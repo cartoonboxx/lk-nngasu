@@ -8,13 +8,18 @@
     "build": "run-p type-check \"build-only {@}\" --",
     "preview": "vite preview",
     "test:unit": "vitest",
+    "test:unit:run": "vitest run",
     "test:e2e": "playwright test",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
-    "lint": "run-s \"lint:*\"",
+    "lint": "run-s lint:oxlint lint:eslint",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache",
-    "format": "prettier --write --experimental-cli src/"
+    "lint:check": "run-s \"lint:check:*\"",
+    "lint:check:oxlint": "oxlint .",
+    "lint:check:eslint": "eslint . --cache",
+    "format": "prettier --write --experimental-cli src/",
+    "format:check": "prettier --check --experimental-cli src/"
   },
   "dependencies": {
     "pinia": "^4.0.3",

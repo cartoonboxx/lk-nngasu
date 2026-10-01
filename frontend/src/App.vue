@@ -1,4 +1,4 @@
-<script setup lang="ts"></script>
+<script setup lang="ts" />
 
 <template>
   <h1>You did it!</h1>
@@ -7,5 +7,3 @@
     documentation
   </p>
 </template>
-
-<style scoped></style>

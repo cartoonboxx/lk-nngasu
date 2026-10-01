@@ -1,0 +1,9 @@
+{
+  "name": "lk-nngasu",
+  "private": true,
+  "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
+    "quality": "sh scripts/quality-check.sh",
+    "precommit": "npm run quality"
+  }
+}
