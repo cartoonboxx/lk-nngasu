@@ -1,0 +1,143 @@
+:root {
+
+  // spacing
+  --space-0: 0;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  // radius
+  --radius-none: 0;
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-sheet: 16px;
+  --radius-round: 9999px;
+
+  // colors surface
+  --color-surface-level-0: #06111B;
+  --color-surface-level-1: #071521;
+  --color-surface-level-2: #091A28;
+  --color-surface-level-3: #0C1E2D;
+  --color-surface-level-4: #122A3C;
+  --color-surface-level-5: #163247;
+
+  --color-surface-accent: #3A2113;
+  --color-surface-disabled: #132330;
+  --color-surface-overlay: #00000099;
+
+  // colors font/icons
+  --color-content-level-1: #F3F7FB;
+  --color-content-level-2: #A9BBD0;
+  --color-content-level-3: #8196AD;
+  --color-content-disabled: #62768A;
+  --color-content-accent: #FF8A3D;
+  --color-content-interactive: #59B5FF;
+  --color-content-on-accent: #171009;
+
+  // color borders
+  --color-border-level-1: #20394D;
+  --color-border-level-2: #456179;
+  --color-border-level-3: #65839F;
+  --color-border-accent: #FF7A1A;
+  --color-border-focus: #59B5FF;
+  --color-border-error: #FB7185;
+
+  --color-accent-default: #FF7A1A;
+  --color-accent-hover: #FF923D;
+  --color-accent-pressed: #E96808;
+
+  // color statuses
+  --color-status-success-content: #4ADE80;
+  --color-status-warning-content: #FBBF24;
+  --color-status-error-content: #FB7185;
+  --color-status-info-content: #59B5FF;
+  --color-status-neutral-content: #A9BBD0;
+
+  --color-status-success-surface: #102B22;
+  --color-status-warning-surface: #332A12;
+  --color-status-error-surface: #351B25;
+  --color-status-info-surface: #102D45;
+  --color-status-neutral-surface: #182B3A;
+
+  // font size
+  --font-size-h1: 32px;
+  --font-size-h2: 24px;
+  --font-size-h3: 20px;
+  --font-size-h4: 18px;
+  --font-size-h5: 16px;
+  --font-size-h6: 14px;
+
+  --font-size-body: 16px;
+  --font-size-body-small: 14px;
+  --font-size-label: 14px;
+  --font-size-action: 14px;
+  --font-size-caption: 12px;
+  --font-size-display: 40px;
+}
+
+@media screen and (max-width: 540px) {
+  :root {
+    // font size
+    --font-size-h1: 24px;
+    --font-size-h2: 20px;
+    --font-size-h3: 18px;
+    --font-size-h4: 18px;
+    --font-size-h5: 16px;
+    --font-size-h6: 14px;
+
+    --font-size-body: 16px;
+    --font-size-body-small: 14px;
+    --font-size-label: 14px;
+    --font-size-action: 16px;
+    --font-size-caption: 12px;
+    --font-size-display: 32px;
+  }
+}
+
+// fonts
+@font-face {
+  font-family: 'Inter';
+  src: url('../assets/Inter/Inter-VariableFont_opsz,wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('../assets/Inter/Inter-Italic-VariableFont_opsz,wght.ttf') format('truetype');
+  font-weight: 100 900;
+  font-style: italic;
+  font-display: swap;
+}
+
+body,
+button,
+input,
+textarea,
+select {
+  font-family: 'Inter', system-ui, sans-serif;
+}
+
+h1 {
+  font-weight: 700;
+}
+
+h2, h3, h4, h5, h6 {
+  font-weight: 600;
+}
+
+@for $i from 1 through 6 {
+  h#{$i} {
+    font-size: var(--font-size-h#{$i});
+    color: var(--color-content-level-1);
+  }
+}

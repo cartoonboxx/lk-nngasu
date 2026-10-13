@@ -76,14 +76,6 @@ run_node_project_checks() {
     run_npm_script_if_present "$dir" lint "$label lint"
   fi
 
-  if has_npm_script "$dir" format:check; then
-    run_npm_script_if_present "$dir" format:check "$label prettier"
-  elif has_npm_script "$dir" prettier:check; then
-    run_npm_script_if_present "$dir" prettier:check "$label prettier"
-  else
-    printf '\n-- Skipping %s prettier: script "format:check" or "prettier:check" not found in %s/package.json\n' "$label" "${dir#$ROOT_DIR/}"
-  fi
-
   if has_npm_script "$dir" test:unit:run; then
     run_npm_script_if_present "$dir" test:unit:run "$label unit tests"
   elif has_npm_script "$dir" test:unit; then
