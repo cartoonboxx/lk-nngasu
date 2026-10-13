@@ -3,6 +3,18 @@ declare global {
   type ButtonState = 'default' | 'hover' | 'active' | 'disabled'
   type ButtonType = 'button' | 'submit' | 'reset'
   type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
+
+  type IconButtonSize = 'sm' | 'md' | 'lg'
+  type IconButtonState = 'default' | 'hover' | 'active' | 'disabled'
+  type IconButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger'
+
+  type IconTabSize = 'sm' | 'md' | 'lg'
+  type IconTabState = 'default' | 'hover' | 'active' | 'disabled'
+  type IconTabVariant = 'default' | 'selected'
+
+  type InputSize = 'sm' | 'md' | 'lg'
+  type InputType = 'text' | 'email' | 'password' | 'search' | 'tel' | 'url'
+  type InputVariant = 'default' | 'filled' | 'focus' | 'error' | 'disabled'
 }
 
 export {}

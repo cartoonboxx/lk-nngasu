@@ -1,0 +1,84 @@
+.tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--icon-tab-size);
+  height: var(--icon-tab-size);
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    box-shadow 160ms ease;
+
+  :global(svg) {
+    width: var(--icon-size);
+    height: var(--icon-size);
+    stroke-width: 2;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+
+  &:hover:not(:disabled),
+  &.hover {
+    background: var(--color-surface-level-4);
+    color: var(--color-text-primary);
+  }
+
+  &:active:not(:disabled),
+  &.active {
+    background: var(--color-surface-level-5);
+    color: var(--color-text-primary);
+  }
+
+  &:disabled,
+  &.disabled {
+    cursor: not-allowed;
+    color: var(--color-content-disabled);
+    opacity: 0.56;
+  }
+}
+
+.sm {
+  --icon-tab-size: 32px;
+  --icon-size: 16px;
+}
+
+.md {
+  --icon-tab-size: 40px;
+  --icon-size: 20px;
+}
+
+.lg {
+  --icon-tab-size: 44px;
+  --icon-size: 22px;
+}
+
+.default {
+  --icon-tab-state: default;
+}
+
+.selected {
+  border-color: var(--color-border-focus);
+  background: var(--color-status-info-surface);
+  color: var(--color-content-interactive);
+
+  &:hover:not(:disabled),
+  &.hover {
+    background: var(--color-status-info-surface);
+    color: var(--color-content-interactive);
+  }
+
+  &:active:not(:disabled),
+  &.active {
+    background: var(--color-surface-level-4);
+  }
+}

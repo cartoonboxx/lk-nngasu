@@ -15,7 +15,7 @@
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
 
-import BaseButton from '@/components/BaseButton/BaseButton.vue'
+import BaseButton from '@/components/buttons/BaseButton/BaseButton.vue'
 import style from './Button.module.scss'
 
 export default defineComponent({
