@@ -31,6 +31,11 @@
   --color-surface-accent: #3a2113;
   --color-surface-disabled: #132330;
   --color-surface-overlay: #00000099;
+  --color-surface-brand: #11264c;
+  --color-brand-blue: #4279e8;
+  --color-logo-blue: #0d4f8f;
+  --color-surface-light: #ffffff;
+  --color-text-on-light: #10151c;
 
   // colors font/icons
   --color-text-primary: #f3f7fb;
@@ -45,13 +50,13 @@
   --color-border-level-1: #20394d;
   --color-border-level-2: #456179;
   --color-border-level-3: #65839f;
-  --color-border-accent: #ff7a1a;
+  --color-border-accent: var(--color-accent-default);
   --color-border-focus: #59b5ff;
   --color-border-error: #fb7185;
 
-  --color-accent-default: #ff7a1a;
-  --color-accent-hover: #ff8f2b;
-  --color-accent-pressed: #e96808;
+  --color-accent-default: #e58032;
+  --color-accent-hover: #ef9042;
+  --color-accent-pressed: #ce6e25;
 
   // color statuses
   --color-status-success-content: #4ade80;
@@ -126,8 +131,15 @@ select {
   font-family: 'Inter', system-ui, sans-serif;
 }
 
+a {
+  text-decoration: none;
+  color: var(--color-content-disabled);
+}
+
 * {
   box-sizing: border-box;
+  margin: 0;
+  padding: 0;
 }
 
 body {

@@ -12,6 +12,10 @@ declare global {
   type IconTabState = 'default' | 'hover' | 'active' | 'disabled'
   type IconTabVariant = 'default' | 'selected'
 
+  type CheckboxSize = 'sm' | 'md' | 'lg'
+  type CheckboxState = 'default' | 'hover' | 'focus' | 'active' | 'disabled'
+  type CheckboxVariant = 'default' | 'error'
+
   type InputSize = 'sm' | 'md' | 'lg'
   type InputType = 'text' | 'email' | 'password' | 'search' | 'tel' | 'url'
   type InputVariant = 'default' | 'filled' | 'focus' | 'error' | 'disabled'

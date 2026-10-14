@@ -1,0 +1,17 @@
+.root {
+  display: inline-flex;
+  width: fit-content;
+  flex-direction: column;
+  gap: 6px;
+
+  &.fullWidth {
+    width: 100%;
+  }
+
+  .label {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-label);
+    font-weight: 600;
+    line-height: 1.2;
+  }
+}

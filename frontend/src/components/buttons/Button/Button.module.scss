@@ -1,6 +1,7 @@
 .primary {
   background: var(--color-accent-default);
   color: var(--color-text-primary);
+  box-shadow: 0 16px 36px color-mix(in srgb, var(--color-accent-default) 18%, transparent);
 
   &:hover:not(:disabled),
   &.hover {
@@ -53,12 +54,12 @@
 
   &:hover:not(:disabled),
   &.hover {
-    background: #482031;
+    background: color-mix(in srgb, var(--color-status-error-surface), var(--color-status-error-content) 10%);
   }
 
   &:active:not(:disabled),
   &.active {
-    background: #5a2439;
+    background: color-mix(in srgb, var(--color-status-error-surface), var(--color-status-error-content) 20%);
   }
 }
 

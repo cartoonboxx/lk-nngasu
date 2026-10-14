@@ -37,6 +37,7 @@ export default defineConfigWithVueTs(
   {
     name: 'app/component-naming',
     rules: {
+      'vue/component-api-style': ['error', ['options']],
       'vue/multi-word-component-names': 'off',
       'vue/no-reserved-component-names': 'off',
     },

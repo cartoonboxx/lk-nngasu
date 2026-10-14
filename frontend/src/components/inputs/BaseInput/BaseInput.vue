@@ -5,22 +5,35 @@
     ref="field"
     :class="[style.base, style.textarea, style[size], fullWidth ? style.fullWidth : null]"
     :name="name"
+    :autocomplete="autocomplete"
+    :required="required"
+    :aria-invalid="ariaInvalid || undefined"
+    :aria-describedby="ariaDescribedby"
     :value="modelValue"
     :placeholder="placeholder"
     :disabled="disabled"
     :style="{ minHeight: normalizedBaseHeight }"
     @input="handleInput"
+    @change="handleInput"
   />
   <input
     v-else
+    ref="field"
     :id="id"
     :class="[style.base, style[size], fullWidth ? style.fullWidth : null]"
     :name="name"
+    :autocomplete="autocomplete"
+    :required="required"
+    :aria-invalid="ariaInvalid || undefined"
+    :aria-describedby="ariaDescribedby"
     :type="type"
     :value="modelValue"
     :placeholder="placeholder"
     :disabled="disabled"
     @input="handleInput"
+    @change="handleInput"
+    @animationstart="handleAutofill"
+    @focus="syncValue"
   />
 </template>
 
@@ -42,6 +55,22 @@ export default defineComponent({
     modelValue: {
       type: String,
       default: '',
+    },
+    autocomplete: {
+      type: String,
+      default: undefined,
+    },
+    required: {
+      type: Boolean,
+      default: false,
+    },
+    ariaInvalid: {
+      type: Boolean,
+      default: false,
+    },
+    ariaDescribedby: {
+      type: String,
+      default: undefined,
     },
     placeholder: {
       type: String,
@@ -85,11 +114,21 @@ export default defineComponent({
   },
   mounted() {
     this.resizeTextarea()
+    this.syncValue()
   },
   updated() {
     this.resizeTextarea()
   },
   methods: {
+    syncValue() {
+      const field = this.$refs.field as HTMLInputElement | HTMLTextAreaElement | undefined
+      if (field && field.value !== this.modelValue) {
+        this.$emit('update:modelValue', field.value)
+      }
+    },
+    handleAutofill() {
+      this.syncValue()
+    },
     handleInput(event: Event) {
       this.$emit(
         'update:modelValue',

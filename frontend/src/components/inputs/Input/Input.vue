@@ -2,9 +2,13 @@
   <div :class="[style.root, fullWidth ? style.fullWidth : null]">
     <BaseInput
       :id="id"
-      :class="[style[variant], $slots.actions ? style.withActions : null]"
+      :class="[style[effectiveVariant], $slots.actions ? style.withActions : null]"
       :name="name"
-      :model-value="modelValue"
+      :autocomplete="autocomplete"
+      :required="required"
+      :ariaInvalid="ariaInvalid"
+      :ariaDescribedby="ariaDescribedby"
+      :model-value="currentValue"
       :placeholder="placeholder"
       :size="size"
       :type="type"
@@ -44,6 +48,22 @@ export default defineComponent({
       type: String,
       default: '',
     },
+    autocomplete: {
+      type: String,
+      default: undefined,
+    },
+    required: {
+      type: Boolean,
+      default: false,
+    },
+    ariaInvalid: {
+      type: Boolean,
+      default: false,
+    },
+    ariaDescribedby: {
+      type: String,
+      default: undefined,
+    },
     placeholder: {
       type: String,
       default: '',
@@ -81,10 +101,22 @@ export default defineComponent({
   data() {
     return {
       style,
+      currentValue: this.modelValue,
     }
+  },
+  computed: {
+    effectiveVariant(): InputVariant {
+      return this.variant === 'default' && this.currentValue.length > 0 ? 'filled' : this.variant
+    },
+  },
+  watch: {
+    modelValue(value: string) {
+      this.currentValue = value
+    },
   },
   methods: {
     handleUpdate(value: string) {
+      this.currentValue = value
       this.$emit('update:modelValue', value)
     },
   },
