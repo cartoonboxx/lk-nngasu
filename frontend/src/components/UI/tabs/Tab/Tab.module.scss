@@ -1,0 +1,27 @@
+.tab {
+  background: transparent;
+  color: var(--color-text-secondary);
+
+  &:hover:not([data-disabled='true']) {
+    background: var(--color-surface-navigation-hover);
+    color: var(--color-text-primary);
+  }
+
+  &[data-active='true'] {
+    border-color: transparent;
+    background: var(--color-surface-navigation-selected);
+    color: var(--color-content-accent);
+    font-weight: 600;
+
+    &::before {
+      position: absolute;
+      top: 0;
+      bottom: 0;
+      left: 0;
+      width: 3px;
+      border-radius: 0 var(--radius-round) var(--radius-round) 0;
+      background: var(--color-accent-default);
+      content: '';
+    }
+  }
+}

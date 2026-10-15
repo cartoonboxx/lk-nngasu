@@ -28,6 +28,16 @@
   --color-surface-level-4: #122a3c;
   --color-surface-level-5: #163247;
 
+  // semantic surfaces
+  --color-surface-page: var(--color-surface-level-0);
+  --color-surface-navigation: #081722;
+  --color-surface-navigation-hover: #102638;
+  --color-surface-navigation-selected: #402416;
+  --color-surface-panel: var(--color-surface-level-2);
+  --color-surface-raised: var(--color-surface-level-3);
+  --color-surface-interactive: var(--color-surface-level-4);
+  --color-surface-active: #184664;
+
   --color-surface-accent: #3a2113;
   --color-surface-disabled: #132330;
   --color-surface-overlay: #00000099;
@@ -146,7 +156,7 @@ body {
   min-width: 320px;
   min-height: 100vh;
   margin: 0;
-  background: var(--color-surface-level-0);
+  background: var(--color-surface-page);
   color: var(--color-text-primary);
   font-size: var(--font-size-body);
   line-height: 1.5;

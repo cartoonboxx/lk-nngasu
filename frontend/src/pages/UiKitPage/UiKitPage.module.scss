@@ -70,6 +70,37 @@
   gap: var(--space-3);
 }
 
+.tabColumn {
+  display: grid;
+  width: min(100%, 280px);
+  gap: var(--space-2);
+}
+
+.tabBadge {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: var(--radius-round);
+  background: var(--color-brand-blue);
+  color: var(--color-text-primary);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.badgeTarget {
+  display: grid;
+  min-width: 96px;
+  min-height: 44px;
+  place-items: center;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--color-border-level-1);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-interactive);
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-label);
+}
+
 .states {
   display: grid;
   gap: var(--space-3);

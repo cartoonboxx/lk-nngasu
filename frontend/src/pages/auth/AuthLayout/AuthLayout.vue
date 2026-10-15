@@ -2,14 +2,7 @@
   <main :class="style.page">
     <div :class="style.shell">
       <aside :class="style.hero" aria-label="Личный кабинет ННГАСУ">
-        <div :class="style.brand">
-          <span :class="style.brandMark"><img src="$images/logo.svg" alt="" /></span>
-          <strong :class="style.universityName">ННГАСУ</strong>
-          <div :class="style.portalName">
-            <strong>Личный кабинет</strong>
-            <span>студента и сотрудника</span>
-          </div>
-        </div>
+        <BrandHeader />
 
         <div :class="style.heroContent">
           <h1 :class="style.headline">Твой университет.<br />Всегда <span>рядом.</span></h1>
@@ -101,12 +94,14 @@
 
 <script lang="ts">
 import { PhBell, PhBookOpen, PhCalendarBlank, PhStudent } from '@phosphor-icons/vue'
-import style from './AuthLayout.module.scss'
 import { defineComponent } from 'vue'
+
+import BrandHeader from '@/components/BrandHeader/BrandHeader.vue'
+import style from './AuthLayout.module.scss'
 
 export default defineComponent({
   name: 'AuthLayout',
-  components: { PhBell, PhBookOpen, PhCalendarBlank, PhStudent },
+  components: { BrandHeader, PhBell, PhBookOpen, PhCalendarBlank, PhStudent },
   props: {
     titleId: {
       type: String,

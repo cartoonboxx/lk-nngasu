@@ -103,10 +103,10 @@
 import { defineComponent } from 'vue'
 import { PhEye, PhEyeSlash } from '@phosphor-icons/vue'
 import AuthLayout from '../AuthLayout/AuthLayout.vue'
-import Button from '@/components/buttons/Button/Button.vue'
-import IconButton from '@/components/buttons/IconButton/IconButton.vue'
-import Checkbox from '@/components/inputs/Checkbox/Checkbox.vue'
-import TextInput from '@/components/inputs/TextInput/TextInput.vue'
+import Button from '@/components/UI/buttons/Button/Button.vue'
+import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
+import Checkbox from '@/components/UI/inputs/Checkbox/Checkbox.vue'
+import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
 import style from '../AuthForm.module.scss'
 
 export default defineComponent({

@@ -1,0 +1,77 @@
+.base {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  width: auto;
+  min-width: 96px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  font: inherit;
+  font-size: var(--font-size-action);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background-color 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 120ms ease;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+
+  &:disabled {
+    cursor: not-allowed;
+    opacity: 0.56;
+  }
+
+  &.sm {
+    min-height: 36px;
+    padding: 0 var(--space-3);
+  }
+
+  &.md {
+    min-height: 46px;
+    padding: 0 var(--space-4);
+  }
+
+  &.lg {
+    min-height: 54px;
+    padding: 0 var(--space-5);
+  }
+
+  &.fullWidth {
+    width: 100%;
+  }
+
+  &.active {
+    transform: translateY(1px);
+  }
+
+  &.disabled {
+    cursor: not-allowed;
+    opacity: 0.56;
+  }
+
+  .loader {
+    width: 1em;
+    height: 1em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: var(--radius-round);
+    animation: spin 720ms linear infinite;
+  }
+
+  .content {
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}

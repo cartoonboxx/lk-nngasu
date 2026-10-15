@@ -1,0 +1,71 @@
+.navigation {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  display: flex;
+  width: 280px;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-8);
+  padding: var(--space-6) var(--space-4) var(--space-4);
+  overflow-y: auto;
+  border-right: 1px solid color-mix(in srgb, var(--color-border-level-1) 60%, transparent);
+  background-color: var(--color-surface-navigation);
+}
+
+.upper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 36px;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 0 var(--space-2);
+}
+
+.notification {
+  position: relative;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--color-surface-navigation-hover);
+    color: var(--color-text-primary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+}
+
+.tabList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.tabBadge {
+  display: grid;
+  width: 22px;
+  height: 22px;
+  place-items: center;
+  border-radius: var(--radius-round);
+  background: var(--color-brand-blue);
+  color: var(--color-text-primary);
+  font-size: 10px;
+  font-weight: 700;
+}

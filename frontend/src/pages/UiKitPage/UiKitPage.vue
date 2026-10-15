@@ -94,6 +94,17 @@
         </article>
 
         <article :class="style.group">
+          <h3>Prefix slot</h3>
+          <div :class="style.row">
+            <Input placeholder="Поиск по сайту" variant="filled">
+              <template #prefix>
+                <PhMagnifyingGlass :size="20" aria-hidden="true" />
+              </template>
+            </Input>
+          </div>
+        </article>
+
+        <article :class="style.group">
           <h3>Actions</h3>
           <div :class="style.row">
             <Input placeholder="Поиск" variant="filled">
@@ -164,6 +175,28 @@
       </div>
     </section>
 
+    <section :class="style.section" aria-labelledby="badge-title">
+      <div :class="style.sectionHeading">
+        <h2 id="badge-title">Badge</h2>
+      </div>
+
+      <div :class="style.showcase">
+        <article :class="style.group">
+          <h3>Расположение</h3>
+          <div :class="style.row">
+            <Badge :value="3">
+              <IconButton ariaLabel="Уведомления" variant="secondary">
+                <PhHouse />
+              </IconButton>
+            </Badge>
+            <Badge :value="12">
+              <span :class="style.badgeTarget">Элемент</span>
+            </Badge>
+          </div>
+        </article>
+      </div>
+    </section>
+
     <section :class="style.section" aria-labelledby="icon-tabs-title">
       <div :class="style.sectionHeading">
         <h2 id="icon-tabs-title">Табы-иконки</h2>
@@ -217,17 +250,55 @@
         </article>
       </div>
     </section>
+
+    <section :class="style.section" aria-labelledby="tabs-title">
+      <div :class="style.sectionHeading">
+        <h2 id="tabs-title">Табы</h2>
+      </div>
+
+      <div :class="style.showcase">
+        <article :class="style.group">
+          <h3>Внешний вид</h3>
+          <div :class="style.tabColumn" role="tablist" aria-label="Пример таба">
+            <Tab text="Главная" :icon="tabIcon" active>
+              <template #actions>
+                <span :class="style.tabBadge">2</span>
+              </template>
+            </Tab>
+          </div>
+        </article>
+
+        <article :class="style.group">
+          <h3>Состав</h3>
+          <div :class="style.tabColumn" role="tablist" aria-label="Состав табов">
+            <Tab text="Только текст" />
+            <Tab text="Изображение без actions" :image-src="logoImage" />
+            <Tab text="Недоступный таб" disabled />
+          </div>
+        </article>
+
+        <article :class="style.group">
+          <h3>Активное состояние</h3>
+          <div :class="style.tabColumn" role="tablist" aria-label="Активные табы">
+            <Tab text="Активный таб" :icon="tabIcon" active />
+          </div>
+        </article>
+      </div>
+    </section>
   </main>
 </template>
 
 <script lang="ts">
-import { PhHouse, PhAirplaneTaxiing } from '@phosphor-icons/vue'
-import { defineComponent } from 'vue'
+import { PhAirplaneTaxiing, PhHouse, PhMagnifyingGlass } from '@phosphor-icons/vue'
+import { defineComponent, markRaw } from 'vue'
 
-import Button from '@/components/buttons/Button/Button.vue'
-import IconButton from '@/components/buttons/IconButton/IconButton.vue'
-import Input from '@/components/inputs/Input/Input.vue'
-import IconTab from '@/components/tabs/IconTab/IconTab.vue'
+import Badge from '@/components/UI/Badge/Badge.vue'
+import Button from '@/components/UI/buttons/Button/Button.vue'
+import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
+import Input from '@/components/UI/inputs/Input/Input.vue'
+import IconTab from '@/components/UI/tabs/IconTab/IconTab.vue'
+import Tab from '@/components/UI/tabs/Tab/Tab.vue'
+import logoImage from '$images/logo.svg'
 import style from './UiKitPage.module.scss'
 
 const variants: Array<{ value: ButtonVariant; label: string }> = [
@@ -253,7 +324,6 @@ const states: Array<{ value: ButtonState; label: string }> = [
 const inputVariants: Array<{ value: InputVariant; label: string }> = [
   { value: 'default', label: 'Default' },
   { value: 'filled', label: 'Filled' },
-  { value: 'focus', label: 'Focus' },
   { value: 'error', label: 'Error' },
   { value: 'disabled', label: 'Disabled' },
 ]
@@ -305,12 +375,15 @@ const iconTabStates: Array<{ value: IconTabState; label: string }> = [
 export default defineComponent({
   name: 'UiKitPage',
   components: {
+    Badge,
     Button,
     PhHouse,
     PhAirplaneTaxiing,
+    PhMagnifyingGlass,
     IconButton,
     IconTab,
     Input,
+    Tab,
   },
   data() {
     return {
@@ -326,6 +399,8 @@ export default defineComponent({
       iconTabVariants,
       iconTabSizes,
       iconTabStates,
+      tabIcon: markRaw(PhHouse),
+      logoImage,
       textareaValue:
         'Textarea использует базовую высоту 96px и расширяется по высоте, когда текста становится больше.',
     }

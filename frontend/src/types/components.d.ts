@@ -18,7 +18,7 @@ declare global {
 
   type InputSize = 'sm' | 'md' | 'lg'
   type InputType = 'text' | 'email' | 'password' | 'search' | 'tel' | 'url'
-  type InputVariant = 'default' | 'filled' | 'focus' | 'error' | 'disabled'
+  type InputVariant = 'default' | 'filled' | 'error' | 'disabled'
 }
 
 export {}
