@@ -10,6 +10,7 @@ import ResourcesPage from '@/pages/resources/ResourcesPage.vue'
 import SchedulePage from '@/pages/schedule/SchedulePage.vue'
 import SettingsPage from '@/pages/settings/SettingsPage.vue'
 import SubjectsPage from '@/pages/subjects/SubjectsPage.vue'
+import CoursePage from '@/pages/subjects/course/CoursePage.vue'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -36,6 +37,11 @@ const router = createRouter({
           path: 'subjects',
           name: 'subjects',
           component: SubjectsPage,
+        },
+        {
+          path: 'subjects/:id',
+          name: 'course',
+          component: CoursePage,
         },
         {
           path: 'grades',

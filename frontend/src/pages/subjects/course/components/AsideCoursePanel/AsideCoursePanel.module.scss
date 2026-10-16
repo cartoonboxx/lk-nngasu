@@ -1,0 +1,49 @@
+.courses {
+  min-width: 0;
+  border: 1px solid var(--color-border-level-1);
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--color-surface-level-2), var(--color-surface-level-1));
+  overflow: hidden;
+
+  .topicList {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .topic {
+    --tab-padding: var(--space-4) var(--space-5);
+    border-radius: 0;
+
+    & + .topic {
+      border-top-color: var(--color-border-level-1);
+    }
+
+    .topicCopy {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-1);
+      white-space: normal;
+    }
+
+    .topicNumber {
+      font-size: var(--font-size-caption);
+      font-weight: 600;
+    }
+
+    .topicTitle {
+      color: var(--color-text-secondary);
+      font-size: var(--font-size-body-small);
+      font-weight: 400;
+      line-height: 1.55;
+    }
+
+    &[data-active='true'] .topicTitle {
+      color: var(--color-text-primary);
+    }
+  }
+
+  @container (max-width: 680px) {
+    max-height: 280px;
+    overflow-y: auto;
+  }
+}

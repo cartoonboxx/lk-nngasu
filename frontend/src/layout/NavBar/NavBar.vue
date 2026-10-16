@@ -21,7 +21,7 @@
         <NavTab
           text="Предметы"
           :icon="icons.book"
-          :active="$route.name === 'subjects'"
+          :active="isSubjectsActive"
           @select="navigate('subjects')"
         />
         <NavTab
@@ -88,6 +88,13 @@ export default defineComponent({
       style,
     }
   },
+  methods: {
+    navigate(routeName: string) {
+      if (this.$route.name !== routeName) {
+        void this.$router.push({ name: routeName })
+      }
+    },
+  },
   computed: {
     icons() {
       return {
@@ -100,12 +107,8 @@ export default defineComponent({
         gear: markRaw(PhGearSix),
       }
     },
-  },
-  methods: {
-    navigate(routeName: string) {
-      if (this.$route.name !== routeName) {
-        void this.$router.push({ name: routeName })
-      }
+    isSubjectsActive() {
+      return this.$route.name === 'subjects' || this.$route.name === 'course'
     },
   },
 })
