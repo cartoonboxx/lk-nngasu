@@ -1,0 +1,105 @@
+
+.settingsPage {
+  margin-bottom: 20px;
+}
+
+.settingsPageDescription {
+  margin: 0;
+  color: #A9BBD0;
+  font-size: 14px;
+}
+
+.settingsCard {
+  overflow: hidden;
+  border: 1px solid #456179;
+  border-radius: 12px;
+  background: #091A28;
+  width: 50%;
+}
+.tabColumn {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 6px;
+  margin-right: 12px;
+  flex-shrink: 0;
+
+  *{
+    flex: 0 0 auto;
+    width: max-content;
+    text-align: center;
+  }
+}
+.settingsSection {
+  padding: 24px;
+}
+
+.settingsSectionTitle {
+  font-weight: 600;
+
+}
+.settingsSectionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 20px 20px 20px;
+  
+}
+.settingsSectionDescription {
+  font-weight: 00;
+  color: #8196AD;
+  font-size: 14px;
+}
+
+.settingsDivider {
+  height: 1px;
+  margin: 0 20px 0 20px;
+  background: #456179;
+}
+
+.profileRow {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+  button{
+    margin-left: auto;
+  }
+}
+
+.profileAvatar {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  overflow: hidden;
+  border-radius: 50%;
+  background: #1565c0;
+  color: #fff;
+}
+
+.profileAvatarImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profileInfoName {
+  margin: 0 0 5px;
+}
+
+.profileInfoRole {
+  margin: 0;
+  color: #8196AD;
+  font-size: 13px;
+}
+
+.themeSwitcherOption {
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
