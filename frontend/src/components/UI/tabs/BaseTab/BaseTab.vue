@@ -10,6 +10,7 @@
       role="tab"
       :aria-selected="active"
       :disabled="disabled"
+      v-bind="triggerAttrs"
       @click="$emit('select')"
     >
       <span v-if="icon || imageSrc" :class="style.media">
@@ -22,7 +23,10 @@
         />
         <img v-else :class="style.image" :src="imageSrc" :alt="imageAlt" />
       </span>
-      <span :class="style.text">{{ text }}</span>
+      <span :class="style.text"
+        ><slot>{{ text }}</slot></span
+      >
+      <slot name="trailing" />
     </button>
 
     <span v-if="$slots.actions" :class="style.actions">
@@ -32,47 +36,15 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, type Component, type PropType } from 'vue'
+import { defineComponent } from 'vue'
+import { baseTabProps } from '../tabProps'
 
 import style from './BaseTab.module.scss'
 
 export default defineComponent({
   name: 'BaseTab',
   emits: ['select'],
-  props: {
-    text: {
-      type: String,
-      required: true,
-    },
-    imageSrc: {
-      type: String,
-      default: undefined,
-    },
-    imageAlt: {
-      type: String,
-      default: '',
-    },
-    icon: {
-      type: [Object, Function] as PropType<Component>,
-      default: undefined,
-    },
-    iconSize: {
-      type: Number,
-      default: 22,
-    },
-    iconWeight: {
-      type: String,
-      default: 'regular',
-    },
-    active: {
-      type: Boolean,
-      default: false,
-    },
-    disabled: {
-      type: Boolean,
-      default: false,
-    },
-  },
+  props: baseTabProps,
   data() {
     return {
       style,

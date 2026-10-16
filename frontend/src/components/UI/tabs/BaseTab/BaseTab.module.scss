@@ -2,7 +2,7 @@
   position: relative;
   display: inline-flex;
   width: 100%;
-  min-height: 48px;
+  min-height: var(--tab-min-height, 44px);
   align-items: stretch;
   overflow: hidden;
   border: 1px solid transparent;
@@ -14,70 +14,74 @@
     background-color 160ms ease,
     border-color 160ms ease,
     color 160ms ease;
-}
 
-.trigger {
-  display: flex;
-  min-width: 0;
-  flex: 1;
-  align-items: center;
-  gap: var(--space-3);
-  padding: 0 var(--space-4);
-  border: 0;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  font-size: var(--font-size-action);
-  text-align: left;
-  cursor: pointer;
+  .trigger {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    align-items: center;
+    gap: var(--space-3);
+    padding: var(--tab-padding, var(--space-3));
+    border: 0;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: var(--font-size-action);
+    text-align: left;
+    cursor: pointer;
 
-  &:focus-visible {
-    outline: none;
+    &:focus-visible {
+      outline: 2px solid var(--color-border-focus);
+      outline-offset: -2px;
+      border-radius: inherit;
+    }
+
+    &:disabled {
+      cursor: not-allowed;
+    }
   }
 
-  &:disabled {
-    cursor: not-allowed;
+  .media {
+    display: grid;
+    width: 28px;
+    height: 28px;
+    flex: 0 0 28px;
+    place-items: center;
+
+    svg {
+      width: 22px;
+      height: 22px;
+    }
   }
-}
 
-.media {
-  display: grid;
-  width: 28px;
-  height: 28px;
-  flex: 0 0 28px;
-  place-items: center;
-
-  svg {
-    width: 22px;
-    height: 22px;
+  .image {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    object-fit: cover;
   }
-}
 
-.image {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
-  object-fit: cover;
-}
+  .text {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    font-weight: inherit;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
-.text {
-  overflow: hidden;
-  font-weight: inherit;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+  .actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    padding: var(--space-1) var(--space-4) var(--space-1) 0;
+  }
 
-.actions {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1) var(--space-4) var(--space-1) 0;
-}
+  &.active {
+    --tab-active: true;
+  }
 
-.active {
-  --tab-active: true;
-}
-
-.disabled {
-  opacity: 0.56;
+  &.disabled {
+    opacity: 0.56;
+  }
 }

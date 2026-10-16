@@ -4,6 +4,7 @@ import { createMemoryHistory, createRouter } from 'vue-router'
 
 import StudentCard from '@/components/navigation/StudentCard/StudentCard.vue'
 import NavBar from '@/layout/NavBar/NavBar.vue'
+import NavTab from '@/components/UI/tabs/NavTab/NavTab.vue'
 
 describe('Navigation components', () => {
   it('renders student data and initials without an image', () => {
@@ -51,6 +52,7 @@ describe('Navigation components', () => {
       .find((tab) => tab.text().includes('Главная'))
 
     expect(scheduleTab).toBeDefined()
+    expect(wrapper.findAllComponents(NavTab)).toHaveLength(7)
     expect(dashboardTab).toBeDefined()
     expect(dashboardTab!.attributes('aria-selected')).toBe('true')
 

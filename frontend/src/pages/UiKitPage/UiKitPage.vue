@@ -119,6 +119,78 @@
       </div>
     </section>
 
+    <section :class="style.section" aria-labelledby="select-title">
+      <div :class="style.sectionHeading">
+        <h2 id="select-title">Select</h2>
+      </div>
+      <div :class="style.showcase">
+        <article :class="style.group">
+          <h3>Выбор значения</h3>
+          <div :class="style.row">
+            <Select
+              v-model="selectedSubject"
+              :options="selectOptions"
+              aria-label="Предмет"
+              placeholder="Выберите предмет"
+            />
+            <span>Выбрано: {{ selectedSubject || 'ничего' }}</span>
+          </div>
+        </article>
+        <article :class="style.group">
+          <h3>Состояния</h3>
+          <div :class="style.row">
+            <Select :options="selectOptions" model-value="math" aria-label="Заполненный Select" />
+            <Select
+              :options="selectOptions"
+              model-value="math"
+              disabled
+              aria-label="Недоступный Select"
+            />
+            <Select :options="[]" placeholder="Пустой список" />
+          </div>
+        </article>
+        <article :class="style.group">
+          <h3>Размеры</h3>
+          <div :class="style.row">
+            <Select
+              v-for="size in inputSizes"
+              :key="size.value"
+              v-model="selectedSubject"
+              :options="selectOptions"
+              :size="size.value"
+              :aria-label="`Предмет: ${size.label}`"
+              :placeholder="size.label"
+            />
+          </div>
+        </article>
+        <article :class="style.group">
+          <h3>На всю ширину</h3>
+          <Select
+            v-model="selectedSubject"
+            :options="selectOptions"
+            full-width
+            aria-label="Предмет на всю ширину"
+          />
+        </article>
+      </div>
+    </section>
+
+    <section :class="style.section" aria-labelledby="floating-popup-title">
+      <div :class="style.sectionHeading">
+        <h2 id="floating-popup-title">FloatingPopup</h2>
+      </div>
+      <div :class="style.showcase">
+        <article :class="style.group">
+          <h3>Вкладки в виде списка</h3>
+          <FloatingPopup v-model="popupTab" :items="switchableTabs" aria-label="Учебная информация">
+            <template #schedule>Расписание занятий на текущую неделю.</template>
+            <template #subjects>Список предметов текущего семестра.</template>
+            <template #grades>Оценки и результаты аттестации.</template>
+          </FloatingPopup>
+        </article>
+      </div>
+    </section>
+
     <section :class="style.section" aria-labelledby="icon-buttons-title">
       <div :class="style.sectionHeading">
         <h2 id="icon-buttons-title">Кнопки-иконки</h2>
@@ -258,29 +330,65 @@
 
       <div :class="style.showcase">
         <article :class="style.group">
-          <h3>Внешний вид</h3>
-          <div :class="style.tabColumn" role="tablist" aria-label="Пример таба">
-            <Tab text="Главная" :icon="tabIcon" active>
+          <h3>BaseTab — общая геометрия</h3>
+          <div :class="style.tabColumn" role="tablist" aria-label="Базовый таб">
+            <BaseTab text="Базовый таб" :icon="tabIcon" />
+          </div>
+        </article>
+
+        <article :class="style.group">
+          <h3>NavTab — навигация</h3>
+          <div :class="style.tabColumn" role="tablist" aria-label="Навигационные табы">
+            <NavTab
+              v-for="item in switchableTabs"
+              :key="item.value"
+              :text="item.label"
+              :active="item.value === activeTab"
+              :disabled="item.disabled"
+              :icon="tabIcon"
+              @select="activeTab = item.value"
+            />
+          </div>
+        </article>
+
+        <article :class="style.group">
+          <h3>StyleTab — выбор в списке</h3>
+          <div :class="style.tabColumn" role="listbox" aria-label="Выбор предмета">
+            <StyleTab
+              v-for="item in selectOptions"
+              :key="item.value"
+              :text="item.label"
+              :active="item.value === selectedSubject"
+              :disabled="item.disabled"
+              @select="selectedSubject = item.value"
+            />
+          </div>
+        </article>
+
+        <article :class="style.group">
+          <h3>StyleTab — дополнительные действия</h3>
+          <div :class="style.tabColumn" role="listbox" aria-label="Пример выбора">
+            <StyleTab text="Главная" :icon="tabIcon" active>
               <template #actions>
                 <span :class="style.tabBadge">2</span>
               </template>
-            </Tab>
+            </StyleTab>
           </div>
         </article>
 
         <article :class="style.group">
-          <h3>Состав</h3>
-          <div :class="style.tabColumn" role="tablist" aria-label="Состав табов">
-            <Tab text="Только текст" />
-            <Tab text="Изображение без actions" :image-src="logoImage" />
-            <Tab text="Недоступный таб" disabled />
+          <h3>StyleTab — состав</h3>
+          <div :class="style.tabColumn" role="listbox" aria-label="Состав вариантов">
+            <StyleTab text="Только текст" />
+            <StyleTab text="Изображение без actions" :image-src="logoImage" />
+            <StyleTab text="Недоступный таб" disabled />
           </div>
         </article>
 
         <article :class="style.group">
-          <h3>Активное состояние</h3>
-          <div :class="style.tabColumn" role="tablist" aria-label="Активные табы">
-            <Tab text="Активный таб" :icon="tabIcon" active />
+          <h3>StyleTab — выбранное состояние</h3>
+          <div :class="style.tabColumn" role="listbox" aria-label="Выбранный вариант">
+            <StyleTab text="Активный таб" :icon="tabIcon" active />
           </div>
         </article>
       </div>
@@ -296,8 +404,12 @@ import Badge from '@/components/UI/Badge/Badge.vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 import Input from '@/components/UI/inputs/Input/Input.vue'
+import Select from '@/components/UI/inputs/Select/Select.vue'
+import FloatingPopup from '@/components/UI/popup/FloatingPopup/FloatingPopup.vue'
 import IconTab from '@/components/UI/tabs/IconTab/IconTab.vue'
-import Tab from '@/components/UI/tabs/Tab/Tab.vue'
+import StyleTab from '@/components/UI/tabs/StyleTab/StyleTab.vue'
+import BaseTab from '@/components/UI/tabs/BaseTab/BaseTab.vue'
+import NavTab from '@/components/UI/tabs/NavTab/NavTab.vue'
 import logoImage from '$images/logo.svg'
 import style from './UiKitPage.module.scss'
 
@@ -383,11 +495,30 @@ export default defineComponent({
     IconButton,
     IconTab,
     Input,
-    Tab,
+    Select,
+    FloatingPopup,
+    StyleTab,
+    BaseTab,
+    NavTab,
   },
   data() {
     return {
       style,
+      activeTab: 'schedule',
+      popupTab: 'schedule',
+      selectedSubject: '',
+      selectOptions: [
+        { value: 'math', label: 'Математика' },
+        { value: 'physics', label: 'Физика' },
+        { value: 'drawing', label: 'Начертательная геометрия' },
+        { value: 'archive', label: 'Архивный предмет', disabled: true },
+      ],
+      switchableTabs: [
+        { value: 'schedule', label: 'Расписание' },
+        { value: 'subjects', label: 'Предметы' },
+        { value: 'grades', label: 'Оценки' },
+        { value: 'archive', label: 'Архив', disabled: true },
+      ],
       variants,
       sizes,
       states,

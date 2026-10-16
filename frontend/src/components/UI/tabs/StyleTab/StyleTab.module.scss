@@ -1,0 +1,18 @@
+.tab {
+  border-color: transparent;
+  border-radius: var(--radius-lg);
+  background: transparent;
+  color: var(--color-text-secondary);
+
+  &:hover:not([data-disabled='true']) {
+    background: var(--color-surface-level-4);
+    color: var(--color-text-primary);
+  }
+
+  &:active:not([data-disabled='true']),
+  &[data-active='true'] {
+    border-color: var(--color-border-level-1);
+    background: var(--color-surface-level-5);
+    color: var(--color-text-primary);
+  }
+}

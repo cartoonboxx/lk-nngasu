@@ -6,31 +6,31 @@
       </div>
 
       <div :class="style.tabList">
-        <Tab
+        <NavTab
           text="Главная"
           :icon="icons.house"
           :active="$route.name === 'dashboard'"
           @select="navigate('dashboard')"
         />
-        <Tab
+        <NavTab
           text="Расписание"
           :icon="icons.calendar"
           :active="$route.name === 'schedule'"
           @select="navigate('schedule')"
         />
-        <Tab
+        <NavTab
           text="Предметы"
           :icon="icons.book"
           :active="$route.name === 'subjects'"
           @select="navigate('subjects')"
         />
-        <Tab
+        <NavTab
           text="Оценки"
           :icon="icons.chart"
           :active="$route.name === 'grades'"
           @select="navigate('grades')"
         />
-        <Tab
+        <NavTab
           text="Сообщения"
           :icon="icons.chats"
           :active="$route.name === 'messages'"
@@ -39,14 +39,14 @@
           <template #actions>
             <span :class="style.tabBadge" aria-label="2 новых">2</span>
           </template>
-        </Tab>
-        <Tab
+        </NavTab>
+        <NavTab
           text="Ресурсы и сервисы"
           :icon="icons.squares"
           :active="$route.name === 'resources'"
           @select="navigate('resources')"
         />
-        <Tab
+        <NavTab
           text="Настройки"
           :icon="icons.gear"
           :active="$route.name === 'settings'"
@@ -73,7 +73,7 @@ import { defineComponent, markRaw } from 'vue'
 
 import BrandHeader from '@/components/BrandHeader/BrandHeader.vue'
 import StudentCard from '@/components/navigation/StudentCard/StudentCard.vue'
-import Tab from '@/components/UI/tabs/Tab/Tab.vue'
+import NavTab from '@/components/UI/tabs/NavTab/NavTab.vue'
 import style from './NavBar.module.scss'
 
 export default defineComponent({
@@ -81,7 +81,7 @@ export default defineComponent({
   components: {
     BrandHeader,
     StudentCard,
-    Tab,
+    NavTab,
   },
   data() {
     return {
