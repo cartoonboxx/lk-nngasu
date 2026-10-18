@@ -1,69 +1,61 @@
-
 .settingsPage {
-  margin-bottom: 20px;
-}
+  margin-bottom: var(--space-5);
 
-.settingsPageDescription {
-  margin: 0;
-  color: #A9BBD0;
-  font-size: 14px;
+  p {
+    margin: var(--space-0);
+    color: var(--color-status-neutral-content);
+    font-size: var(--font-size-body-small);
+  }
 }
 
 .settingsCard {
   overflow: hidden;
-  border: 1px solid #456179;
-  border-radius: 12px;
-  background: #091A28;
-  width: 50%;
+  border: 1px solid var(--color-border-level-2);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-level-2);
+  width: 600px;
 }
 .tabColumn {
   display: flex;
   flex-direction: row;
   align-items: center;
   justify-content: flex-start;
-  gap: 6px;
-  margin-right: 12px;
+  gap: var(--space-2);
   flex-shrink: 0;
+}
 
-  *{
-    flex: 0 0 auto;
-    width: max-content;
-    text-align: center;
+.settingsSection {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border-level-2);
+  h2 {
+    margin-bottom: var(--space-5);
   }
 }
-.settingsSection {
-  padding: 24px;
-}
 
-.settingsSectionTitle {
-  font-weight: 600;
-
-}
 .settingsSectionRow {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 20px 20px 20px 20px;
-  
-}
-.settingsSectionDescription {
-  font-weight: 00;
-  color: #8196AD;
-  font-size: 14px;
-}
+  padding: var(--space-5);
+  border-bottom: 1px solid var(--color-border-level-2);
 
-.settingsDivider {
-  height: 1px;
-  margin: 0 20px 0 20px;
-  background: #456179;
+  h2 {
+    margin: var(--space-0);
+  }
+
+  p {
+    color: var(--color-status-neutral-content);
+    font-size: var(--font-size-body-small);
+  }
 }
 
 .profileRow {
   display: flex;
   align-items: center;
-  gap: 16px;
+  gap: var(--space-4);
   width: 100%;
-  button{
+
+  button {
     margin-left: auto;
   }
 }
@@ -87,19 +79,15 @@
   object-fit: cover;
 }
 
-.profileInfoName {
-  margin: 0 0 5px;
-}
-
-.profileInfoRole {
-  margin: 0;
-  color: #8196AD;
-  font-size: 13px;
-}
-
-.themeSwitcherOption {
-  padding: 9px 12px;
-  border: 0;
-  border-radius: 6px;
-  cursor: pointer;
+.profileInfo {
+  p {
+    &:first-child {
+      margin-bottom: var(-space-1);
+    }
+    &:last-child {
+      margin: var(--space-0);
+      color: var(--color-status-neutral-content);
+      font-size: var(--font-size-body-small);
+    }
+  }
 }

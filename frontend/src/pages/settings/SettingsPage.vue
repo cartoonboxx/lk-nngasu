@@ -1,15 +1,10 @@
-
 <template>
-  <!-- первая секция -->
   <section :class="style.settingsPage">
     <h1>Настройки</h1>
-    <p :class="style.settingsPageDescription">
-      Основные параметры личного кабинета
-    </p>
+    <p>Основные параметры личного кабинета</p>
   </section>
-<!-- основа -->
+
   <section :class="style.settingsCard">
-    <!-- Фото -->
     <div :class="style.settingsSection">
       <h2>Фото профиля</h2>
 
@@ -25,28 +20,22 @@
         </div>
 
         <div :class="style.profileInfo">
-          <p :class="style.profileInfoName">Анна Иванова</p>
-          <p :class="style.profileInfoRole">Студентка</p>
+          <p>Анна Иванова</p>
+          <p>Студентка</p>
         </div>
 
-        <button class="_base_qfg6r_1 _md_qfg6r_28 _secondary_5ij5q_12"
-          type="button">Изменить фото</button>
+        <Button variant="secondary">Изменить фото</Button>
       </div>
     </div>
 
-    <div :class="style.settingsDivider"></div>
-
-<!-- Тема -->
     <div :class="style.settingsSectionRow">
-      <div >
-        <h2 :class="style.settingsSectionTitle">Тема интерфейса</h2>
-        <p :class="style.settingsSectionDescription">
-          Выберите удобное оформление
-        </p>
+      <div>
+        <h2>Тема интерфейса</h2>
+        <p>Выберите удобное оформление</p>
       </div>
 
       <div :class="style.tabColumn" role="listbox" aria-label="Выбор темы">
-        <StyleTab 
+        <StyleTab
           v-for="item in themeOptions"
           :key="item.value"
           :text="item.label"
@@ -56,24 +45,16 @@
       </div>
     </div>
 
-    <div :class="style.settingsDivider"></div>
+    <div :class="style.settingsSectionRow">
+      <div>
+        <h2>Пароль</h2>
+        <p>Изменить пароль для входа</p>
+      </div>
 
-<!-- Пароль -->
- <div :class="style.settingsSectionRow">
-
-    <div>
-      <h2 :class="style.settingsSectionTitle">Пароль</h2>
-      <p :class="style.settingsSectionDescription">Изменить пароль для входа</p>
+      <div>
+        <Button variant="secondary">Изменить пароль</Button>
+      </div>
     </div>
-
-    <div>
-      <button
-        class="_base_qfg6r_1 _md_qfg6r_28 _secondary_5ij5q_12"
-        type="button">Изменить пароль
-      </button>
-    </div>
- </div>
-
   </section>
 </template>
 
@@ -81,12 +62,14 @@
 import { defineComponent } from 'vue'
 import style from './SettingsPage.module.scss'
 import StyleTab from '@/components/UI/tabs/StyleTab/StyleTab.vue'
+import Button from '@/components/UI/buttons/Button/Button.vue'
 
 export default defineComponent({
   name: 'SettingsPage',
 
   components: {
     StyleTab,
+    Button,
   },
 
   data() {
