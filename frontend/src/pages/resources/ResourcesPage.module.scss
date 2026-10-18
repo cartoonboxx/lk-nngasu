@@ -1,0 +1,212 @@
+
+.page {
+  width: 100%;
+}
+
+.header {
+  margin-bottom: 24px;
+}
+
+.pageHeader {
+  margin: 0 0 6px;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.pageDescription {
+  margin: 0;
+  color: #8196AD;
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.pageInput {
+  display: flex;
+  width: 100%;
+  margin-bottom: 28px;
+
+  > * {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+.section {
+  margin-bottom: 28px;
+}
+
+.sectionHeading {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 14px;
+
+  h2 {
+    margin: 0;
+    font-size: 23px;
+    font-weight: 700;
+  }
+
+  p {
+    margin: 0;
+    color: #A9BBD0;
+    font-size: 13px;
+  }
+}
+
+.servicesGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+// #456179
+// #20394D
+
+// #071521 #091A28 #0C1E2D
+.serviceCard {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  min-width: 0;
+  min-height: 170px;
+  padding: 20px 22px;
+  background: #0C1E2D;
+  border: 1px solid #20394D;
+  border-radius: 7px;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+
+  &:hover {
+    background-color: rgba(255, 138, 61, 0.1);
+    border-color: #FF7A1A;
+  }
+}
+
+.cardContent {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+
+  h3 {
+    margin: 0 0 10px;
+    font-size: 20px;
+    font-weight: 700;
+  }
+
+  p {
+    margin: 0 0 8px;
+    color: #a8bed8;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+}
+
+.domain {
+  margin-bottom: 12px;
+  color: #829dbb;
+  font-size: 12px;
+}
+
+.cardLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  color: #51a9ff;
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+
+  &:hover {
+    color: #91ceff;
+    text-decoration: underline;
+  }
+}
+
+.serviceIcon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  padding-top: 4px;
+  color: #ff922e;
+}
+
+.serviceCard:nth-child(2) .serviceIcon {
+  color: #ffb847;
+}
+
+.serviceCard:nth-child(3) .serviceIcon {
+  color: #20a9ff;
+}
+
+.serviceCard:nth-child(4) .serviceIcon {
+  color: #a48bff;
+}
+
+.contactsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.contactCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  min-width: 0;
+  padding: 16px;
+  background: #0C1E2D;
+  border: 1px solid #20394D;
+  border-radius: 7px;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease;
+
+  &:hover {
+    background-color: rgba(255, 138, 61, 0.1);
+    border-color: #FF7A1A;
+  }
+}
+
+.contactIcon {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  color: #67d0ff;
+  background: #103b5b;
+  border-radius: 50%;
+}
+
+.contactContent {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+
+  h3 {
+    margin: 4px 0 6px;
+    font-size: 15px;
+    font-weight: 700;
+  }
+
+  p {
+    margin: 0 0 16px;
+    color: #a8bed8;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+}
+
+
+
