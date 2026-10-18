@@ -1,14 +1,9 @@
 <template>
-  <main :class="style.page">
-    <!-- Заголовок -->
     <section :class="style.header">
-      <h1 :class="style.pageHeader">Ресурсы и сервисы</h1>
-      <p :class="style.pageDescription">
-        Учебные платформы, боты и контакты университета
-      </p>
+      <h1>Ресурсы и сервисы</h1>
+      <p>Учебные платформы, боты и контакты университета</p>
     </section>
 
-    <!-- Поиск -->
     <section :class="style.pageInput">
       <StyleInput
         v-model="searchQuery"
@@ -21,14 +16,12 @@
       </StyleInput>
     </section>
 
-    <!-- Сервисы университета -->
     <section :class="style.section">
       <div :class="style.sectionHeading">
         <h2>Сервисы университета</h2>
         <p>Открываются в новой вкладке</p>
       </div>
 
-      <!-- сделано через артикли так как, если использовать табы не получается нормально изображение разместить-->
       <div :class="style.servicesGrid">
         <article
           v-for="service in filteredServices"
@@ -38,7 +31,6 @@
           <div :class="style.cardContent">
             <h3>{{ service.label }}</h3>
             <p>{{ service.description }}</p>
-            <span :class="style.domain">{{ service.domain }}</span>
 
             <a
               :href="service.url"
@@ -58,7 +50,6 @@
       </div>
     </section>
 
-    <!-- Контакты университета -->
     <section :class="style.section">
       <div :class="style.sectionHeading">
         <h2>Контакты университета</h2>
@@ -87,7 +78,6 @@
       </div>
 
     </section>
-  </main>
 </template>
 
 <script lang="ts">
