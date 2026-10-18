@@ -1,7 +1,7 @@
 <template :class="style.page">
   <section :class="style.pageHeader">
     <h1>Предметы</h1>
-    <p :class="style.pageDescription">Дисциплины текущего семестра</p>
+    <p >Дисциплины текущего семестра</p>
   </section>
 
   <section :class="style.pageInput">
