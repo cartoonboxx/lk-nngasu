@@ -1,39 +1,28 @@
-
 <template :class="style.page">
-  <!-- Заголовок -->
   <section :class="style.pageHeader">
     <h1>Предметы</h1>
-    <p :class="style.pageDescription">
-      Дисциплины текущего семестра
-    </p>
+    <p :class="style.pageDescription">Дисциплины текущего семестра</p>
   </section>
 
-  <!-- Поиск и выбор семестра -->
   <section :class="style.pageInput">
-    <StyleInput 
-      v-model="searchQuery"
-      placeholder="Поиск дисциплины"
-      :full-width="true">
+    <StyleInput v-model="searchQuery" placeholder="Поиск дисциплины" :full-width="true">
       <template #prefix>
         <PhMagnifyingGlass :size="20" aria-hidden="true" />
       </template>
     </StyleInput>
 
-    <StyleSelect
-      v-model="selectedSemester"
-      :options="semesterOptions"
-    />
+    <StyleSelect v-model="selectedSemester" :options="semesterOptions" />
   </section>
 
-  <!-- Табы с названиями предметов -->
   <section :class="style.pageSubjectSemestr">
-    <StyleTab
+    <Button
       v-for="subject in filteredSubjects"
       :key="subject.value"
-      :text="subject.label"
-      :active="selectedSubject === subject.value"
-      @select="selectedSubject = subject.value"
-    />
+      :variant="selectedSubject === subject.value ? 'primary' : 'secondary'"
+      @click="selectedSubject = subject.value"
+    >
+      {{ subject.label }}
+    </Button>
   </section>
 </template>
 
@@ -42,9 +31,9 @@ import { defineComponent } from 'vue'
 import style from './SubjectPage.module.scss'
 import { PhMagnifyingGlass } from '@phosphor-icons/vue'
 
-import StyleTab from '@/components/UI/tabs/StyleTab/StyleTab.vue'
 import StyleInput from '@/components/UI/inputs/Input/Input.vue'
 import StyleSelect from '@/components/UI/inputs/Select/Select.vue'
+import Button from '@/components/UI/buttons/Button/Button.vue'
 
 interface Subject {
   label: string
@@ -56,7 +45,6 @@ export default defineComponent({
   name: 'SubjectsPage',
 
   components: {
-    StyleTab,
     StyleInput,
     StyleSelect,
     PhMagnifyingGlass,
@@ -129,15 +117,14 @@ export default defineComponent({
       ] as Subject[],
     }
   },
-// 
   computed: {
     filteredSubjects(): Subject[] {
       const query = this.searchQuery.trim().toLowerCase()
 
       return this.subjects.filter((subject) => {
-        const matchesSemester =subject.semester === this.selectedSemester
+        const matchesSemester = subject.semester === this.selectedSemester
 
-        const matchesSearch =subject.label.toLowerCase().includes(query)
+        const matchesSearch = subject.label.toLowerCase().includes(query)
 
         return matchesSemester && matchesSearch
       })
@@ -146,7 +133,7 @@ export default defineComponent({
 
   watch: {
     filteredSubjects(subjects: Subject[]) {
-      const selectedExists = subjects.some((subject) => subject.value === this.selectedSubject,)
+      const selectedExists = subjects.some((subject) => subject.value === this.selectedSubject)
 
       if (!selectedExists) {
         this.selectedSubject = subjects[0]?.value ?? ''
