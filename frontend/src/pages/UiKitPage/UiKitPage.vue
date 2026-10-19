@@ -393,11 +393,36 @@
         </article>
       </div>
     </section>
+    <section :class="style.section" aria-labelledby="modal-title">
+      <div :class="style.sectionHeading">
+        <h2 id="modal-title">Модальное окно</h2>
+      </div>
+      <div :class="style.showcase">
+        <article :class="style.group">
+          <h3>Произвольное содержимое</h3>
+          <div :class="style.row">
+            <Button @click="modalOpen = true">Открыть модальное окно</Button>
+          </div>
+        </article>
+      </div>
+      <Modal v-model="modalOpen" v-slot="{ close }" aria-labelledby="feedback-title">
+        <div :class="style.modalActions">
+          <div :class="style.header">
+            <h3 id="feedback-title">Обратная связь</h3>
+            <p>Напишите сообщение, и мы постараемся помочь.</p>
+          </div>
+          <IconButton ariaLabel="Закрыть окно" variant="ghost" @click="close">
+            <PhX :size="20" aria-hidden="true" />
+          </IconButton>
+        </div>
+        <Input v-model="modalMessage" multiline full-width placeholder="Ваше сообщение" />
+      </Modal>
+    </section>
   </main>
 </template>
 
 <script lang="ts">
-import { PhAirplaneTaxiing, PhHouse, PhMagnifyingGlass } from '@phosphor-icons/vue'
+import { PhAirplaneTaxiing, PhHouse, PhMagnifyingGlass, PhX } from '@phosphor-icons/vue'
 import { defineComponent, markRaw } from 'vue'
 
 import Badge from '@/components/UI/Badge/Badge.vue'
@@ -405,6 +430,7 @@ import Button from '@/components/UI/buttons/Button/Button.vue'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 import Input from '@/components/UI/inputs/Input/Input.vue'
 import Select from '@/components/UI/inputs/Select/Select.vue'
+import Modal from '@/components/UI/modal/BaseModal/Modal.vue'
 import FloatingPopup from '@/components/UI/popup/FloatingPopup/FloatingPopup.vue'
 import IconTab from '@/components/UI/tabs/IconTab/IconTab.vue'
 import StyleTab from '@/components/UI/tabs/StyleTab/StyleTab.vue'
@@ -490,6 +516,7 @@ export default defineComponent({
     Badge,
     Button,
     PhHouse,
+    PhX,
     PhAirplaneTaxiing,
     PhMagnifyingGlass,
     IconButton,
@@ -497,6 +524,7 @@ export default defineComponent({
     Input,
     Select,
     FloatingPopup,
+    Modal,
     StyleTab,
     BaseTab,
     NavTab,
@@ -504,6 +532,8 @@ export default defineComponent({
   data() {
     return {
       style,
+      modalOpen: false,
+      modalMessage: '',
       activeTab: 'schedule',
       popupTab: 'schedule',
       selectedSubject: '',
