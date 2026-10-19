@@ -4,12 +4,15 @@
       ref="dialog"
       v-bind="$attrs"
       :class="style.overlay"
-      @cancel.prevent="close"
+      @cancel.self.prevent="close"
       @close="onNativeClose"
       @pointerdown="backdropPressed = $event.target === $event.currentTarget"
       @click="onBackdropClick"
     >
-      <div :class="style.modal">
+      <div
+        :class="style.modal"
+        :style="{ width: typeof width === 'number' ? `${width}px` : width }"
+      >
         <div :class="style.content">
           <slot :close="close" />
         </div>
@@ -37,6 +40,7 @@ export default defineComponent({
   inheritAttrs: false,
   props: {
     modelValue: { type: Boolean, default: false },
+    width: { type: [Number, String], default: 540 },
     closeOnOverlay: { type: Boolean, default: true },
   },
   emits: {

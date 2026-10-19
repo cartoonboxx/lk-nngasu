@@ -11,6 +11,7 @@
     :aria-describedby="ariaDescribedby"
     :value="modelValue"
     :placeholder="placeholder"
+    :maxlength="maxlength"
     :disabled="disabled"
     :style="{ minHeight: normalizedBaseHeight }"
     @input="handleInput"
@@ -29,6 +30,7 @@
     :type="type"
     :value="modelValue"
     :placeholder="placeholder"
+    :maxlength="maxlength"
     :disabled="disabled"
     @input="handleInput"
     @change="handleInput"
@@ -70,6 +72,10 @@ export default defineComponent({
     },
     ariaDescribedby: {
       type: String,
+      default: undefined,
+    },
+    maxlength: {
+      type: Number,
       default: undefined,
     },
     placeholder: {
@@ -130,10 +136,9 @@ export default defineComponent({
       this.syncValue()
     },
     handleInput(event: Event) {
-      this.$emit(
-        'update:modelValue',
-        (event.target as HTMLInputElement | HTMLTextAreaElement).value,
-      )
+      const value = (event.target as HTMLInputElement | HTMLTextAreaElement).value
+      if (value === this.modelValue) return
+      this.$emit('update:modelValue', value)
       this.$nextTick(() => this.resizeTextarea())
     },
     resizeTextarea() {

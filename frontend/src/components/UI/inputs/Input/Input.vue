@@ -17,6 +17,7 @@
       :ariaDescribedby="ariaDescribedby"
       :model-value="currentValue"
       :placeholder="placeholder"
+      :maxlength="maxlength"
       :size="size"
       :type="type"
       :disabled="disabled || variant === 'disabled'"
@@ -69,6 +70,10 @@ export default defineComponent({
     },
     ariaDescribedby: {
       type: String,
+      default: undefined,
+    },
+    maxlength: {
+      type: Number,
       default: undefined,
     },
     placeholder: {

@@ -14,10 +14,20 @@
         :topic="activeTopic"
         :topic-index="activeTopicIndex"
         :topic-count="topics.length"
+        @open-assignment="assignmentOpen = true"
         @previous="selectTopic(activeTopicIndex - 1)"
         @next="selectTopic(activeTopicIndex + 1)"
       />
     </div>
+    <AssignmentModal
+      v-model="assignmentOpen"
+      course-title="Логическое программирование"
+      :topic="activeTopic"
+      :topic-index="activeTopicIndex"
+      :answer="activeAnswer"
+      @submit="submitAnswer"
+      @delete="deleteAnswer"
+    />
   </section>
 </template>
 
@@ -26,16 +36,24 @@ import { defineComponent } from 'vue'
 import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import AsideCoursePanel from './components/AsideCoursePanel/AsideCoursePanel.vue'
 import ContentCourseComponent from './components/ContentCourseComponent/ContentCourseComponent.vue'
+import AssignmentModal from './components/AssignmentModal/AssignmentModal.vue'
+import type {
+  AssignmentAnswer,
+  AssignmentAnswerDraft,
+} from './components/AssignmentModal/assignment.types'
+import { assignmentAnswers } from './assignmentAnswers'
 import type { CourseTopic } from './course.types'
 import style from './CoursePage.module.scss'
 
 export default defineComponent({
   name: 'CoursePage',
-  components: { SectionHeader, AsideCoursePanel, ContentCourseComponent },
+  components: { SectionHeader, AsideCoursePanel, ContentCourseComponent, AssignmentModal },
   data() {
     return {
       style,
       activeTopicIndex: 0,
+      assignmentOpen: false,
+      assignmentAnswers,
       topics: [
         {
           id: 'introduction',
@@ -106,11 +124,24 @@ export default defineComponent({
     }
   },
   computed: {
+    answerKey(): string {
+      return JSON.stringify([this.$route.params.id, this.activeTopic.id])
+    },
+    activeAnswer(): AssignmentAnswer | null {
+      return this.assignmentAnswers[this.answerKey] ?? null
+    },
     activeTopic(): CourseTopic {
       return this.topics[this.activeTopicIndex]!
     },
   },
   methods: {
+    submitAnswer(draft: AssignmentAnswerDraft) {
+      if (this.activeAnswer?.review) return
+      this.assignmentAnswers[this.answerKey] = { ...draft, submittedAt: new Date().toISOString() }
+    },
+    deleteAnswer() {
+      if (!this.activeAnswer?.review) delete this.assignmentAnswers[this.answerKey]
+    },
     selectTopic(index: number) {
       if (index < 0 || index >= this.topics.length) return
       this.activeTopicIndex = index

@@ -40,7 +40,7 @@
             <span>Срок сдачи: {{ topic.deadline }}, 23:59</span>
           </p>
 
-          <Button>Открыть задание</Button>
+          <Button @click="$emit('open-assignment')">Открыть задание</Button>
         </div>
       </div>
     </section>
@@ -88,7 +88,7 @@ export default defineComponent({
     topicIndex: { type: Number, required: true },
     topicCount: { type: Number, required: true },
   },
-  emits: ['previous', 'next'],
+  emits: ['previous', 'next', 'open-assignment'],
   data() {
     return { style }
   },
