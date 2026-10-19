@@ -92,27 +92,27 @@
           </div>
           <p :id="`${id}-files-hint`" :class="style.muted">До 10 файлов, не более 20 МБ каждый</p>
           <ul v-if="attachments.length" :class="style.files" aria-label="Прикреплённые файлы">
-            <li v-for="attachment in attachments" :key="attachment.id" :class="style.file">
-              <span
-                :class="[
-                  style.fileIcon,
-                  attachment.name.toLowerCase().endsWith('.pdf') ? style.pdf : null,
-                ]"
-                aria-hidden="true"
-              >
-                <component :is="fileIcon(attachment.name)" :size="34" weight="duotone" />
-              </span>
-              <span :class="style.fileName"
-                >{{ attachment.name }} <small>{{ formatSize(attachment.size) }}</small></span
-              >
-              <IconButton
-                :ariaLabel="`Удалить файл ${attachment.name}`"
-                variant="ghost"
-                size="sm"
-                @click="removeFile(attachment.id)"
-              >
-                <PhX :size="20" aria-hidden="true" />
-              </IconButton>
+            <li v-for="attachment in attachments" :key="attachment.id">
+              <MediaButton :title="attachment.name" :meta="formatSize(attachment.size)" readonly>
+                <template #icon>
+                  <component
+                    :is="fileIcon(attachment.name)"
+                    :class="attachment.name.toLowerCase().endsWith('.pdf') ? style.pdf : null"
+                    :size="34"
+                    weight="duotone"
+                  />
+                </template>
+                <template #actions>
+                  <IconButton
+                    :ariaLabel="`Удалить файл ${attachment.name}`"
+                    variant="ghost"
+                    size="sm"
+                    @click="removeFile(attachment.id)"
+                  >
+                    <PhX :size="20" aria-hidden="true" />
+                  </IconButton>
+                </template>
+              </MediaButton>
             </li>
           </ul>
         </div>
@@ -142,28 +142,23 @@
         </div>
         <p v-if="answer.comment" :class="style.comment">{{ answer.comment }}</p>
         <ul v-if="answer.attachments.length" :class="style.files" aria-label="Файлы ответа">
-          <li v-for="attachment in answer.attachments" :key="attachment.id" :class="style.file">
-            <span
-              :class="[
-                style.fileIcon,
-                attachment.name.toLowerCase().endsWith('.pdf') ? style.pdf : null,
-              ]"
-              aria-hidden="true"
-            >
-              <component :is="fileIcon(attachment.name)" :size="34" weight="duotone" />
-            </span>
-            <span :class="style.fileName"
-              >{{ attachment.name }} <small>{{ formatSize(attachment.size) }}</small></span
-            >
-            <IconButton
-              v-if="attachment.file || attachment.url"
+          <li v-for="attachment in answer.attachments" :key="attachment.id">
+            <MediaButton
+              :title="attachment.name"
+              :meta="formatSize(attachment.size)"
+              :readonly="!attachment.file && !attachment.url"
               :ariaLabel="`Скачать ${attachment.name}`"
-              variant="ghost"
-              size="sm"
               @click="download(attachment)"
             >
-              <PhDownloadSimple :size="20" aria-hidden="true" />
-            </IconButton>
+              <template #icon>
+                <component
+                  :is="fileIcon(attachment.name)"
+                  :class="attachment.name.toLowerCase().endsWith('.pdf') ? style.pdf : null"
+                  :size="34"
+                  weight="duotone"
+                />
+              </template>
+            </MediaButton>
           </li>
         </ul>
         <section v-if="answer.review" :class="style.review" aria-label="Результат проверки">
@@ -209,7 +204,6 @@
 import { defineComponent, useId, type PropType } from 'vue'
 import {
   PhCalendarBlank,
-  PhDownloadSimple,
   PhFileCode,
   PhFilePdf,
   PhFileText,
@@ -218,6 +212,7 @@ import {
 } from '@phosphor-icons/vue'
 import Modal from '@/components/UI/modal/BaseModal/Modal.vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
+import MediaButton from '@/components/UI/buttons/MediaButton/MediaButton.vue'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 import Input from '@/components/UI/inputs/Input/Input.vue'
 import type { CourseTopic } from '../../course.types'
@@ -233,10 +228,10 @@ export default defineComponent({
   components: {
     Modal,
     Button,
+    MediaButton,
     IconButton,
     Input,
     PhCalendarBlank,
-    PhDownloadSimple,
     PhFileCode,
     PhFilePdf,
     PhFileText,

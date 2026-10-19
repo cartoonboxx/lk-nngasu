@@ -9,23 +9,18 @@
     <section :class="style.materials">
       <h3>Материалы</h3>
       <div :class="style.materialList">
-        <button
+        <MediaButton
           v-for="material in materials"
           :key="material.kind"
-          :class="style.material"
-          type="button"
-          :aria-label="`Скачать: ${material.title}`"
+          :title="material.title"
+          :meta="material.meta"
+          :ariaLabel="`Скачать: ${material.title}`"
           @click="downloadMaterial(material)"
         >
-          <span :class="[style.fileIcon, style[material.kind]]" aria-hidden="true">
-            <component :is="material.icon" :size="30" weight="fill" />
-          </span>
-          <span :class="style.materialCopy">
-            <span :class="style.materialTitle">{{ material.title }}</span>
-            <span :class="style.materialMeta">{{ material.meta }}</span>
-          </span>
-          <PhDownloadSimple :class="style.downloadIcon" :size="20" aria-hidden="true" />
-        </button>
+          <template #icon>
+            <component :is="material.icon" :class="style[material.kind]" :size="30" weight="fill" />
+          </template>
+        </MediaButton>
       </div>
     </section>
 
@@ -64,12 +59,12 @@ import {
   PhCalendarBlank,
   PhCaretLeft,
   PhCaretRight,
-  PhDownloadSimple,
   PhFileCode,
   PhFileText,
   PhPresentationChart,
 } from '@phosphor-icons/vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
+import MediaButton from '@/components/UI/buttons/MediaButton/MediaButton.vue'
 import type { CourseTopic } from '../../course.types.ts'
 import style from './ContentCourseComponent.module.scss'
 
@@ -82,7 +77,7 @@ interface CourseMaterial {
 
 export default defineComponent({
   name: 'ContentCourseComponent',
-  components: { Button, PhCalendarBlank, PhCaretLeft, PhCaretRight, PhDownloadSimple },
+  components: { Button, MediaButton, PhCalendarBlank, PhCaretLeft, PhCaretRight },
   props: {
     topic: { type: Object as PropType<CourseTopic>, required: true },
     topicIndex: { type: Number, required: true },

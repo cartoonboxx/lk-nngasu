@@ -15,6 +15,9 @@ test('student submits, edits and deletes a separate answer for each topic', asyn
   await dialog.getByRole('button', { name: 'Отправить преподавателю' }).click()
   await expect(dialog.getByRole('status')).toContainText('Ожидает проверки')
   await expect(dialog.getByLabel('Отправленный ответ')).toContainText('answer.pl')
+  const answerDownloadPromise = page.waitForEvent('download')
+  await dialog.getByRole('button', { name: 'Скачать answer.pl', exact: true }).click()
+  expect((await answerDownloadPromise).suggestedFilename()).toBe('answer.pl')
   await dialog.getByRole('button', { name: 'Редактировать ответ' }).click()
   await dialog.getByLabel('Комментарий к ответу').fill('Исправленный ответ')
   await dialog.getByRole('button', { name: 'Сохранить изменения' }).click()
@@ -86,4 +89,17 @@ test('cancelling the file picker keeps the assignment and its draft open', async
   await expect(dialog.getByLabel('Прикреплённые файлы')).toContainText('answer.pl')
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
+})
+
+test('course materials download through MediaButton', async ({ page }) => {
+  await page.goto('/subjects/logic')
+  for (const [title, filename] of [
+    ['Лекция 1', 'introduction-lecture.md'],
+    ['План темы', 'introduction-presentation.md'],
+    ['Практическая работа №1', 'introduction-practice.md'],
+  ]) {
+    const downloadPromise = page.waitForEvent('download')
+    await page.getByRole('button', { name: `Скачать: ${title}`, exact: true }).click()
+    expect((await downloadPromise).suggestedFilename()).toBe(filename)
+  }
 })

@@ -165,41 +165,11 @@
   gap: var(--space-2);
   list-style: none;
 }
-.file {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-  min-height: 64px;
-  padding: var(--space-3) var(--space-4);
-  border: 1px solid var(--color-border-level-1);
-  border-radius: var(--radius-md);
-  background: var(--color-surface-level-1);
-  > button {
-    flex-shrink: 0;
-    color: var(--color-content-interactive);
-  }
-}
-.fileIcon {
-  display: grid;
-  flex-shrink: 0;
-  place-items: center;
-  color: var(--color-content-interactive);
-}
+
 .pdf {
   color: var(--color-status-error-content);
 }
-.fileName {
-  min-width: 0;
-  flex: 1;
-  overflow-wrap: anywhere;
-  font-size: var(--font-size-body-small);
-  small {
-    display: block;
-    margin-top: 2px;
-    color: var(--color-text-muted);
-    font-size: var(--font-size-caption);
-  }
-}
+
 .actions {
   display: flex;
   flex-wrap: wrap;
