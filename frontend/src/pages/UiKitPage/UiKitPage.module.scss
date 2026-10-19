@@ -123,3 +123,14 @@
     font-weight: 600;
   }
 }
+
+.modalActions {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-4);
+
+  .header {
+    display: flex;
+    flex-direction: column;
+  }
+}
