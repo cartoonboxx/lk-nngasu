@@ -18,12 +18,12 @@
   gap: var(--space-4);
   margin-bottom: var(--space-6);
   margin-right: var(
-    --space-6
+    --space-7
   ); //проблема когда появляется список при нажатии он больше чем основной и появляется скролл, пока такое решение проблеммы
   overflow: visible;
 }
 
-.pageSubjectSemestr {
+.pageSubjectSemester {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-5);
