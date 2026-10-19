@@ -83,6 +83,8 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 import style from './ResourcesPage.module.scss'
+import VK_logo from '$images/vk_logo.svg'
+
 
 import {
   PhMagnifyingGlass,
@@ -152,7 +154,7 @@ export default defineComponent({
           domain: '',
           url: 'https://vk.ru/nngasu',
           linkText: 'Открыть в ВК',
-          icon: PhTelegramLogo,// поменять на вк
+          icon: VK_logo,
         },
         {
           label: 'MAX-бот',
