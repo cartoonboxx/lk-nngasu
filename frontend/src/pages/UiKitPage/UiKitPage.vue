@@ -48,6 +48,79 @@
       </div>
     </section>
 
+    <section :class="style.section" aria-labelledby="media-buttons-title">
+      <div :class="style.sectionHeading">
+        <h2 id="media-buttons-title">Медиафайлы</h2>
+      </div>
+      <div :class="style.showcase">
+        <article :class="style.group">
+          <h3>Скачивание материалов</h3>
+          <div :class="style.mediaList">
+            <MediaButton
+              title="Лекция 1"
+              meta="Конспект · MD"
+              ariaLabel="Скачать лекцию 1"
+              @click="downloadMediaExample"
+            >
+              <template #icon
+                ><PhFileText :class="style.mediaError" :size="30" weight="fill"
+              /></template>
+            </MediaButton>
+            <MediaButton
+              title="План темы"
+              meta="Учебный материал · MD"
+              ariaLabel="Скачать план темы"
+              @click="downloadMediaExample"
+            >
+              <template #icon
+                ><PhPresentationChart :class="style.mediaWarning" :size="30" weight="fill"
+              /></template>
+            </MediaButton>
+            <MediaButton
+              title="Практическая работа №1"
+              meta="Задание · MD"
+              @click="downloadMediaExample"
+            >
+              <template #icon><PhFileCode :size="30" weight="fill" /></template>
+            </MediaButton>
+            <MediaButton title="Недоступный материал" meta="Скачивание недоступно" disabled>
+              <template #icon><PhFileText :size="30" /></template>
+            </MediaButton>
+          </div>
+        </article>
+        <article :class="style.group">
+          <h3>Readonly — прикреплённые файлы</h3>
+          <div :class="style.mediaList">
+            <MediaButton v-if="mediaAttachmentVisible" title="main.pl" meta="4 КБ" readonly>
+              <template #icon><PhFileCode :size="34" weight="duotone" /></template>
+              <template #actions>
+                <IconButton
+                  ariaLabel="Удалить файл main.pl"
+                  variant="ghost"
+                  size="sm"
+                  @click="mediaAttachmentVisible = false"
+                  ><PhX :size="20"
+                /></IconButton>
+              </template>
+            </MediaButton>
+            <Button v-else variant="secondary" @click="mediaAttachmentVisible = true"
+              >Вернуть файл main.pl</Button
+            >
+            <MediaButton title="Отчёт.pdf" meta="1,2 МБ" readonly>
+              <template #icon
+                ><PhFilePdf :class="style.mediaError" :size="34" weight="duotone"
+              /></template>
+            </MediaButton>
+            <MediaButton readonly>
+              <template #icon><PhFileText :size="34" weight="duotone" /></template>
+              <span>Произвольное содержимое через слот</span>
+              <small>Дополнительная информация о файле</small>
+            </MediaButton>
+          </div>
+        </article>
+      </div>
+    </section>
+
     <section :class="style.section" aria-labelledby="inputs-title">
       <div :class="style.sectionHeading">
         <h2 id="inputs-title">Поля ввода</h2>
@@ -422,11 +495,21 @@
 </template>
 
 <script lang="ts">
-import { PhAirplaneTaxiing, PhHouse, PhMagnifyingGlass, PhX } from '@phosphor-icons/vue'
+import {
+  PhAirplaneTaxiing,
+  PhHouse,
+  PhMagnifyingGlass,
+  PhX,
+  PhFileText,
+  PhFileCode,
+  PhFilePdf,
+  PhPresentationChart,
+} from '@phosphor-icons/vue'
 import { defineComponent, markRaw } from 'vue'
 
 import Badge from '@/components/UI/Badge/Badge.vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
+import MediaButton from '@/components/UI/buttons/MediaButton/MediaButton.vue'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 import Input from '@/components/UI/inputs/Input/Input.vue'
 import Select from '@/components/UI/inputs/Select/Select.vue'
@@ -513,6 +596,11 @@ const iconTabStates: Array<{ value: IconTabState; label: string }> = [
 export default defineComponent({
   name: 'UiKitPage',
   components: {
+    MediaButton,
+    PhFileText,
+    PhFileCode,
+    PhFilePdf,
+    PhPresentationChart,
     Badge,
     Button,
     PhHouse,
@@ -532,6 +620,7 @@ export default defineComponent({
   data() {
     return {
       style,
+      mediaAttachmentVisible: true,
       modalOpen: false,
       modalMessage: '',
       activeTab: 'schedule',
@@ -565,6 +654,20 @@ export default defineComponent({
       textareaValue:
         'Textarea использует базовую высоту 96px и расширяется по высоте, когда текста становится больше.',
     }
+  },
+  methods: {
+    downloadMediaExample() {
+      const url = URL.createObjectURL(
+        new Blob(['# Учебный материал\n\nПример файла из UI Kit.'], {
+          type: 'text/markdown;charset=utf-8',
+        }),
+      )
+      const link = document.createElement('a')
+      link.href = url
+      link.download = 'material.md'
+      link.click()
+      setTimeout(() => URL.revokeObjectURL(url), 1000)
+    },
   },
 })
 </script>
