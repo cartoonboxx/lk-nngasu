@@ -1,4 +1,4 @@
-<template :class="style.page">
+<template>
   <section :class="style.pageHeader">
     <h1>Предметы</h1>
     <p >Дисциплины текущего семестра</p>
@@ -14,11 +14,11 @@
     <StyleSelect v-model="selectedSemester" :options="semesterOptions" />
   </section>
 
-  <section :class="style.pageSubjectSemestr">
+  <section :class="style.pageSubjectSemester">
     <Button
       v-for="subject in filteredSubjects"
       :key="subject.value"
-      :variant="selectedSubject === subject.value ? 'primary' : 'secondary'"
+      :variant="selectedSubject === subject.value ? 'secondary' : 'secondary'"
       @click="selectedSubject = subject.value"
     >
       {{ subject.label }}
@@ -48,6 +48,7 @@ export default defineComponent({
     StyleInput,
     StyleSelect,
     PhMagnifyingGlass,
+    Button,
   },
 
   data() {
