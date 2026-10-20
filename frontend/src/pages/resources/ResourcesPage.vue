@@ -19,7 +19,7 @@
     </div>
 
     <div :class="style.servicesGrid">
-      <ServiceCardComponent
+      <ServiceCard
         v-for="service in filteredServices"
         :key="service.label"
         :label="service.label"
@@ -35,8 +35,9 @@
     <div :class="style.sectionHeading">
       <h2>Контакты университета</h2>
     </div>
+
     <div :class="style.contactsGrid">
-      <ContactCardComponent
+      <ServiceCard
         v-for="contact in filteredContacts"
         :key="contact.label"
         :label="contact.label"
@@ -44,6 +45,8 @@
         :url="contact.url"
         :link-text="contact.linkText"
         :icon="contact.icon"
+        icon-position="left"
+        variant="contact"
       />
     </div>
   </section>
@@ -51,15 +54,18 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue'
+import type { Component } from 'vue'
+
 import style from './ResourcesPage.module.scss'
+
 import VK_logo from '$images/vk-logo.svg'
 import Max_logo from '$images/MAX.svg'
-import ServiceCardComponent from '../../components/Resources/ServiceCard/ServiceCard.vue'
-import ContactCardComponent from '../../components/Resources/ContactCard/ContactCard.vue'
+
+import ServiceCard from './components/ServiceCard/ServiceCard.vue'
+import StyleInput from '@/components/UI/inputs/Input/Input.vue'
 
 import {
   PhMagnifyingGlass,
-  PhArrowSquareOut,
   PhGraduationCap,
   PhPlayCircle,
   PhUsersThree,
@@ -67,23 +73,21 @@ import {
   PhHeadset,
 } from '@phosphor-icons/vue'
 
-import StyleInput from '@/components/UI/inputs/Input/Input.vue'
-
-interface Service {
+type Service = {
   label: string
   description: string
   domain: string
   url: string
   linkText: string
-  icon: typeof PhGraduationCap | string
+  icon: string | Component
 }
 
-interface Contact {
+type Contact = {
   label: string
   description: string
   url: string
   linkText: string
-  icon: typeof PhUsersThree
+  icon: Component
 }
 
 export default defineComponent({
@@ -91,10 +95,8 @@ export default defineComponent({
 
   components: {
     StyleInput,
+    ServiceCard,
     PhMagnifyingGlass,
-    PhArrowSquareOut,
-    ContactCardComponent,
-    ServiceCardComponent,
   },
 
   data() {
@@ -106,7 +108,7 @@ export default defineComponent({
         {
           label: 'Moodle LMS',
           description: 'Учебные материалы, задания и курсы в системе электронного обучения.',
-          domain: 'lms.nggasu.ru',
+          domain: 'lms.nngasu.ru',
           url: 'https://lms.nngasu.ru/',
           linkText: 'Открыть Moodle',
           icon: PhGraduationCap,
@@ -114,7 +116,7 @@ export default defineComponent({
         {
           label: 'Видеолекции',
           description: 'Записи лекций и видеоматериалы по дисциплинам.',
-          domain: '',
+          domain: 'видеолекции',
           url: '#',
           linkText: 'Смотреть лекции',
           icon: PhPlayCircle,
@@ -122,7 +124,7 @@ export default defineComponent({
         {
           label: 'ВК',
           description: 'Доступ к сервисам личного кабинета через ВК.',
-          domain: '',
+          domain: 'vk.ru',
           url: 'https://vk.ru/nngasu',
           linkText: 'Открыть в ВК',
           icon: VK_logo,
@@ -130,7 +132,7 @@ export default defineComponent({
         {
           label: 'MAX-бот',
           description: 'Взаимодействие с личным кабинетом в мессенджере MAX.',
-          domain: '',
+          domain: 'max.ru',
           url: 'https://max.ru',
           linkText: 'Открыть в MAX',
           icon: Max_logo,

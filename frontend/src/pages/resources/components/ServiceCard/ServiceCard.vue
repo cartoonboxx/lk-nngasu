@@ -1,5 +1,5 @@
 <template>
-  <article :class="style.card">
+  <article :class="[style.card, style[iconPosition]]">
     <div :class="style.content">
       <h3>{{ label }}</h3>
       <p>{{ description }}</p>
@@ -10,7 +10,7 @@
       </a>
     </div>
 
-    <div :class="style.icon">
+    <div :class="[style.icon,style[iconPosition],style[variant]]">
       <img
         v-if="typeof icon === 'string'"
         :src="icon"
@@ -18,7 +18,7 @@
         :alt="`${label} — логотип`"
       />
 
-      <component :is="icon" v-else :size="56" weight="fill" aria-hidden="true" />
+      <component :is="icon" v-else :size="variant === 'contact' ? 28 : 56" weight="fill" aria-hidden="true" />
     </div>
   </article>
 </template>
@@ -57,6 +57,15 @@ export default defineComponent({
     icon: {
       type: [String, Object] as unknown as () => string | Component,
       required: true,
+    },
+    iconPosition: {
+      type: String as () => 'left' | 'right',
+      default: 'right',
+      validator: (value: string) => ['left', 'right'].includes(value),
+    },
+    variant: {
+      type: String as () => 'service' | 'contact',
+      default: 'service',
     },
   },
 
