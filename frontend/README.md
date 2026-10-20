@@ -1,4 +1,30 @@
-# .
+# Frontend ННГАСУ
+
+## Запуск через Docker для разработки
+
+Запустите Docker Desktop. В папке `frontend` выполните:
+
+```sh
+docker compose up
+```
+
+При первом запуске Compose соберёт образ и установит зависимости.
+Откройте http://localhost:1488. Изменения в `src` и `public` доступны
+контейнеру сразу; Vite обновляет страницу во время разработки.
+
+Для остановки нажмите Ctrl+C. Чтобы удалить остановленный контейнер и сеть:
+
+```sh
+docker compose down
+```
+
+После изменения зависимостей (`package.json` или `package-lock.json`),
+Dockerfile или других файлов, которые не подключены через `volumes`,
+пересоберите образ:
+
+```sh
+docker compose up --build
+```
 
 This template should help get you started developing with Vue 3 in Vite.
 
