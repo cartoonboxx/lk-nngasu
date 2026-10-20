@@ -5,6 +5,31 @@
       <h1>Компоненты интерфейса</h1>
     </header>
 
+    <section :class="style.section" aria-labelledby="tooltip-title">
+      <div :class="style.sectionHeading">
+        <h2 id="tooltip-title">Tooltip</h2>
+      </div>
+      <div :class="style.showcase">
+        <article :class="style.group">
+          <h3>Расположение</h3>
+          <div :class="style.row">
+            <Tooltip
+              v-for="position in tooltipPositions"
+              :key="position"
+              :position="position"
+              :text="`Подсказка: ${position}`"
+            >
+              <Button variant="secondary">{{ position }}</Button>
+            </Tooltip>
+            <Tooltip position="right">
+              <span :class="style.badgeTarget">Разметка</span>
+              <template #content>Подсказка с <strong>разметкой</strong></template>
+            </Tooltip>
+          </div>
+        </article>
+      </div>
+    </section>
+
     <section :class="style.section" aria-labelledby="buttons-title">
       <div :class="style.sectionHeading">
         <h2 id="buttons-title">Кнопки</h2>
@@ -507,6 +532,7 @@ import {
 } from '@phosphor-icons/vue'
 import { defineComponent, markRaw } from 'vue'
 
+import Tooltip, { type TooltipPosition } from '@/components/UI/Tooltip/Tooltip.vue'
 import Badge from '@/components/UI/Badge/Badge.vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
 import MediaButton from '@/components/UI/buttons/MediaButton/MediaButton.vue'
@@ -596,6 +622,7 @@ const iconTabStates: Array<{ value: IconTabState; label: string }> = [
 export default defineComponent({
   name: 'UiKitPage',
   components: {
+    Tooltip,
     MediaButton,
     PhFileText,
     PhFileCode,
@@ -620,6 +647,7 @@ export default defineComponent({
   data() {
     return {
       style,
+      tooltipPositions: ['top', 'bottom', 'left', 'right'] as TooltipPosition[],
       mediaAttachmentVisible: true,
       modalOpen: false,
       modalMessage: '',
