@@ -19,26 +19,15 @@
     </div>
 
     <div :class="style.servicesGrid">
-      <article v-for="service in filteredServices" :key="service.label" :class="style.serviceCard">
-        <div :class="style.cardContent">
-          <h3>{{ service.label }}</h3>
-          <p>{{ service.description }}</p>
-
-          <a :href="service.url" target="_blank" rel="noopener noreferrer" :class="style.cardLink">
-            {{ service.linkText }}
-            <PhArrowSquareOut :size="18" />
-          </a>
-        </div>
-
-        <div :class="style.serviceIcon">
-          <img
-            v-if="typeof service.icon === 'string'"
-            :src="service.icon"
-            alt="Логотип ВКонтакте"
-          />
-          <component v-else :is="service.icon" :size="56" weight="fill" />
-        </div>
-      </article>
+      <ServiceCardComponent
+        v-for="service in filteredServices"
+        :key="service.label"
+        :label="service.label"
+        :description="service.description"
+        :url="service.url"
+        :link-text="service.linkText"
+        :icon="service.icon"
+      />
     </div>
   </section>
 
@@ -46,23 +35,16 @@
     <div :class="style.sectionHeading">
       <h2>Контакты университета</h2>
     </div>
-
     <div :class="style.contactsGrid">
-      <article v-for="contact in filteredContacts" :key="contact.label" :class="style.contactCard">
-        <div :class="style.contactIcon">
-          <component :is="contact.icon" :size="28" />
-        </div>
-
-        <div :class="style.contactContent">
-          <h3>{{ contact.label }}</h3>
-          <p>{{ contact.description }}</p>
-
-          <a :href="contact.url" :class="style.cardLink">
-            {{ contact.linkText }}
-            <PhArrowSquareOut :size="18" />
-          </a>
-        </div>
-      </article>
+      <ContactCardComponent
+        v-for="contact in filteredContacts"
+        :key="contact.label"
+        :label="contact.label"
+        :description="contact.description"
+        :url="contact.url"
+        :link-text="contact.linkText"
+        :icon="contact.icon"
+      />
     </div>
   </section>
 </template>
@@ -72,14 +54,14 @@ import { defineComponent } from 'vue'
 import style from './ResourcesPage.module.scss'
 import VK_logo from '$images/vk-logo.svg'
 import Max_logo from '$images/MAX.svg'
+import ServiceCardComponent from '../../components/Resources/ServiceCard/ServiceCard.vue'
+import ContactCardComponent from '../../components/Resources/ContactCard/ContactCard.vue'
 
 import {
   PhMagnifyingGlass,
   PhArrowSquareOut,
   PhGraduationCap,
   PhPlayCircle,
-  PhTelegramLogo,
-  PhChatCircle,
   PhUsersThree,
   PhFileText,
   PhHeadset,
@@ -111,6 +93,8 @@ export default defineComponent({
     StyleInput,
     PhMagnifyingGlass,
     PhArrowSquareOut,
+    ContactCardComponent,
+    ServiceCardComponent,
   },
 
   data() {
