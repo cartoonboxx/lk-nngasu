@@ -1,69 +1,84 @@
 <template>
-  <section :class="style.header">
-    <h1>Ресурсы и сервисы</h1>
-    <p>Учебные платформы, боты и контакты университета</p>
-  </section>
+  <section :class="style.resoursePage">
+    <SectionHeader
+      header="Ресурсы и сервисы"
+      paragraph="Учебные платформы, боты и контакты университета"
+    />
 
-  <section :class="style.pageInput">
-    <StyleInput v-model="searchQuery" placeholder="Поиск ресурса или службы" :full-width="true">
-      <template #prefix>
-        <PhMagnifyingGlass :size="20" aria-hidden="true" />
-      </template>
-    </StyleInput>
-  </section>
+    <section :class="style.pageInput">
+      <StyleInput v-model="searchQuery" placeholder="Поиск ресурса или службы" :full-width="true">
+        <template #prefix>
+          <PhMagnifyingGlass :size="20" aria-hidden="true" />
+        </template>
+      </StyleInput>
+    </section>
 
-  <section :class="style.section">
-    <div :class="style.sectionHeading">
-      <h2>Сервисы университета</h2>
-      <p>Открываются в новой вкладке</p>
-    </div>
+    <section :class="style.section">
+      <div :class="style.sectionHeading">
+        <h2>Сервисы университета</h2>
+        <p>Открываются в новой вкладке</p>
+      </div>
 
-    <div :class="style.servicesGrid">
-      <article v-for="service in filteredServices" :key="service.label" :class="style.serviceCard">
-        <div :class="style.cardContent">
-          <h3>{{ service.label }}</h3>
-          <p>{{ service.description }}</p>
+      <div :class="style.servicesGrid">
+        <article
+          v-for="service in filteredServices"
+          :key="service.label"
+          :class="style.serviceCard"
+        >
+          <div :class="style.cardContent">
+            <h3>{{ service.label }}</h3>
+            <p>{{ service.description }}</p>
 
-          <a :href="service.url" target="_blank" rel="noopener noreferrer" :class="style.cardLink">
-            {{ service.linkText }}
-            <PhArrowSquareOut :size="18" />
-          </a>
-        </div>
+            <a
+              :href="service.url"
+              target="_blank"
+              rel="noopener noreferrer"
+              :class="style.cardLink"
+            >
+              {{ service.linkText }}
+              <PhArrowSquareOut :size="18" />
+            </a>
+          </div>
 
-        <div :class="style.serviceIcon">
-          <img
-            v-if="typeof service.icon === 'string'"
-            :src="service.icon"
-            alt="Логотип ВКонтакте"
-          />
-          <component v-else :is="service.icon" :size="56" weight="fill" />
-        </div>
-      </article>
-    </div>
-  </section>
+          <div :class="style.serviceIcon">
+            <img
+              v-if="typeof service.icon === 'string'"
+              :src="service.icon"
+              alt="Логотип ВКонтакте"
+            />
+            <component v-else :is="service.icon" :size="56" weight="fill" />
+          </div>
+        </article>
+      </div>
+    </section>
 
-  <section :class="style.section">
-    <div :class="style.sectionHeading">
-      <h2>Контакты университета</h2>
-    </div>
+    <section :class="style.section">
+      <div :class="style.sectionHeading">
+        <h2>Контакты университета</h2>
+      </div>
 
-    <div :class="style.contactsGrid">
-      <article v-for="contact in filteredContacts" :key="contact.label" :class="style.contactCard">
-        <div :class="style.contactIcon">
-          <component :is="contact.icon" :size="28" />
-        </div>
+      <div :class="style.contactsGrid">
+        <article
+          v-for="contact in filteredContacts"
+          :key="contact.label"
+          :class="style.contactCard"
+        >
+          <div :class="style.contactIcon">
+            <component :is="contact.icon" :size="28" />
+          </div>
 
-        <div :class="style.contactContent">
-          <h3>{{ contact.label }}</h3>
-          <p>{{ contact.description }}</p>
+          <div :class="style.contactContent">
+            <h3>{{ contact.label }}</h3>
+            <p>{{ contact.description }}</p>
 
-          <a :href="contact.url" :class="style.cardLink">
-            {{ contact.linkText }}
-            <PhArrowSquareOut :size="18" />
-          </a>
-        </div>
-      </article>
-    </div>
+            <a :href="contact.url" :class="style.cardLink">
+              {{ contact.linkText }}
+              <PhArrowSquareOut :size="18" />
+            </a>
+          </div>
+        </article>
+      </div>
+    </section>
   </section>
 </template>
 
@@ -84,6 +99,7 @@ import {
 } from '@phosphor-icons/vue'
 
 import StyleInput from '@/components/UI/inputs/Input/Input.vue'
+import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 
 interface Service {
   label: string
@@ -106,6 +122,7 @@ export default defineComponent({
   name: 'ResourcesPage',
 
   components: {
+    SectionHeader,
     StyleInput,
     PhMagnifyingGlass,
     PhArrowSquareOut,

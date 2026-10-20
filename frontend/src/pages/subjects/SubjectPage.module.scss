@@ -1,14 +1,7 @@
-.pageHeader {
-  margin-bottom: var(--space-6);
+@use '@/styles/mixins';
 
-  h1 {
-    margin-bottom: var(--space-2);
-  }
-  p {
-    margin: var(--space-0);
-    color: var(--color-status-neutral-content);
-    font-size: var(--font-size-body-small);
-  }
+.subjectPage {
+  @include mixins.setLayout()
 }
 
 .pageInput {

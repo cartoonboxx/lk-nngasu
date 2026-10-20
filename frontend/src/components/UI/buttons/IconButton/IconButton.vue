@@ -2,7 +2,6 @@
   <button
     :class="[style.button, style[size], style[variant], state !== 'default' ? style[state] : null]"
     :type="type"
-    :aria-label="ariaLabel"
     :disabled="disabled || state === 'disabled'"
   >
     <slot />
@@ -16,10 +15,6 @@ import style from './IconButton.module.scss'
 export default defineComponent({
   name: 'IconButton',
   props: {
-    ariaLabel: {
-      type: String,
-      required: true,
-    },
     variant: {
       type: String as PropType<IconButtonVariant>,
       default: 'secondary',

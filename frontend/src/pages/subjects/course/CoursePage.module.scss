@@ -1,6 +1,9 @@
+@use '@/styles/mixins';
+
 .coursePage {
   min-width: 0;
   container-type: inline-size;
+  @include mixins.setLayout();
 
   .courseContent {
     display: grid;

@@ -1,28 +1,27 @@
 <template>
-  <section :class="style.pageHeader">
-    <h1>Предметы</h1>
-    <p >Дисциплины текущего семестра</p>
-  </section>
+  <section :class="style.subjectPage">
+    <SectionHeader header="Предметы" paragraph="Дисциплины текущего семестра" />
 
-  <section :class="style.pageInput">
-    <StyleInput v-model="searchQuery" placeholder="Поиск дисциплины" :full-width="true">
-      <template #prefix>
-        <PhMagnifyingGlass :size="20" aria-hidden="true" />
-      </template>
-    </StyleInput>
+    <section :class="style.pageInput">
+      <StyleInput v-model="searchQuery" placeholder="Поиск дисциплины" :full-width="true">
+        <template #prefix>
+          <PhMagnifyingGlass :size="20" aria-hidden="true" />
+        </template>
+      </StyleInput>
 
-    <StyleSelect v-model="selectedSemester" :options="semesterOptions" />
-  </section>
+      <StyleSelect v-model="selectedSemester" :options="semesterOptions" />
+    </section>
 
-  <section :class="style.pageSubjectSemester">
-    <Button
-      v-for="subject in filteredSubjects"
-      :key="subject.value"
-      :variant="selectedSubject === subject.value ? 'secondary' : 'secondary'"
-      @click="selectedSubject = subject.value"
-    >
-      {{ subject.label }}
-    </Button>
+    <section :class="style.pageSubjectSemester">
+      <Button
+        v-for="subject in filteredSubjects"
+        :key="subject.value"
+        :variant="selectedSubject === subject.value ? 'secondary' : 'secondary'"
+        @click="selectedSubject = subject.value"
+      >
+        {{ subject.label }}
+      </Button>
+    </section>
   </section>
 </template>
 
@@ -34,6 +33,7 @@ import { PhMagnifyingGlass } from '@phosphor-icons/vue'
 import StyleInput from '@/components/UI/inputs/Input/Input.vue'
 import StyleSelect from '@/components/UI/inputs/Select/Select.vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
+import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 
 interface Subject {
   label: string
@@ -45,6 +45,7 @@ export default defineComponent({
   name: 'SubjectsPage',
 
   components: {
+    SectionHeader,
     StyleInput,
     StyleSelect,
     PhMagnifyingGlass,

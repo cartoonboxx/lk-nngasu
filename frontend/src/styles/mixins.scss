@@ -1,0 +1,7 @@
+@mixin setLayout($version: 'PC') {
+  width: 100%;
+
+  @if ($version == 'PC') {
+    max-width: var(--max-width-pc);
+  }
+}

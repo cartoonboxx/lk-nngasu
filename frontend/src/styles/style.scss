@@ -95,6 +95,9 @@
   --font-size-action: 14px;
   --font-size-caption: 12px;
   --font-size-display: 40px;
+
+  // screen
+  --max-width-pc: 1200px;
 }
 
 @media screen and (max-width: 540px) {

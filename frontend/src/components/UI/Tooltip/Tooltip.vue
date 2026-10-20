@@ -3,13 +3,13 @@
     ref="trigger"
     :class="style.root"
     :aria-describedby="visible ? id : undefined"
-    @mouseenter="hovered = true"
+    @mouseenter="isShow ? onMouseOn() : null"
     @mouseleave="onMouseleave"
   >
     <slot />
     <Teleport to="body">
       <Transition
-        :enter-active-class="style.transition"
+        :enter-active-class="style.enterTransition"
         :leave-active-class="style.transition"
         :enter-from-class="style.hidden"
         :leave-to-class="style.hidden"
@@ -37,9 +37,21 @@ export type TooltipPosition = 'top' | 'bottom' | 'left' | 'right'
 export default defineComponent({
   name: 'Tooltip',
   props: {
-    text: { type: String, default: '' },
-    position: { type: String as PropType<TooltipPosition>, default: 'top' },
-    disabled: Boolean,
+    text: {
+      type: String,
+      default: '',
+    },
+    position: {
+      type: String as PropType<TooltipPosition>,
+      default: 'top',
+    },
+    disabled: {
+      type: Boolean,
+    },
+    isShow: {
+      type: Boolean,
+      default: true,
+    },
   },
   data() {
     return {
@@ -49,6 +61,7 @@ export default defineComponent({
       dismissed: false,
       x: 0,
       y: 0,
+      animationFrame: 0,
     }
   },
   computed: {
@@ -64,9 +77,7 @@ export default defineComponent({
   watch: {
     visible(value: boolean) {
       if (value) {
-        this.updatePosition()
-        window.addEventListener('scroll', this.updatePosition, true)
-        window.addEventListener('resize', this.updatePosition)
+        this.trackPosition()
         document.addEventListener('keydown', this.onKeydown)
       } else {
         this.removeListeners()
@@ -80,6 +91,10 @@ export default defineComponent({
     this.removeListeners()
   },
   methods: {
+    trackPosition() {
+      this.updatePosition()
+      this.animationFrame = window.requestAnimationFrame(this.trackPosition)
+    },
     updatePosition() {
       const trigger = this.$refs.trigger as HTMLElement | undefined
       if (!trigger) return
@@ -101,12 +116,14 @@ export default defineComponent({
       this.hovered = false
       this.dismissed = false
     },
+    onMouseOn() {
+      this.hovered = true
+    },
     onKeydown(event: KeyboardEvent) {
       if (event.key === 'Escape') this.dismissed = true
     },
     removeListeners() {
-      window.removeEventListener('scroll', this.updatePosition, true)
-      window.removeEventListener('resize', this.updatePosition)
+      window.cancelAnimationFrame(this.animationFrame)
       document.removeEventListener('keydown', this.onKeydown)
     },
   },

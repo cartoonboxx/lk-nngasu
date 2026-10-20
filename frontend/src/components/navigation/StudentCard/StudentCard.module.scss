@@ -63,3 +63,32 @@
     color: var(--color-text-secondary);
   }
 }
+
+.card.compact {
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  grid-template-columns: 40px;
+  align-self: center;
+  justify-content: center;
+  gap: 0;
+  padding: 3px;
+  border-color: transparent;
+  border-radius: var(--radius-round);
+  background: transparent;
+  transition: background-color 160ms ease;
+
+  .avatar {
+    width: 40px;
+    height: 40px;
+  }
+
+  &:hover {
+    border-color: transparent;
+    background: var(--color-surface-navigation-hover);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+}

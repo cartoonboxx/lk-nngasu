@@ -2,4 +2,15 @@
   min-height: 100vh;
   margin-left: 280px;
   padding: var(--space-6);
+  transition: margin-left 200ms ease;
+  display: flex;
+  justify-content: center;
+
+  &.collapsed {
+    margin-left: 80px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 }

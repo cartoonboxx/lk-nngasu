@@ -1,6 +1,6 @@
 <template>
   <BaseTab
-    :class="style.tab"
+    :class="[style.tab, compact ? style.compact : null]"
     :text="text"
     :image-src="imageSrc"
     :image-alt="imageAlt"
@@ -9,7 +9,7 @@
     :icon-weight="iconWeight"
     :active="active"
     :disabled="disabled"
-    :trigger-attrs="triggerAttrs"
+    :trigger-attrs="compact ? { 'aria-label': text, title: text, ...triggerAttrs } : triggerAttrs"
     @select="$emit('select')"
   >
     <template v-if="$slots.default" #default><slot /></template>
@@ -33,7 +33,13 @@ export default defineComponent({
   components: {
     BaseTab,
   },
-  props: baseTabProps,
+  props: {
+    ...baseTabProps,
+    compact: {
+      type: Boolean,
+      default: false,
+    },
+  },
   data() {
     return {
       style,

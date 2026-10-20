@@ -1,11 +1,7 @@
-.settingsPage {
-  margin-bottom: var(--space-5);
+@use '@/styles/mixins';
 
-  p {
-    margin: var(--space-0);
-    color: var(--color-status-neutral-content);
-    font-size: var(--font-size-body-small);
-  }
+.settingsPage {
+  @include mixins.setLayout()
 }
 
 .settingsCard {

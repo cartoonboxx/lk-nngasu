@@ -32,12 +32,7 @@
             >
           </p>
         </div>
-        <IconButton
-          :class="style.close"
-          ariaLabel="Закрыть задание"
-          variant="ghost"
-          @click="$emit('update:modelValue', false)"
-        >
+        <IconButton :class="style.close" variant="ghost" @click="$emit('update:modelValue', false)">
           <PhX :size="24" aria-hidden="true" />
         </IconButton>
       </header>
@@ -103,12 +98,7 @@
                   />
                 </template>
                 <template #actions>
-                  <IconButton
-                    :ariaLabel="`Удалить файл ${attachment.name}`"
-                    variant="ghost"
-                    size="sm"
-                    @click="removeFile(attachment.id)"
-                  >
+                  <IconButton variant="ghost" size="sm" @click="removeFile(attachment.id)">
                     <PhX :size="20" aria-hidden="true" />
                   </IconButton>
                 </template>
