@@ -77,7 +77,7 @@
 .profileInfo {
   p {
     &:first-child {
-      margin-bottom: var(-space-1);
+      margin-bottom: var(--space-1);
     }
     &:last-child {
       margin: var(--space-0);

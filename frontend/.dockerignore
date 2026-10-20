@@ -4,3 +4,10 @@ dist
 .eslintcache
 test-results
 playwright-report
+coverage
+.env
+.env.*
+!.env.example
+*.local
+*.log
+.DS_Store
