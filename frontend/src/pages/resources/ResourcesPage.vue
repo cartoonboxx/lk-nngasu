@@ -20,35 +20,15 @@
       </div>
 
       <div :class="style.servicesGrid">
-        <article
+        <ServiceCard
           v-for="service in filteredServices"
           :key="service.label"
-          :class="style.serviceCard"
-        >
-          <div :class="style.cardContent">
-            <h3>{{ service.label }}</h3>
-            <p>{{ service.description }}</p>
-
-            <a
-              :href="service.url"
-              target="_blank"
-              rel="noopener noreferrer"
-              :class="style.cardLink"
-            >
-              {{ service.linkText }}
-              <PhArrowSquareOut :size="18" />
-            </a>
-          </div>
-
-          <div :class="style.serviceIcon">
-            <img
-              v-if="typeof service.icon === 'string'"
-              :src="service.icon"
-              alt="Логотип ВКонтакте"
-            />
-            <component v-else :is="service.icon" :size="56" weight="fill" />
-          </div>
-        </article>
+          :label="service.label"
+          :description="service.description"
+          :url="service.url"
+          :link-text="service.linkText"
+          :icon="service.icon"
+        />
       </div>
     </section>
 
@@ -58,25 +38,17 @@
       </div>
 
       <div :class="style.contactsGrid">
-        <article
+        <ServiceCard
           v-for="contact in filteredContacts"
           :key="contact.label"
-          :class="style.contactCard"
-        >
-          <div :class="style.contactIcon">
-            <component :is="contact.icon" :size="28" />
-          </div>
-
-          <div :class="style.contactContent">
-            <h3>{{ contact.label }}</h3>
-            <p>{{ contact.description }}</p>
-
-            <a :href="contact.url" :class="style.cardLink">
-              {{ contact.linkText }}
-              <PhArrowSquareOut :size="18" />
-            </a>
-          </div>
-        </article>
+          :label="contact.label"
+          :description="contact.description"
+          :url="contact.url"
+          :link-text="contact.linkText"
+          :icon="contact.icon"
+          icon-position="left"
+          variant="contact"
+        />
       </div>
     </section>
   </section>
@@ -84,13 +56,19 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue'
+import type { Component } from 'vue'
+
 import style from './ResourcesPage.module.scss'
+
 import VK_logo from '$images/vk-logo.svg'
 import Max_logo from '$images/MAX.svg'
 
+import ServiceCard from './components/ServiceCard/ServiceCard.vue'
+import StyleInput from '@/components/UI/inputs/Input/Input.vue'
+import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
+
 import {
   PhMagnifyingGlass,
-  PhArrowSquareOut,
   PhGraduationCap,
   PhPlayCircle,
   PhUsersThree,
@@ -98,24 +76,21 @@ import {
   PhHeadset,
 } from '@phosphor-icons/vue'
 
-import StyleInput from '@/components/UI/inputs/Input/Input.vue'
-import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
-
-interface Service {
+type Service = {
   label: string
   description: string
   domain: string
   url: string
   linkText: string
-  icon: typeof PhGraduationCap | string
+  icon: string | Component
 }
 
-interface Contact {
+type Contact = {
   label: string
   description: string
   url: string
   linkText: string
-  icon: typeof PhUsersThree
+  icon: Component
 }
 
 export default defineComponent({
@@ -124,8 +99,8 @@ export default defineComponent({
   components: {
     SectionHeader,
     StyleInput,
+    ServiceCard,
     PhMagnifyingGlass,
-    PhArrowSquareOut,
   },
 
   data() {
@@ -137,7 +112,7 @@ export default defineComponent({
         {
           label: 'Moodle LMS',
           description: 'Учебные материалы, задания и курсы в системе электронного обучения.',
-          domain: 'lms.nggasu.ru',
+          domain: 'lms.nngasu.ru',
           url: 'https://lms.nngasu.ru/',
           linkText: 'Открыть Moodle',
           icon: PhGraduationCap,
@@ -145,7 +120,7 @@ export default defineComponent({
         {
           label: 'Видеолекции',
           description: 'Записи лекций и видеоматериалы по дисциплинам.',
-          domain: '',
+          domain: 'видеолекции',
           url: '#',
           linkText: 'Смотреть лекции',
           icon: PhPlayCircle,
@@ -153,7 +128,7 @@ export default defineComponent({
         {
           label: 'ВК',
           description: 'Доступ к сервисам личного кабинета через ВК.',
-          domain: '',
+          domain: 'vk.ru',
           url: 'https://vk.ru/nngasu',
           linkText: 'Открыть в ВК',
           icon: VK_logo,
@@ -161,7 +136,7 @@ export default defineComponent({
         {
           label: 'MAX-бот',
           description: 'Взаимодействие с личным кабинетом в мессенджере MAX.',
-          domain: '',
+          domain: 'max.ru',
           url: 'https://max.ru',
           linkText: 'Открыть в MAX',
           icon: Max_logo,

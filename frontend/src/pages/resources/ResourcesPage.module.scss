@@ -38,130 +38,14 @@
   gap: var(--space-3);
 }
 
-.serviceCard {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: var(--space-4);
-  min-height: 170px;
-  padding: var(--space-5) var(--space-6);
-  background: var(--color-surface-level-3);
-  border: 1px solid var(--color-border-level-1);
-  border-radius: var(--radius-sm);
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease;
-
-  &:hover {
-    background-color: rgba(255, 138, 61, 0.1);
-    border-color: var(--color-accent-hover);
-  }
-
-  .serviceIcon {
-    display: flex;
-    flex-shrink: 0;
-    align-items: center;
-    justify-content: center;
-    padding-top: var(--space-1);
-    color: var(--color-content-accent);
-  }
-  img{
-    width: 52px;
-    height: 52px;
-    object-fit: contain;
-  }
-}
-.serviceCard:nth-child(2) .serviceIcon {
-  color: var(--color-content-accent);
-}
-
-.serviceCard:nth-child(3) .serviceIcon {
-  color: var(--color-brand-blue);
-}
-
-.serviceCard:nth-child(4) .serviceIcon {
-  color: var(--color-brand-blue);
-}
-
-.cardContent {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  align-items: flex-start;
-  min-width: 0;
-
-  h3 {
-    margin-bottom: var(--space-2);
-  }
-
-  p {
-    margin-bottom: var(--space-2);
-    color: var(--color-text-secondary);
-  }
-}
-.cardLink {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-1);
-  margin-top: auto;
-  color: var(--color-content-interactive);
-  font-size: var(--font-size-label);
-
-  &:hover {
-    color: var(--color-accent-hover);
-    text-decoration: underline;
-  }
-}
-
 .contactsGrid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-3);
 }
 
-.contactCard {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-3);
-  padding: var(--space-4);
-  background: var(--color-surface-level-3);
-  border: 1px solid var(--color-border-level-1);
-  border-radius: var(--radius-sm);
-  transition:
-    background-color 0.2s ease,
-    border-color 0.2s ease;
 
-  &:hover {
-    background-color: rgba(255, 138, 61, 0.1);
-    border-color: var(--color-accent-hover);
-  }
-}
 
-.contactIcon {
-  display: flex;
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: center;
-  width: 56px;
-  height: 56px;
-  color: var(--color-content-interactive);
-  background: var(--color-surface-active);
-  border-radius: 50%;
-}
 
-.contactContent {
-  display: flex;
-  flex: 1;
-  flex-direction: column;
-  align-items: flex-start;
 
-  h3 {
-    margin-top: var(--space-1);
-    margin-bottom: var(--space-1);
-  }
 
-  p {
-    margin-bottom: var(--space-4);
-    color: var(--color-status-neutral-content);
-  }
-}
