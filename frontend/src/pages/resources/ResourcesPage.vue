@@ -78,8 +78,6 @@ import {
   PhArrowSquareOut,
   PhGraduationCap,
   PhPlayCircle,
-  PhTelegramLogo,
-  PhChatCircle,
   PhUsersThree,
   PhFileText,
   PhHeadset,
