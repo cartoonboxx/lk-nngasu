@@ -2,9 +2,6 @@
   <button
     :class="[style.tab, style[size], style[variant], state !== 'default' ? style[state] : null]"
     type="button"
-    role="tab"
-    :aria-label="ariaLabel"
-    :aria-selected="variant === 'selected'"
     :disabled="disabled || state === 'disabled'"
   >
     <slot />
@@ -18,10 +15,6 @@ import style from './IconTab.module.scss'
 export default defineComponent({
   name: 'IconTab',
   props: {
-    ariaLabel: {
-      type: String,
-      required: true,
-    },
     variant: {
       type: String as PropType<IconTabVariant>,
       default: 'default',

@@ -13,8 +13,6 @@
       :name="name"
       :autocomplete="autocomplete"
       :required="required"
-      :ariaInvalid="ariaInvalid"
-      :ariaDescribedby="ariaDescribedby"
       :model-value="currentValue"
       :placeholder="placeholder"
       :maxlength="maxlength"
@@ -63,14 +61,6 @@ export default defineComponent({
     required: {
       type: Boolean,
       default: false,
-    },
-    ariaInvalid: {
-      type: Boolean,
-      default: false,
-    },
-    ariaDescribedby: {
-      type: String,
-      default: undefined,
     },
     maxlength: {
       type: Number,

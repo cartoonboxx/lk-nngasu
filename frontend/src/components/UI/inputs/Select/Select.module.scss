@@ -70,7 +70,7 @@
   .caret {
     flex-shrink: 0;
     transition: transform 160ms ease;
-    [aria-expanded='true'] & {
+    &.open {
       transform: rotate(180deg);
     }
   }

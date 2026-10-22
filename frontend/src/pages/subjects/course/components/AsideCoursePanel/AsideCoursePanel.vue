@@ -1,5 +1,5 @@
 <template>
-  <aside :class="style.courses" aria-label="Темы курса">
+  <aside :class="style.courses">
     <div ref="topicList" :class="style.topicList">
       <NavTab
         v-for="(topic, index) in topics"
@@ -8,8 +8,6 @@
         :text="topic.title"
         :active="index === activeTopicIndex"
         :trigger-attrs="{
-          id: `course-topic-${topic.id}`,
-          'aria-controls': 'course-topic-content',
           tabindex: index === activeTopicIndex ? 0 : -1,
           onKeydown: (event: KeyboardEvent) => onTopicKeydown(event, index),
         }"
@@ -70,7 +68,7 @@ export default defineComponent({
       this.$emit('select', target)
       await this.$nextTick()
       ;(this.$refs.topicList as HTMLElement)
-        ?.querySelectorAll<HTMLButtonElement>('[role="tab"]')
+        ?.querySelectorAll<HTMLButtonElement>('button')
         [target]?.focus()
     },
   },

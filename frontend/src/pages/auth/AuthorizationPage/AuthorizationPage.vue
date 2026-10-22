@@ -1,8 +1,8 @@
 <template>
-  <AuthLayout title-id="authorization-title">
+  <AuthLayout>
     <form :class="style.form" @submit.prevent>
       <header :class="style.header">
-        <h2 id="authorization-title">Вход в аккаунт</h2>
+        <h2>Вход в аккаунт</h2>
       </header>
 
       <div :class="style.fields">

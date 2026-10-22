@@ -6,11 +6,11 @@
 
       <a :class="style.link" :href="url" target="_blank" rel="noopener noreferrer">
         {{ linkText }}
-        <PhArrowSquareOut :size="18" aria-hidden="true" />
+        <PhArrowSquareOut :size="18" />
       </a>
     </div>
 
-    <div :class="[style.icon,style[iconPosition],style[variant]]">
+    <div :class="[style.icon, style[iconPosition], style[variant]]">
       <img
         v-if="typeof icon === 'string'"
         :src="icon"
@@ -18,7 +18,7 @@
         :alt="`${label} — логотип`"
       />
 
-      <component :is="icon" v-else :size="variant === 'contact' ? 28 : 56" weight="fill" aria-hidden="true" />
+      <component :is="icon" v-else :size="variant === 'contact' ? 28 : 56" weight="fill" />
     </div>
   </article>
 </template>

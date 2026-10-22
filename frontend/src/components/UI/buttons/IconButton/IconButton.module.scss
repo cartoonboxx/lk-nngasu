@@ -33,6 +33,10 @@
     opacity: 0.56;
   }
 
+  &.round {
+    border-radius: var(--radius-round);
+  }
+
   &.sm {
     --icon-button-size: 32px;
     --icon-size: 16px;

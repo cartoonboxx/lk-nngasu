@@ -1,17 +1,12 @@
 <template>
-  <button
-    :class="[style.card, compact ? style.compact : null]"
-    type="button"
-    :aria-label="`Открыть профиль ${name}`"
-    :title="compact ? `${name} · ${role}` : undefined"
-  >
+  <button :class="[style.card, compact ? style.compact : null]" type="button">
     <img v-if="imageSrc" :class="style.avatar" :src="imageSrc" :alt="imageAlt" />
-    <span v-else :class="style.avatar" aria-hidden="true">АИ</span>
+    <span v-else :class="style.avatar">АИ</span>
     <span v-if="!compact" :class="style.copy">
       <strong>{{ name }}</strong>
       <span>{{ role }}</span>
     </span>
-    <PhCaretRight v-if="!compact" :class="style.arrow" :size="18" aria-hidden="true" />
+    <PhCaretRight v-if="!compact" :class="style.arrow" :size="18" />
   </button>
 </template>
 

@@ -1,10 +1,25 @@
-import { describe, it, expect } from 'vitest'
+import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
 
 import { mount } from '@vue/test-utils'
 import App from '../App.vue'
 import router from '../router'
 
 describe('App', () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn(() => ({
+        matches: false,
+        addEventListener: vi.fn<MediaQueryList['addEventListener']>(),
+        removeEventListener: vi.fn<MediaQueryList['removeEventListener']>(),
+      })),
+    )
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   it('mounts renders properly', async () => {
     router.push('/ui-kit')
     await router.isReady()

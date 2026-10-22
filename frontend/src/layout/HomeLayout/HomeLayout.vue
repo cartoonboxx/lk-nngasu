@@ -1,6 +1,12 @@
 <template>
-  <NavBar @collapse-change="navigationCollapsed = $event" />
-  <main :class="[style.mainContent, navigationCollapsed ? style.collapsed : null]">
+  <NavBar
+    @collapse-change="navigationCollapsed = $event"
+    @mobile-menu-change="mobileMenuOpen = $event"
+  />
+  <main
+    :inert="mobileMenuOpen"
+    :class="[style.mainContent, navigationCollapsed ? style.collapsed : null]"
+  >
     <RouterView />
   </main>
 </template>
@@ -17,6 +23,7 @@ export default defineComponent({
     return {
       style,
       navigationCollapsed: false,
+      mobileMenuOpen: false,
     }
   },
 })

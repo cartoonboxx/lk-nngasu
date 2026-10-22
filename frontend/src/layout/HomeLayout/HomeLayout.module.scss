@@ -14,3 +14,16 @@
     transition: none;
   }
 }
+
+@media (max-width: 767px) {
+  .mainContent,
+  .mainContent.collapsed {
+    min-width: 0;
+    margin-left: 0;
+    padding: max(var(--space-4), env(safe-area-inset-top))
+      max(var(--space-4), env(safe-area-inset-right))
+      calc(72px + env(safe-area-inset-bottom) + var(--space-4))
+      max(var(--space-4), env(safe-area-inset-left));
+    transition: none;
+  }
+}

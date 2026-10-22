@@ -13,25 +13,39 @@ test('student submits, edits and deletes a separate answer for each topic', asyn
   })
   await dialog.getByLabel('Комментарий к ответу').fill('Первый ответ')
   await dialog.getByRole('button', { name: 'Отправить преподавателю' }).click()
-  await expect(dialog.getByRole('status')).toContainText('Ожидает проверки')
-  await expect(dialog.getByLabel('Отправленный ответ')).toContainText('answer.pl')
+  await expect(
+    dialog.locator('p').filter({ hasText: /^(Не отправлено|Ожидает проверки|Работа проверена)$/ }),
+  ).toContainText('Ожидает проверки')
+  await expect(
+    dialog
+      .locator('section')
+      .filter({ has: page.getByRole('heading', { name: 'Ваш ответ', exact: true }) }),
+  ).toContainText('answer.pl')
   const answerDownloadPromise = page.waitForEvent('download')
-  await dialog.getByRole('button', { name: 'Скачать answer.pl', exact: true }).click()
+  await dialog.getByRole('button').filter({ hasText: 'answer.pl' }).click()
   expect((await answerDownloadPromise).suggestedFilename()).toBe('answer.pl')
   await dialog.getByRole('button', { name: 'Редактировать ответ' }).click()
   await dialog.getByLabel('Комментарий к ответу').fill('Исправленный ответ')
   await dialog.getByRole('button', { name: 'Сохранить изменения' }).click()
   await page.keyboard.press('Escape')
-  await page.getByRole('button', { name: 'Следующая тема' }).click()
+  await page.getByRole('button', { name: 'Следующая тема', exact: true }).click()
   await page.getByRole('button', { name: 'Открыть задание', exact: true }).click()
-  await expect(dialog.getByRole('status')).toContainText('Не отправлено')
+  await expect(
+    dialog.locator('p').filter({ hasText: /^(Не отправлено|Ожидает проверки|Работа проверена)$/ }),
+  ).toContainText('Не отправлено')
   await page.keyboard.press('Escape')
-  await page.getByRole('button', { name: 'Предыдущая тема' }).click()
+  await page.getByRole('button', { name: 'Предыдущая тема', exact: true }).click()
   await page.getByRole('button', { name: 'Открыть задание', exact: true }).click()
-  await expect(dialog.getByLabel('Отправленный ответ')).toContainText('Исправленный ответ')
+  await expect(
+    dialog
+      .locator('section')
+      .filter({ has: page.getByRole('heading', { name: 'Ваш ответ', exact: true }) }),
+  ).toContainText('Исправленный ответ')
   await dialog.getByRole('button', { name: 'Удалить ответ', exact: true }).click()
   await dialog.getByRole('button', { name: 'Подтвердить удаление' }).click()
-  await expect(dialog.getByRole('status')).toContainText('Не отправлено')
+  await expect(
+    dialog.locator('p').filter({ hasText: /^(Не отправлено|Ожидает проверки|Работа проверена)$/ }),
+  ).toContainText('Не отправлено')
   await expect(dialog.getByLabel('Комментарий к ответу')).toHaveValue('')
 })
 
@@ -49,8 +63,10 @@ test('assignment remains usable on a narrow screen', async ({ page }) => {
   expect(box!.x).toBeGreaterThanOrEqual(0)
   expect(box!.x + box!.width).toBeLessThanOrEqual(320)
   await submit.click()
-  await expect(dialog.getByRole('status')).toContainText('Ожидает проверки')
-  await dialog.getByRole('button', { name: 'Закрыть задание' }).click()
+  await expect(
+    dialog.locator('p').filter({ hasText: /^(Не отправлено|Ожидает проверки|Работа проверена)$/ }),
+  ).toContainText('Ожидает проверки')
+  await dialog.locator('header button').first().click()
   await expect(dialog).toBeHidden()
 })
 
@@ -67,9 +83,9 @@ test('assignment accepts dropped files and limits the comment', async ({ page })
     return data
   })
   await dialog.locator('input[type="file"]').dispatchEvent('drop', { dataTransfer: transfer })
-  await expect(dialog.getByLabel('Прикреплённые файлы')).toContainText('dropped.pl')
+  await expect(dialog.locator('ul')).toContainText('dropped.pl')
   await dialog.getByRole('button', { name: 'Отправить преподавателю' }).click()
-  await expect(dialog.getByLabel('Файлы ответа')).toContainText('dropped.pl')
+  await expect(dialog.locator('ul')).toContainText('dropped.pl')
 })
 
 test('cancelling the file picker keeps the assignment and its draft open', async ({ page }) => {
@@ -86,7 +102,7 @@ test('cancelling the file picker keeps the assignment and its draft open', async
   await files.dispatchEvent('cancel', { bubbles: true, cancelable: true })
   await expect(dialog).toBeVisible()
   await expect(dialog.getByLabel('Комментарий к ответу')).toHaveValue('Черновик ответа')
-  await expect(dialog.getByLabel('Прикреплённые файлы')).toContainText('answer.pl')
+  await expect(dialog.locator('ul')).toContainText('answer.pl')
   await page.keyboard.press('Escape')
   await expect(dialog).toBeHidden()
 })
@@ -99,7 +115,7 @@ test('course materials download through MediaButton', async ({ page }) => {
     ['Практическая работа №1', 'introduction-practice.md'],
   ]) {
     const downloadPromise = page.waitForEvent('download')
-    await page.getByRole('button', { name: `Скачать: ${title}`, exact: true }).click()
+    await page.getByRole('button').filter({ hasText: title }).click()
     expect((await downloadPromise).suggestedFilename()).toBe(filename)
   }
 })

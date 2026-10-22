@@ -1,22 +1,12 @@
 <template>
   <div ref="root" :class="style.root" @focusout="onFocusout" @keydown.esc="close(true)">
     <slot name="trigger" :trigger-props="triggerProps" :open="open">
-      <button v-bind="triggerProps" type="button" :class="style.trigger">{{ ariaLabel }}</button>
+      <button v-bind="triggerProps" type="button" :class="style.trigger">{{ triggerText }}</button>
     </slot>
-    <div
-      v-if="open"
-      :id="`${id}-popup`"
-      :class="style.popup"
-      :role="isTabs ? 'dialog' : undefined"
-      :aria-label="isTabs ? ariaLabel : undefined"
-    >
+    <div v-if="open" :class="style.popup">
       <div
-        :id="`${id}-list`"
         ref="list"
         :class="style.list"
-        :role="selectionRole"
-        :aria-label="ariaLabel"
-        :aria-orientation="isTabs ? 'vertical' : undefined"
         :tabindex="!enabledIndices.length ? 0 : undefined"
         @keydown="onKeydown"
       >
@@ -28,10 +18,7 @@
           :active="item.value === activeValue"
           :disabled="item.disabled"
           :trigger-attrs="{
-            id: `${id}-item-${index}`,
             'data-popup-item': '',
-            role: isTabs ? 'tab' : 'option',
-            'aria-controls': isTabs && $slots[item.value] ? `${id}-panel-${index}` : undefined,
             tabindex:
               index === (enabledIndices.includes(activeIndex) ? activeIndex : enabledIndices[0])
                 ? 0
@@ -48,14 +35,11 @@
         </p>
       </div>
       <template v-if="isTabs">
-        <template v-for="(item, index) in items" :key="item.value">
+        <template v-for="item in items" :key="item.value">
           <div
             v-if="$slots[item.value]"
             v-show="item.value === activeValue"
-            :id="`${id}-panel-${index}`"
             :class="style.panel"
-            role="tabpanel"
-            :aria-labelledby="`${id}-item-${index}`"
             tabindex="0"
           >
             <slot :name="item.value" :item="item" />
@@ -67,7 +51,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, type PropType, useId } from 'vue'
+import { defineComponent, type PropType } from 'vue'
 import NavTab from '@/components/UI/tabs/NavTab/NavTab.vue'
 import StyleTab from '@/components/UI/tabs/StyleTab/StyleTab.vue'
 import style from './FloatingPopup.module.scss'
@@ -84,18 +68,18 @@ export default defineComponent({
   props: {
     items: { type: Array as PropType<FloatingPopupItem[]>, required: true },
     modelValue: { type: String, default: undefined },
-    ariaLabel: { type: String, default: 'Вкладки' },
+    triggerText: { type: String, default: 'Вкладки' },
     disabled: Boolean,
     closeOnSelect: Boolean,
-    selectionRole: { type: String as PropType<'tablist' | 'listbox'>, default: 'tablist' },
+    mode: { type: String as PropType<'tabs' | 'select'>, default: 'tabs' },
   },
   emits: { 'update:modelValue': (value: string) => typeof value === 'string' },
   data() {
-    return { style, id: useId(), open: false, internalValue: undefined as string | undefined }
+    return { style, open: false, internalValue: undefined as string | undefined }
   },
   computed: {
     isTabs(): boolean {
-      return this.selectionRole === 'tablist'
+      return this.mode === 'tabs'
     },
     activeValue(): string | undefined {
       const value = this.modelValue ?? this.internalValue
@@ -113,9 +97,6 @@ export default defineComponent({
     },
     triggerProps() {
       return {
-        'aria-expanded': this.open,
-        'aria-controls': this.isTabs ? `${this.id}-popup` : `${this.id}-list`,
-        'aria-haspopup': this.isTabs ? ('dialog' as const) : ('listbox' as const),
         disabled: this.disabled,
         onClick: this.toggle,
         onKeydown: this.onTriggerKeydown,
@@ -156,7 +137,7 @@ export default defineComponent({
       this.open = false
       if (restoreFocus)
         (this.$refs.root as HTMLElement | undefined)
-          ?.querySelector<HTMLButtonElement>('[aria-expanded]')
+          ?.querySelector<HTMLButtonElement>('button')
           ?.focus()
     },
     toggle() {

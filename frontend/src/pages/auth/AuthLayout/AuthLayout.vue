@@ -1,7 +1,7 @@
 <template>
   <main :class="style.page">
     <div :class="style.shell">
-      <aside :class="style.hero" aria-label="Личный кабинет ННГАСУ">
+      <aside :class="style.hero">
         <BrandHeader />
 
         <div :class="style.heroContent">
@@ -11,7 +11,7 @@
           </p>
         </div>
 
-        <div :class="style.illustration" aria-hidden="true">
+        <div :class="style.illustration">
           <span :class="style.orbit" />
           <span :class="style.orbitInner" />
           <svg :class="style.architecture" viewBox="0 0 560 290" fill="none">
@@ -70,17 +70,15 @@
         </div>
 
         <div :class="style.services">
-          <span><PhCalendarBlank :size="17" aria-hidden="true" /> Расписание</span>
-          <span><PhBookOpen :size="17" aria-hidden="true" /> Учёба</span>
-          <span><PhBell :size="17" aria-hidden="true" /> Новости</span>
+          <span><PhCalendarBlank :size="17" /> Расписание</span>
+          <span><PhBookOpen :size="17" /> Учёба</span>
+          <span><PhBell :size="17" /> Новости</span>
         </div>
         <p :class="style.heroFooter">Нижний Новгород <span>·</span> ННГАСУ</p>
       </aside>
 
-      <section :class="style.panel" :aria-labelledby="titleId">
-        <div :class="style.panelTop">
-          <PhStudent :size="18" aria-hidden="true" /> Твой цифровой кампус
-        </div>
+      <section :class="style.panel">
+        <div :class="style.panelTop"><PhStudent :size="18" /> Твой цифровой кампус</div>
         <div :class="style.formArea">
           <slot />
         </div>
@@ -102,12 +100,6 @@ import style from './AuthLayout.module.scss'
 export default defineComponent({
   name: 'AuthLayout',
   components: { BrandHeader, PhBell, PhBookOpen, PhCalendarBlank, PhStudent },
-  props: {
-    titleId: {
-      type: String,
-      required: true,
-    },
-  },
   data() {
     return {
       style,
