@@ -7,20 +7,12 @@
     <button
       :class="style.trigger"
       type="button"
-      role="tab"
-      :aria-selected="active"
       :disabled="disabled"
       v-bind="triggerAttrs"
       @click="$emit('select')"
     >
       <span v-if="icon || imageSrc" :class="style.media">
-        <component
-          :is="icon"
-          v-if="icon"
-          :size="iconSize"
-          :weight="active ? 'fill' : iconWeight"
-          aria-hidden="true"
-        />
+        <component :is="icon" v-if="icon" :size="iconSize" :weight="active ? 'fill' : iconWeight" />
         <img v-else :class="style.image" :src="imageSrc" :alt="imageAlt" />
       </span>
       <span :class="style.text"

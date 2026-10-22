@@ -1,6 +1,12 @@
 <template>
   <button
-    :class="[style.button, style[size], style[variant], state !== 'default' ? style[state] : null]"
+    :class="[
+      style.button,
+      style[size],
+      style[variant],
+      state !== 'default' ? style[state] : null,
+      round ? style.round : null,
+    ]"
     :type="type"
     :disabled="disabled || state === 'disabled'"
   >
@@ -30,6 +36,10 @@ export default defineComponent({
     type: {
       type: String as PropType<ButtonType>,
       default: 'button',
+    },
+    round: {
+      type: Boolean,
+      default: false,
     },
     disabled: {
       type: Boolean,

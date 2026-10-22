@@ -7,11 +7,10 @@
       :class="style.main"
       :type="readonly ? undefined : type"
       :disabled="!readonly && disabled ? true : undefined"
-      :aria-label="readonly ? undefined : ariaLabel"
       @click="handleClick"
     >
       <span :class="style.leftPart">
-        <span v-if="$slots.icon" :class="style.icon" aria-hidden="true"><slot name="icon" /></span>
+        <span v-if="$slots.icon" :class="style.icon"><slot name="icon" /></span>
         <span :class="style.content">
           <slot>
             <span :class="style.title">{{ title }}</span>
@@ -19,12 +18,7 @@
           </slot>
         </span>
       </span>
-      <PhDownloadSimple
-        v-if="!readonly && !$slots.actions"
-        :class="style.download"
-        :size="20"
-        aria-hidden="true"
-      />
+      <PhDownloadSimple v-if="!readonly && !$slots.actions" :class="style.download" :size="20" />
     </component>
     <div v-if="$slots.actions" :class="style.actions" :inert="disabled || undefined">
       <slot name="actions" />
@@ -48,10 +42,6 @@ export default defineComponent({
     meta: {
       type: String,
       default: '',
-    },
-    ariaLabel: {
-      type: String,
-      default: undefined,
     },
     readonly: {
       type: Boolean,

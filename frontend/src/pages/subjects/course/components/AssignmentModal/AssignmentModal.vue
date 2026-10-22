@@ -1,7 +1,6 @@
 <template>
   <Modal
     :model-value="modelValue"
-    :aria-labelledby="`${id}-title`"
     :width="800"
     :style="{ '--modal-content-padding': '0px' }"
     @update:model-value="$emit('update:modelValue', $event)"
@@ -13,31 +12,30 @@
             {{ courseTitle }} <span>· Тема {{ topicIndex + 1 }}</span>
           </p>
           <div :class="style.titleRow">
-            <h2 :id="`${id}-title`">Практическая работа №{{ topicIndex + 1 }}</h2>
+            <h2>Практическая работа №{{ topicIndex + 1 }}</h2>
             <p
               :class="[
                 style.status,
                 reviewed ? style.reviewed : null,
                 answer && !reviewed ? style.pending : null,
               ]"
-              role="status"
             >
               {{ reviewed ? 'Работа проверена' : answer ? 'Ожидает проверки' : 'Не отправлено' }}
             </p>
           </div>
           <p :class="style.deadline">
-            <PhCalendarBlank :size="23" aria-hidden="true" />
+            <PhCalendarBlank :size="23" />
             <span
               >Срок сдачи: <strong>{{ topic.deadline }}, 23:59</strong></span
             >
           </p>
         </div>
         <IconButton :class="style.close" variant="ghost" @click="$emit('update:modelValue', false)">
-          <PhX :size="24" aria-hidden="true" />
+          <PhX :size="24" />
         </IconButton>
       </header>
 
-      <section :class="style.task" aria-label="Условие задания">
+      <section :class="style.task">
         <h3>Задание</h3>
         <p>{{ topic.task }}</p>
       </section>
@@ -58,9 +56,8 @@
             :base-height="104"
             :maxlength="2000"
             placeholder="Добавьте пояснение к работе"
-            :ariaDescribedby="`${id}-counter`"
           />
-          <p :id="`${id}-counter`" :class="style.counter">{{ comment.length }} / 2000</p>
+          <p :class="style.counter">{{ comment.length }} / 2000</p>
         </div>
         <div :class="style.field">
           <label :for="`${id}-files`">Файлы работы</label>
@@ -70,8 +67,8 @@
             @dragleave="dragging = false"
             @drop.prevent="onDrop"
           >
-            <PhUploadSimple :size="34" aria-hidden="true" />
-            <div :class="style.uploadCopy" aria-hidden="true">
+            <PhUploadSimple :size="34" />
+            <div :class="style.uploadCopy">
               <p>Перетащите файлы сюда</p>
               <span>или выберите на устройстве</span>
             </div>
@@ -80,13 +77,11 @@
               :class="style.fileInput"
               type="file"
               multiple
-              aria-label="Файлы работы"
-              :aria-describedby="`${id}-files-hint`"
               @change="addFiles"
             />
           </div>
-          <p :id="`${id}-files-hint`" :class="style.muted">До 10 файлов, не более 20 МБ каждый</p>
-          <ul v-if="attachments.length" :class="style.files" aria-label="Прикреплённые файлы">
+          <p :class="style.muted">До 10 файлов, не более 20 МБ каждый</p>
+          <ul v-if="attachments.length" :class="style.files">
             <li v-for="attachment in attachments" :key="attachment.id">
               <MediaButton :title="attachment.name" :meta="formatSize(attachment.size)" readonly>
                 <template #icon>
@@ -99,14 +94,14 @@
                 </template>
                 <template #actions>
                   <IconButton variant="ghost" size="sm" @click="removeFile(attachment.id)">
-                    <PhX :size="20" aria-hidden="true" />
+                    <PhX :size="20" />
                   </IconButton>
                 </template>
               </MediaButton>
             </li>
           </ul>
         </div>
-        <p v-if="error" :class="style.error" role="alert">{{ error }}</p>
+        <p v-if="error" :class="style.error">{{ error }}</p>
         <p :class="style.sessionNote">
           Демонстрационный режим: ответ хранится до перезагрузки страницы.
         </p>
@@ -125,19 +120,18 @@
         </footer>
       </form>
 
-      <section v-else-if="answer" :class="style.form" aria-label="Отправленный ответ">
+      <section v-else-if="answer" :class="style.form">
         <div :class="style.answerHeading">
           <h3>Ваш ответ</h3>
           <p :class="style.muted">Отправлен {{ formatDate(answer.submittedAt) }}</p>
         </div>
         <p v-if="answer.comment" :class="style.comment">{{ answer.comment }}</p>
-        <ul v-if="answer.attachments.length" :class="style.files" aria-label="Файлы ответа">
+        <ul v-if="answer.attachments.length" :class="style.files">
           <li v-for="attachment in answer.attachments" :key="attachment.id">
             <MediaButton
               :title="attachment.name"
               :meta="formatSize(attachment.size)"
               :readonly="!attachment.file && !attachment.url"
-              :ariaLabel="`Скачать ${attachment.name}`"
               @click="download(attachment)"
             >
               <template #icon>
@@ -151,7 +145,7 @@
             </MediaButton>
           </li>
         </ul>
-        <section v-if="answer.review" :class="style.review" aria-label="Результат проверки">
+        <section v-if="answer.review" :class="style.review">
           <div :class="style.gradeBlock">
             <p :class="style.muted">Оценка работы</p>
             <p :class="style.grade">{{ answer.review.grade }}</p>
@@ -170,12 +164,7 @@
           <Button variant="danger" @click="confirmDelete = true">Удалить ответ</Button>
           <Button variant="secondary" @click="startEditing">Редактировать ответ</Button>
         </footer>
-        <div
-          v-if="confirmDelete && !reviewed"
-          :class="style.confirm"
-          role="group"
-          aria-label="Удаление ответа"
-        >
+        <div v-if="confirmDelete && !reviewed" :class="style.confirm">
           <p>Удалить ответ вместе с файлами и комментарием?</p>
           <div :class="style.confirmActions">
             <Button variant="secondary" @click="confirmDelete = false">Отмена</Button>

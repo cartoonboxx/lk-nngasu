@@ -14,7 +14,6 @@
           :key="material.kind"
           :title="material.title"
           :meta="material.meta"
-          :ariaLabel="`Скачать: ${material.title}`"
           @click="downloadMaterial(material)"
         >
           <template #icon>
@@ -31,7 +30,7 @@
 
         <div :class="style.assignmentFooter">
           <p :class="style.deadline">
-            <PhCalendarBlank :size="19" aria-hidden="true" />
+            <PhCalendarBlank :size="19" />
             <span>Срок сдачи: {{ topic.deadline }}, 23:59</span>
           </p>
 
@@ -42,12 +41,12 @@
 
     <footer :class="style.footer">
       <Button variant="secondary" :disabled="topicIndex === 0" @click="$emit('previous')">
-        <PhCaretLeft :size="18" aria-hidden="true" />
+        <PhCaretLeft :size="18" />
         <span>Предыдущая тема</span>
       </Button>
       <Button variant="secondary" :disabled="topicIndex === topicCount - 1" @click="$emit('next')">
         <span>Следующая тема</span>
-        <PhCaretRight :size="18" aria-hidden="true" />
+        <PhCaretRight :size="18" />
       </Button>
     </footer>
   </section>

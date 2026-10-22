@@ -9,7 +9,7 @@
     :icon-weight="iconWeight"
     :active="active"
     :disabled="disabled"
-    :trigger-attrs="{ role: 'option', ...triggerAttrs }"
+    :trigger-attrs="triggerAttrs"
     @select="$emit('select')"
   >
     <template v-if="$slots.default" #default><slot /></template>

@@ -8,8 +8,6 @@
       :name="name"
       :autocomplete="autocomplete"
       :required="required"
-      :ariaInvalid="ariaInvalid"
-      :ariaDescribedby="ariaDescribedby"
       :model-value="modelValue"
       :placeholder="placeholder"
       :variant="variant"
@@ -69,14 +67,6 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
-    ariaInvalid: {
-      type: Boolean,
-      default: false,
-    },
-    ariaDescribedby: {
-      type: String,
-      default: undefined,
-    },
     placeholder: {
       type: String,
       default: '',
@@ -118,8 +108,8 @@ export default defineComponent({
     }
   },
   computed: {
-    fieldId(): string {
-      return this.id ?? this.generatedId
+    fieldId(): string | undefined {
+      return this.id ?? (this.label ? this.generatedId : undefined)
     },
   },
   methods: {

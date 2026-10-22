@@ -2,7 +2,6 @@
   <div
     ref="trigger"
     :class="style.root"
-    :aria-describedby="visible ? id : undefined"
     @mouseenter="isShow ? onMouseOn() : null"
     @mouseleave="onMouseleave"
   >
@@ -16,10 +15,8 @@
       >
         <div
           v-if="visible"
-          :id="id"
           :class="[style.tooltip, style[position]]"
           :style="{ '--tooltip-x': `${x}px`, '--tooltip-y': `${y}px` }"
-          role="tooltip"
         >
           <slot name="content">{{ text }}</slot>
         </div>
@@ -29,7 +26,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, type PropType, useId } from 'vue'
+import { defineComponent, type PropType } from 'vue'
 import style from './Tooltip.module.scss'
 
 export type TooltipPosition = 'top' | 'bottom' | 'left' | 'right'
@@ -56,7 +53,6 @@ export default defineComponent({
   data() {
     return {
       style,
-      id: `tooltip-${useId()}`,
       hovered: false,
       dismissed: false,
       x: 0,

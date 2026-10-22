@@ -1,8 +1,8 @@
 <template>
-  <AuthLayout title-id="registration-title">
+  <AuthLayout>
     <form :class="style.form" @submit.prevent>
       <header :class="style.header">
-        <h2 id="registration-title">Регистрация</h2>
+        <h2>Регистрация</h2>
       </header>
 
       <div :class="style.fields">
@@ -27,13 +27,7 @@
           full-width
         >
           <template #actions>
-            <IconButton
-              :ariaLabel="showPassword ? 'Скрыть пароль' : 'Показать пароль'"
-              :aria-pressed="showPassword"
-              variant="ghost"
-              size="sm"
-              @click="showPassword = !showPassword"
-            >
+            <IconButton variant="ghost" size="sm" @click="showPassword = !showPassword">
               <PhEyeSlash v-if="showPassword" />
               <PhEye v-else />
             </IconButton>
@@ -47,8 +41,6 @@
           placeholder="Введи пароль ещё раз"
           :type="showConfirmation ? 'text' : 'password'"
           :variant="passwordMismatch ? 'error' : 'default'"
-          :ariaInvalid="passwordMismatch"
-          :ariaDescribedby="passwordMismatch ? 'password-error' : undefined"
           required
           full-width
         >
@@ -59,12 +51,7 @@
             </IconButton>
           </template>
         </TextInput>
-        <p
-          v-if="passwordMismatch"
-          id="password-error"
-          :class="[style.hint, style.error]"
-          role="status"
-        >
+        <p v-if="passwordMismatch" :class="[style.hint, style.error]">
           Пароли не совпадают. Проверь введённые значения.
         </p>
       </div>

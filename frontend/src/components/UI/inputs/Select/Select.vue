@@ -3,13 +3,12 @@
     :class="[style.root, fullWidth && style.fullWidth]"
     :items="options"
     :model-value="modelValue"
-    :aria-label="ariaLabel ?? placeholder"
     :disabled="isDisabled"
-    selection-role="listbox"
+    mode="select"
     close-on-select
     @update:model-value="$emit('update:modelValue', $event)"
   >
-    <template #trigger="{ triggerProps }">
+    <template #trigger="{ triggerProps, open }">
       <StyleTab
         :text="selected?.label ?? placeholder"
         :disabled="isDisabled"
@@ -22,16 +21,11 @@
         ]"
         :trigger-attrs="{
           ...triggerProps,
-          id,
-          role: 'button',
           class: style.control,
-          'aria-selected': undefined,
-          'aria-label': ariaLabel ?? placeholder,
-          'aria-describedby': ariaDescribedby,
         }"
       >
         <template #trailing>
-          <PhCaretDown :class="style.caret" :size="18" aria-hidden="true" />
+          <PhCaretDown :class="[style.caret, open && style.open]" :size="18" />
         </template>
       </StyleTab>
     </template>
@@ -67,14 +61,6 @@ export default defineComponent({
       type: String,
       default: 'Выберите значение',
     },
-    ariaLabel: {
-      type: String,
-      default: undefined,
-    },
-    id: {
-      type: String,
-      default: undefined,
-    },
     name: {
       type: String,
       default: undefined,
@@ -89,7 +75,6 @@ export default defineComponent({
     },
     disabled: Boolean,
     fullWidth: Boolean,
-    ariaDescribedby: { type: String, default: undefined },
   },
   emits: { 'update:modelValue': (value: string) => typeof value === 'string' },
   data() {

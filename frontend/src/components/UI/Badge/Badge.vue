@@ -1,7 +1,7 @@
 <template>
   <div :class="style.root">
     <slot />
-    <span :class="style.badge" role="status" :aria-label="`Количество: ${value}`">
+    <span :class="style.badge">
       {{ value }}
     </span>
   </div>

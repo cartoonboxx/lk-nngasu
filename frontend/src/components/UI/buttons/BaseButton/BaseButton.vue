@@ -8,9 +8,8 @@
     ]"
     :type="type"
     :disabled="disabled || loading || state === 'disabled'"
-    :aria-busy="loading"
   >
-    <span v-if="loading" :class="style.loader" aria-hidden="true" />
+    <span v-if="loading" :class="style.loader" />
     <span :class="style.content">
       <slot />
     </span>

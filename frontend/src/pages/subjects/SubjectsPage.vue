@@ -5,7 +5,7 @@
     <section :class="style.pageInput">
       <StyleInput v-model="searchQuery" placeholder="Поиск дисциплины" :full-width="true">
         <template #prefix>
-          <PhMagnifyingGlass :size="20" aria-hidden="true" />
+          <PhMagnifyingGlass :size="20" />
         </template>
       </StyleInput>
 

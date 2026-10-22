@@ -5,9 +5,9 @@
       <h1>Компоненты интерфейса</h1>
     </header>
 
-    <section :class="style.section" aria-labelledby="tooltip-title">
+    <section :class="style.section">
       <div :class="style.sectionHeading">
-        <h2 id="tooltip-title">Tooltip</h2>
+        <h2>Tooltip</h2>
       </div>
       <div :class="style.showcase">
         <article :class="style.group">
@@ -30,9 +30,9 @@
       </div>
     </section>
 
-    <section :class="style.section" aria-labelledby="buttons-title">
+    <section :class="style.section">
       <div :class="style.sectionHeading">
-        <h2 id="buttons-title">Кнопки</h2>
+        <h2>Кнопки</h2>
       </div>
 
       <div :class="style.showcase">
@@ -73,20 +73,15 @@
       </div>
     </section>
 
-    <section :class="style.section" aria-labelledby="media-buttons-title">
+    <section :class="style.section">
       <div :class="style.sectionHeading">
-        <h2 id="media-buttons-title">Медиафайлы</h2>
+        <h2>Медиафайлы</h2>
       </div>
       <div :class="style.showcase">
         <article :class="style.group">
           <h3>Скачивание материалов</h3>
           <div :class="style.mediaList">
-            <MediaButton
-              title="Лекция 1"
-              meta="Конспект · MD"
-              ariaLabel="Скачать лекцию 1"
-              @click="downloadMediaExample"
-            >
+            <MediaButton title="Лекция 1" meta="Конспект · MD" @click="downloadMediaExample">
               <template #icon
                 ><PhFileText :class="style.mediaError" :size="30" weight="fill"
               /></template>
@@ -94,7 +89,6 @@
             <MediaButton
               title="План темы"
               meta="Учебный материал · MD"
-              ariaLabel="Скачать план темы"
               @click="downloadMediaExample"
             >
               <template #icon
@@ -119,11 +113,7 @@
             <MediaButton v-if="mediaAttachmentVisible" title="main.pl" meta="4 КБ" readonly>
               <template #icon><PhFileCode :size="34" weight="duotone" /></template>
               <template #actions>
-                <IconButton
-                  ariaLabel="Удалить файл main.pl"
-                  variant="ghost"
-                  size="sm"
-                  @click="mediaAttachmentVisible = false"
+                <IconButton variant="ghost" size="sm" @click="mediaAttachmentVisible = false"
                   ><PhX :size="20"
                 /></IconButton>
               </template>
@@ -146,9 +136,9 @@
       </div>
     </section>
 
-    <section :class="style.section" aria-labelledby="inputs-title">
+    <section :class="style.section">
       <div :class="style.sectionHeading">
-        <h2 id="inputs-title">Поля ввода</h2>
+        <h2>Поля ввода</h2>
       </div>
 
       <div :class="style.showcase">
@@ -196,7 +186,7 @@
           <div :class="style.row">
             <Input placeholder="Поиск по сайту" variant="filled">
               <template #prefix>
-                <PhMagnifyingGlass :size="20" aria-hidden="true" />
+                <PhMagnifyingGlass :size="20" />
               </template>
             </Input>
           </div>
@@ -207,7 +197,7 @@
           <div :class="style.row">
             <Input placeholder="Поиск" variant="filled">
               <template #actions>
-                <IconButton ariaLabel="Найти" size="sm" variant="ghost">
+                <IconButton size="sm" variant="ghost">
                   <PhAirplaneTaxiing />
                 </IconButton>
               </template>
@@ -217,9 +207,9 @@
       </div>
     </section>
 
-    <section :class="style.section" aria-labelledby="select-title">
+    <section :class="style.section">
       <div :class="style.sectionHeading">
-        <h2 id="select-title">Select</h2>
+        <h2>Select</h2>
       </div>
       <div :class="style.showcase">
         <article :class="style.group">
@@ -228,7 +218,6 @@
             <Select
               v-model="selectedSubject"
               :options="selectOptions"
-              aria-label="Предмет"
               placeholder="Выберите предмет"
             />
             <span>Выбрано: {{ selectedSubject || 'ничего' }}</span>
@@ -237,13 +226,8 @@
         <article :class="style.group">
           <h3>Состояния</h3>
           <div :class="style.row">
-            <Select :options="selectOptions" model-value="math" aria-label="Заполненный Select" />
-            <Select
-              :options="selectOptions"
-              model-value="math"
-              disabled
-              aria-label="Недоступный Select"
-            />
+            <Select :options="selectOptions" model-value="math" />
+            <Select :options="selectOptions" model-value="math" disabled />
             <Select :options="[]" placeholder="Пустой список" />
           </div>
         </article>
@@ -256,31 +240,29 @@
               v-model="selectedSubject"
               :options="selectOptions"
               :size="size.value"
-              :aria-label="`Предмет: ${size.label}`"
               :placeholder="size.label"
             />
           </div>
         </article>
         <article :class="style.group">
           <h3>На всю ширину</h3>
-          <Select
-            v-model="selectedSubject"
-            :options="selectOptions"
-            full-width
-            aria-label="Предмет на всю ширину"
-          />
+          <Select v-model="selectedSubject" :options="selectOptions" full-width />
         </article>
       </div>
     </section>
 
-    <section :class="style.section" aria-labelledby="floating-popup-title">
+    <section :class="style.section">
       <div :class="style.sectionHeading">
-        <h2 id="floating-popup-title">FloatingPopup</h2>
+        <h2>FloatingPopup</h2>
       </div>
       <div :class="style.showcase">
         <article :class="style.group">
           <h3>Вкладки в виде списка</h3>
-          <FloatingPopup v-model="popupTab" :items="switchableTabs" aria-label="Учебная информация">
+          <FloatingPopup
+            v-model="popupTab"
+            :items="switchableTabs"
+            trigger-text="Учебная информация"
+          >
             <template #schedule>Расписание занятий на текущую неделю.</template>
             <template #subjects>Список предметов текущего семестра.</template>
             <template #grades>Оценки и результаты аттестации.</template>
@@ -289,9 +271,9 @@
       </div>
     </section>
 
-    <section :class="style.section" aria-labelledby="icon-buttons-title">
+    <section :class="style.section">
       <div :class="style.sectionHeading">
-        <h2 id="icon-buttons-title">Кнопки-иконки</h2>
+        <h2>Кнопки-иконки</h2>
       </div>
 
       <div :class="style.showcase">
@@ -301,7 +283,6 @@
             <IconButton
               v-for="variant in iconButtonVariants"
               :key="variant.value"
-              :ariaLabel="variant.label"
               :variant="variant.value"
             >
               <PhHouse v-if="variant.value === 'danger'" />
@@ -313,12 +294,7 @@
         <article :class="style.group">
           <h3>Размеры</h3>
           <div :class="style.row">
-            <IconButton
-              v-for="size in iconButtonSizes"
-              :key="size.value"
-              :ariaLabel="size.label"
-              :size="size.value"
-            >
+            <IconButton v-for="size in iconButtonSizes" :key="size.value" :size="size.value">
               <PhAirplaneTaxiing />
             </IconButton>
           </div>
@@ -332,7 +308,6 @@
               <IconButton
                 v-for="state in iconButtonStates"
                 :key="state.value"
-                :ariaLabel="`${variant.label} ${state.label}`"
                 :variant="variant.value"
                 :state="state.value"
               >
@@ -345,9 +320,9 @@
       </div>
     </section>
 
-    <section :class="style.section" aria-labelledby="badge-title">
+    <section :class="style.section">
       <div :class="style.sectionHeading">
-        <h2 id="badge-title">Badge</h2>
+        <h2>Badge</h2>
       </div>
 
       <div :class="style.showcase">
@@ -355,7 +330,7 @@
           <h3>Расположение</h3>
           <div :class="style.row">
             <Badge :value="3">
-              <IconButton ariaLabel="Уведомления" variant="secondary">
+              <IconButton variant="secondary">
                 <PhHouse />
               </IconButton>
             </Badge>
@@ -367,19 +342,18 @@
       </div>
     </section>
 
-    <section :class="style.section" aria-labelledby="icon-tabs-title">
+    <section :class="style.section">
       <div :class="style.sectionHeading">
-        <h2 id="icon-tabs-title">Табы-иконки</h2>
+        <h2>Табы-иконки</h2>
       </div>
 
       <div :class="style.showcase">
         <article :class="style.group">
           <h3>Варианты</h3>
-          <div :class="style.row" role="tablist" aria-label="Варианты табов-иконок">
+          <div :class="style.row">
             <IconTab
               v-for="variant in iconTabVariants"
               :key="variant.value"
-              :ariaLabel="variant.label"
               :variant="variant.value"
             >
               <PhAirplaneTaxiing />
@@ -389,13 +363,8 @@
 
         <article :class="style.group">
           <h3>Размеры</h3>
-          <div :class="style.row" role="tablist" aria-label="Размеры табов-иконок">
-            <IconTab
-              v-for="size in iconTabSizes"
-              :key="size.value"
-              :ariaLabel="size.label"
-              :size="size.value"
-            >
+          <div :class="style.row">
+            <IconTab v-for="size in iconTabSizes" :key="size.value" :size="size.value">
               <PhAirplaneTaxiing />
             </IconTab>
           </div>
@@ -403,13 +372,12 @@
 
         <article :class="style.group">
           <h3>Состояния</h3>
-          <div :class="style.states" role="tablist" aria-label="Состояния табов-иконок">
+          <div :class="style.states">
             <div v-for="variant in iconTabVariants" :key="variant.value" :class="style.stateRow">
               <span :class="style.stateLabel">{{ variant.label }}</span>
               <IconTab
                 v-for="state in iconTabStates"
                 :key="state.value"
-                :ariaLabel="`${variant.label} ${state.label}`"
                 :variant="variant.value"
                 :state="state.value"
               >
@@ -421,22 +389,22 @@
       </div>
     </section>
 
-    <section :class="style.section" aria-labelledby="tabs-title">
+    <section :class="style.section">
       <div :class="style.sectionHeading">
-        <h2 id="tabs-title">Табы</h2>
+        <h2>Табы</h2>
       </div>
 
       <div :class="style.showcase">
         <article :class="style.group">
           <h3>BaseTab — общая геометрия</h3>
-          <div :class="style.tabColumn" role="tablist" aria-label="Базовый таб">
+          <div :class="style.tabColumn">
             <BaseTab text="Базовый таб" :icon="tabIcon" />
           </div>
         </article>
 
         <article :class="style.group">
           <h3>NavTab — навигация</h3>
-          <div :class="style.tabColumn" role="tablist" aria-label="Навигационные табы">
+          <div :class="style.tabColumn">
             <NavTab
               v-for="item in switchableTabs"
               :key="item.value"
@@ -451,7 +419,7 @@
 
         <article :class="style.group">
           <h3>StyleTab — выбор в списке</h3>
-          <div :class="style.tabColumn" role="listbox" aria-label="Выбор предмета">
+          <div :class="style.tabColumn">
             <StyleTab
               v-for="item in selectOptions"
               :key="item.value"
@@ -465,7 +433,7 @@
 
         <article :class="style.group">
           <h3>StyleTab — дополнительные действия</h3>
-          <div :class="style.tabColumn" role="listbox" aria-label="Пример выбора">
+          <div :class="style.tabColumn">
             <StyleTab text="Главная" :icon="tabIcon" active>
               <template #actions>
                 <span :class="style.tabBadge">2</span>
@@ -476,7 +444,7 @@
 
         <article :class="style.group">
           <h3>StyleTab — состав</h3>
-          <div :class="style.tabColumn" role="listbox" aria-label="Состав вариантов">
+          <div :class="style.tabColumn">
             <StyleTab text="Только текст" />
             <StyleTab text="Изображение без actions" :image-src="logoImage" />
             <StyleTab text="Недоступный таб" disabled />
@@ -485,15 +453,15 @@
 
         <article :class="style.group">
           <h3>StyleTab — выбранное состояние</h3>
-          <div :class="style.tabColumn" role="listbox" aria-label="Выбранный вариант">
+          <div :class="style.tabColumn">
             <StyleTab text="Активный таб" :icon="tabIcon" active />
           </div>
         </article>
       </div>
     </section>
-    <section :class="style.section" aria-labelledby="modal-title">
+    <section :class="style.section">
       <div :class="style.sectionHeading">
-        <h2 id="modal-title">Модальное окно</h2>
+        <h2>Модальное окно</h2>
       </div>
       <div :class="style.showcase">
         <article :class="style.group">
@@ -503,14 +471,14 @@
           </div>
         </article>
       </div>
-      <Modal v-model="modalOpen" v-slot="{ close }" aria-labelledby="feedback-title">
+      <Modal v-model="modalOpen" v-slot="{ close }">
         <div :class="style.modalActions">
           <div :class="style.header">
-            <h3 id="feedback-title">Обратная связь</h3>
+            <h3>Обратная связь</h3>
             <p>Напишите сообщение, и мы постараемся помочь.</p>
           </div>
-          <IconButton ariaLabel="Закрыть окно" variant="ghost" @click="close">
-            <PhX :size="20" aria-hidden="true" />
+          <IconButton variant="ghost" @click="close">
+            <PhX :size="20" />
           </IconButton>
         </div>
         <Input v-model="modalMessage" multiline full-width placeholder="Ваше сообщение" />

@@ -32,7 +32,7 @@
           <p>Выберите удобное оформление</p>
         </div>
 
-        <div :class="style.tabColumn" role="listbox" aria-label="Выбор темы">
+        <div :class="style.tabColumn">
           <StyleTab
             v-for="item in themeOptions"
             :key="item.value"

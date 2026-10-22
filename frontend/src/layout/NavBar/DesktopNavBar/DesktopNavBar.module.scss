@@ -49,7 +49,7 @@
       pointer-events: none;
     }
 
-    &[aria-expanded='false'] {
+    &.compactToggle {
       .toggleIcon {
         opacity: 0;
       }
@@ -141,5 +141,11 @@
         transition: none;
       }
     }
+  }
+}
+
+@media (max-width: 767px) {
+  .navigation {
+    display: none;
   }
 }

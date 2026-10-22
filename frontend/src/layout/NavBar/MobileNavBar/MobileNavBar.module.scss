@@ -1,0 +1,83 @@
+.bottomNavigation {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .bottomNavigation {
+    position: fixed;
+    z-index: 30;
+    inset: auto 0 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: var(--space-1);
+    padding: var(--space-2) max(var(--space-2), env(safe-area-inset-right))
+      calc(var(--space-2) + env(safe-area-inset-bottom))
+      max(var(--space-2), env(safe-area-inset-left));
+    border-top: 1px solid var(--color-border-level-1);
+    background: var(--color-surface-navigation);
+  }
+
+  .backdrop {
+    position: fixed;
+    z-index: 40;
+    inset: 0;
+    background: var(--color-surface-overlay);
+  }
+
+  .moreSheet {
+    position: fixed;
+    z-index: 50;
+    inset: auto 0 0;
+    display: flex;
+    max-height: calc(100dvh - env(safe-area-inset-top) - var(--space-6));
+    flex-direction: column;
+    gap: var(--space-4);
+    padding: var(--space-3) max(var(--space-4), env(safe-area-inset-right))
+      calc(var(--space-4) + env(safe-area-inset-bottom))
+      max(var(--space-4), env(safe-area-inset-left));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    border: 1px solid var(--color-border-level-1);
+    border-bottom: 0;
+    border-radius: 24px 24px 0 0;
+    background: var(--color-surface-navigation);
+    box-shadow: 0 -16px 48px #00000033;
+    animation: sheetEnter 200ms ease-out;
+  }
+
+  .sheetHandle {
+    width: 36px;
+    height: 4px;
+    flex-shrink: 0;
+    align-self: center;
+    border-radius: var(--radius-round);
+    background: var(--color-border-level-2);
+  }
+
+  .sheetHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 var(--space-1) 0 var(--space-2);
+  }
+
+  .moreLinks {
+    display: grid;
+    gap: var(--space-1);
+  }
+}
+
+@keyframes sheetEnter {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .moreSheet {
+    animation: none;
+  }
+}
