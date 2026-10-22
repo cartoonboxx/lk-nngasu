@@ -1,0 +1,23 @@
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: var(--space-8);
+
+  .information {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+    justify-content: center;
+
+    p {
+      font-size: var(--font-size-body-small);
+      font-weight: 300;
+      color: var(--color-text-secondary)
+    }
+  }
+
+  .actions {
+    display: flex;
+    gap: var(--space-2);
+  }
+}

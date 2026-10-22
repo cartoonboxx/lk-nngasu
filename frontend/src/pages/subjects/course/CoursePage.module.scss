@@ -1,0 +1,20 @@
+@use '@/styles/mixins';
+
+.coursePage {
+  min-width: 0;
+  container-type: inline-size;
+  @include mixins.setLayout();
+
+  .courseContent {
+    display: grid;
+    grid-template-columns: minmax(220px, 280px) minmax(0, 1fr);
+    align-items: stretch;
+    gap: var(--space-4);
+  }
+
+  @container (max-width: 680px) {
+    .courseContent {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+}

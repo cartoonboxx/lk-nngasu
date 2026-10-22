@@ -1,54 +1,56 @@
 <template>
-  <section :class="style.header">
-    <h1>Ресурсы и сервисы</h1>
-    <p>Учебные платформы, боты и контакты университета</p>
-  </section>
+  <section :class="style.resoursePage">
+    <SectionHeader
+      header="Ресурсы и сервисы"
+      paragraph="Учебные платформы, боты и контакты университета"
+    />
 
-  <section :class="style.pageInput">
-    <StyleInput v-model="searchQuery" placeholder="Поиск ресурса или службы" :full-width="true">
-      <template #prefix>
-        <PhMagnifyingGlass :size="20" aria-hidden="true" />
-      </template>
-    </StyleInput>
-  </section>
+    <section :class="style.pageInput">
+      <StyleInput v-model="searchQuery" placeholder="Поиск ресурса или службы" :full-width="true">
+        <template #prefix>
+          <PhMagnifyingGlass :size="20" aria-hidden="true" />
+        </template>
+      </StyleInput>
+    </section>
 
-  <section :class="style.section">
-    <div :class="style.sectionHeading">
-      <h2>Сервисы университета</h2>
-      <p>Открываются в новой вкладке</p>
-    </div>
+    <section :class="style.section">
+      <div :class="style.sectionHeading">
+        <h2>Сервисы университета</h2>
+        <p>Открываются в новой вкладке</p>
+      </div>
 
-    <div :class="style.servicesGrid">
-      <ServiceCard
-        v-for="service in filteredServices"
-        :key="service.label"
-        :label="service.label"
-        :description="service.description"
-        :url="service.url"
-        :link-text="service.linkText"
-        :icon="service.icon"
-      />
-    </div>
-  </section>
+      <div :class="style.servicesGrid">
+        <ServiceCard
+          v-for="service in filteredServices"
+          :key="service.label"
+          :label="service.label"
+          :description="service.description"
+          :url="service.url"
+          :link-text="service.linkText"
+          :icon="service.icon"
+        />
+      </div>
+    </section>
 
-  <section :class="style.section">
-    <div :class="style.sectionHeading">
-      <h2>Контакты университета</h2>
-    </div>
+    <section :class="style.section">
+      <div :class="style.sectionHeading">
+        <h2>Контакты университета</h2>
+      </div>
 
-    <div :class="style.contactsGrid">
-      <ServiceCard
-        v-for="contact in filteredContacts"
-        :key="contact.label"
-        :label="contact.label"
-        :description="contact.description"
-        :url="contact.url"
-        :link-text="contact.linkText"
-        :icon="contact.icon"
-        icon-position="left"
-        variant="contact"
-      />
-    </div>
+      <div :class="style.contactsGrid">
+        <ServiceCard
+          v-for="contact in filteredContacts"
+          :key="contact.label"
+          :label="contact.label"
+          :description="contact.description"
+          :url="contact.url"
+          :link-text="contact.linkText"
+          :icon="contact.icon"
+          icon-position="left"
+          variant="contact"
+        />
+      </div>
+    </section>
   </section>
 </template>
 
@@ -63,6 +65,7 @@ import Max_logo from '$images/MAX.svg'
 
 import ServiceCard from './components/ServiceCard/ServiceCard.vue'
 import StyleInput from '@/components/UI/inputs/Input/Input.vue'
+import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 
 import {
   PhMagnifyingGlass,
@@ -94,6 +97,7 @@ export default defineComponent({
   name: 'ResourcesPage',
 
   components: {
+    SectionHeader,
     StyleInput,
     ServiceCard,
     PhMagnifyingGlass,

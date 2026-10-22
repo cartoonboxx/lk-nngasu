@@ -53,13 +53,7 @@
           full-width
         >
           <template #actions>
-            <IconButton
-              :ariaLabel="showConfirmation ? 'Скрыть повтор пароля' : 'Показать повтор пароля'"
-              :aria-pressed="showConfirmation"
-              variant="ghost"
-              size="sm"
-              @click="showConfirmation = !showConfirmation"
-            >
+            <IconButton variant="ghost" size="sm" @click="showConfirmation = !showConfirmation">
               <PhEyeSlash v-if="showConfirmation" />
               <PhEye v-else />
             </IconButton>

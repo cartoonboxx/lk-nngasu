@@ -1,0 +1,131 @@
+<template>
+  <div
+    ref="trigger"
+    :class="style.root"
+    :aria-describedby="visible ? id : undefined"
+    @mouseenter="isShow ? onMouseOn() : null"
+    @mouseleave="onMouseleave"
+  >
+    <slot />
+    <Teleport to="body">
+      <Transition
+        :enter-active-class="style.enterTransition"
+        :leave-active-class="style.transition"
+        :enter-from-class="style.hidden"
+        :leave-to-class="style.hidden"
+      >
+        <div
+          v-if="visible"
+          :id="id"
+          :class="[style.tooltip, style[position]]"
+          :style="{ '--tooltip-x': `${x}px`, '--tooltip-y': `${y}px` }"
+          role="tooltip"
+        >
+          <slot name="content">{{ text }}</slot>
+        </div>
+      </Transition>
+    </Teleport>
+  </div>
+</template>
+
+<script lang="ts">
+import { defineComponent, type PropType, useId } from 'vue'
+import style from './Tooltip.module.scss'
+
+export type TooltipPosition = 'top' | 'bottom' | 'left' | 'right'
+
+export default defineComponent({
+  name: 'Tooltip',
+  props: {
+    text: {
+      type: String,
+      default: '',
+    },
+    position: {
+      type: String as PropType<TooltipPosition>,
+      default: 'top',
+    },
+    disabled: {
+      type: Boolean,
+    },
+    isShow: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  data() {
+    return {
+      style,
+      id: `tooltip-${useId()}`,
+      hovered: false,
+      dismissed: false,
+      x: 0,
+      y: 0,
+      animationFrame: 0,
+    }
+  },
+  computed: {
+    visible(): boolean {
+      return (
+        !this.disabled &&
+        !this.dismissed &&
+        this.hovered &&
+        Boolean(this.text || this.$slots.content)
+      )
+    },
+  },
+  watch: {
+    visible(value: boolean) {
+      if (value) {
+        this.trackPosition()
+        document.addEventListener('keydown', this.onKeydown)
+      } else {
+        this.removeListeners()
+      }
+    },
+    position() {
+      if (this.visible) this.updatePosition()
+    },
+  },
+  beforeUnmount() {
+    this.removeListeners()
+  },
+  methods: {
+    trackPosition() {
+      this.updatePosition()
+      this.animationFrame = window.requestAnimationFrame(this.trackPosition)
+    },
+    updatePosition() {
+      const trigger = this.$refs.trigger as HTMLElement | undefined
+      if (!trigger) return
+      const rect = trigger.getBoundingClientRect()
+      this.x =
+        this.position === 'left'
+          ? rect.left
+          : this.position === 'right'
+            ? rect.right
+            : rect.left + rect.width / 2
+      this.y =
+        this.position === 'top'
+          ? rect.top
+          : this.position === 'bottom'
+            ? rect.bottom
+            : rect.top + rect.height / 2
+    },
+    onMouseleave() {
+      this.hovered = false
+      this.dismissed = false
+    },
+    onMouseOn() {
+      this.hovered = true
+    },
+    onKeydown(event: KeyboardEvent) {
+      if (event.key === 'Escape') this.dismissed = true
+    },
+    removeListeners() {
+      window.cancelAnimationFrame(this.animationFrame)
+      document.removeEventListener('keydown', this.onKeydown)
+    },
+  },
+})
+</script>

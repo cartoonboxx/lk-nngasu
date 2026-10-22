@@ -1,0 +1,54 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  max-width: none;
+  height: 100dvh;
+  max-height: none;
+  margin: 0;
+  padding: var(--space-6);
+  border: 0;
+  background: transparent;
+  color: var(--color-text-primary);
+
+  &[open] {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &::backdrop {
+    background: var(--color-surface-overlay);
+  }
+}
+
+.modal {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  border: 1px solid var(--color-border-level-1);
+  border-radius: var(--radius-sheet);
+  background: var(--color-surface-panel);
+  box-shadow: 0 24px 64px var(--color-surface-overlay);
+}
+
+.content {
+  min-height: 0;
+  padding: var(--modal-content-padding, var(--space-6));
+  overflow: auto;
+  overscroll-behavior: contain;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 540px) {
+  .overlay {
+    padding: var(--space-4);
+  }
+
+  .content {
+    padding: var(--modal-content-padding, var(--space-4));
+  }
+}

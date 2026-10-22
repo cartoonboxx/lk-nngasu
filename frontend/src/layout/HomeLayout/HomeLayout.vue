@@ -1,6 +1,6 @@
 <template>
-  <NavBar />
-  <main :class="style.mainContent">
+  <NavBar @collapse-change="navigationCollapsed = $event" />
+  <main :class="[style.mainContent, navigationCollapsed ? style.collapsed : null]">
     <RouterView />
   </main>
 </template>
@@ -16,6 +16,7 @@ export default defineComponent({
   data() {
     return {
       style,
+      navigationCollapsed: false,
     }
   },
 })

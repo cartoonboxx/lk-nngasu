@@ -1,12 +1,17 @@
 <template>
-  <button :class="style.card" type="button" :aria-label="`Открыть профиль ${name}`">
+  <button
+    :class="[style.card, compact ? style.compact : null]"
+    type="button"
+    :aria-label="`Открыть профиль ${name}`"
+    :title="compact ? `${name} · ${role}` : undefined"
+  >
     <img v-if="imageSrc" :class="style.avatar" :src="imageSrc" :alt="imageAlt" />
     <span v-else :class="style.avatar" aria-hidden="true">АИ</span>
-    <span :class="style.copy">
+    <span v-if="!compact" :class="style.copy">
       <strong>{{ name }}</strong>
       <span>{{ role }}</span>
     </span>
-    <PhCaretRight :class="style.arrow" :size="18" aria-hidden="true" />
+    <PhCaretRight v-if="!compact" :class="style.arrow" :size="18" aria-hidden="true" />
   </button>
 </template>
 
@@ -22,6 +27,10 @@ export default defineComponent({
     PhCaretRight,
   },
   props: {
+    compact: {
+      type: Boolean,
+      default: false,
+    },
     name: {
       type: String,
       required: true,

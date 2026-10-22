@@ -27,13 +27,7 @@
           full-width
         >
           <template #actions>
-            <IconButton
-              :ariaLabel="showPassword ? 'Скрыть пароль' : 'Показать пароль'"
-              :aria-pressed="showPassword"
-              variant="ghost"
-              size="sm"
-              @click="showPassword = !showPassword"
-            >
+            <IconButton variant="ghost" size="sm" @click="showPassword = !showPassword">
               <PhEyeSlash v-if="showPassword" />
               <PhEye v-else />
             </IconButton>

@@ -7,7 +7,7 @@ export const baseTabProps = {
   },
   text: {
     type: String,
-    required: true,
+    default: '',
   },
   imageSrc: {
     type: String,
