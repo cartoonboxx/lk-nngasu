@@ -7,6 +7,7 @@
 
       <div :class="style.fields">
         <TextInput
+          size="lg"
           v-model="email"
           label="Электронная почта"
           name="email"
@@ -17,6 +18,7 @@
           full-width
         />
         <TextInput
+          size="lg"
           v-model="password"
           label="Пароль"
           name="password"
@@ -34,6 +36,7 @@
           </template>
         </TextInput>
         <TextInput
+          size="lg"
           v-model="confirmPassword"
           label="Повтори пароль"
           name="password-confirmation"

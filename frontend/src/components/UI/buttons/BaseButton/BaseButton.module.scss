@@ -28,17 +28,17 @@
   }
 
   &.sm {
-    min-height: 36px;
+    min-height: var(--control-height-sm);
     padding: 0 var(--space-3);
   }
 
   &.md {
-    min-height: 46px;
+    min-height: var(--control-height-md);
     padding: 0 var(--space-4);
   }
 
   &.lg {
-    min-height: 54px;
+    min-height: var(--control-height-lg);
     padding: 0 var(--space-5);
   }
 

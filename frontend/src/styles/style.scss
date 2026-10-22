@@ -11,6 +11,11 @@
   --space-10: 40px;
   --space-12: 48px;
 
+  // shared control heights
+  --control-height-sm: 36px;
+  --control-height-md: 46px;
+  --control-height-lg: 54px;
+
   // radius
   --radius-none: 0;
   --radius-xs: 4px;
@@ -153,7 +158,7 @@ a {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  -webkit-tap-highlight-color: transparent
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {

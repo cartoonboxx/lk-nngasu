@@ -70,16 +70,19 @@
   }
 
   &.sm {
+    min-height: var(--control-height-sm);
     --checkbox-size: 16px;
     --checkbox-radius: var(--radius-xs);
   }
 
   &.md {
+    min-height: var(--control-height-md);
     --checkbox-size: 20px;
     --checkbox-radius: var(--radius-sm);
   }
 
   &.lg {
+    min-height: var(--control-height-lg);
     --checkbox-size: 24px;
     --checkbox-radius: var(--radius-sm);
   }

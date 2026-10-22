@@ -28,16 +28,16 @@
     }
 
     &.sm {
-      height: 36px;
+      height: var(--control-height-sm);
       .control {
         padding: 0 var(--space-3);
       }
     }
     &.md {
-      height: 46px;
+      height: var(--control-height-md);
     }
     &.lg {
-      height: 54px;
+      height: var(--control-height-lg);
       .control {
         padding: 0 var(--space-5);
       }

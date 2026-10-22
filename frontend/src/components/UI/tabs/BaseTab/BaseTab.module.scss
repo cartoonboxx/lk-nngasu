@@ -2,7 +2,7 @@
   position: relative;
   display: inline-flex;
   width: 100%;
-  min-height: var(--tab-min-height, 44px);
+  min-height: var(--tab-min-height, var(--control-height-md));
   align-items: stretch;
   overflow: hidden;
   border: 1px solid transparent;
@@ -22,7 +22,7 @@
     align-items: center;
     justify-content: var(--tab-trigger-justify, flex-start);
     gap: var(--tab-trigger-gap, var(--space-3));
-    padding: var(--tab-padding, var(--space-3));
+    padding: var(--tab-padding, 0 var(--space-3));
     border: 0;
     background: transparent;
     color: inherit;
