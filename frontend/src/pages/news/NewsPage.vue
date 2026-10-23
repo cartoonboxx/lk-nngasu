@@ -45,7 +45,7 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue'
-import { PhMagnifyingGlass, PhArrowRight } from '@phosphor-icons/vue'
+import { PhMagnifyingGlass } from '@phosphor-icons/vue'
 
 import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import StyleInput from '@/components/UI/inputs/Input/Input.vue'
@@ -77,7 +77,6 @@ export default defineComponent({
     StyleInput,
     Button,
     PhMagnifyingGlass,
-    PhArrowRight,
     NewsCard,
   },
 

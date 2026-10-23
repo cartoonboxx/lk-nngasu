@@ -1,11 +1,10 @@
 <template>
   <article :class="[style.card, featured ? style.featured : '']">
-    <img
+    <div
       v-if="image"
-      :src="image"
-      alt=""
-      :loading="featured ? 'eager' : 'lazy'"
       :class="style.image"
+      :style="{ backgroundImage: `url(${JSON.stringify(image)})` }"
+      aria-hidden="true"
     />
 
     <div :class="style.content">
@@ -23,10 +22,13 @@
         {{ description }}
       </p>
 
-      <a v-if="featured" :href="url" :class="style.readMore">
+      <div :class="style.actions">
+        <Button :variant="featured ? 'primary' : 'secondary'" @click="openNews">
         Читать подробнее
         <PhArrowRight :size="20" aria-hidden="true" />
-      </a>
+      </Button>
+      </div>
+      
     </div>
   </article>
 </template>
@@ -35,12 +37,14 @@
 import { defineComponent } from 'vue'
 import { PhArrowRight } from '@phosphor-icons/vue'
 import style from './NewsCard.module.scss'
+import Button from '@/components/UI/buttons/Button/Button.vue'
 
 export default defineComponent({
   name: 'NewsCard',
 
   components: {
     PhArrowRight,
+    Button,
   },
 
   props: {
@@ -83,6 +87,13 @@ export default defineComponent({
         month: 'long',
         year: 'numeric',
       }).format(new Date(`${this.date}T00:00:00`))
+    },
+  },
+  methods: {
+    openNews() {
+      if (!this.url || this.url === '#') return
+
+      window.location.assign(this.url)
     },
   },
 })
