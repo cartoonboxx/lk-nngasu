@@ -34,9 +34,7 @@
         />
       </div>
 
-      <div v-if="hasMoreNews" :class="style.showMore">
-        <Button variant="secondary" @click="showMore"> Показать ещё новости </Button>
-      </div>
+      
     </template>
 
     <p v-else :class="style.empty" role="status">По вашему запросу ничего не найдено.</p>
@@ -49,7 +47,6 @@ import { PhMagnifyingGlass } from '@phosphor-icons/vue'
 
 import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import StyleInput from '@/components/UI/inputs/Input/Input.vue'
-import Button from '@/components/UI/buttons/Button/Button.vue'
 import NewsCard from './components/NewsCard.vue'
 import style from './NewsPage.module.scss'
 
@@ -75,7 +72,6 @@ export default defineComponent({
   components: {
     SectionHeader,
     StyleInput,
-    Button,
     PhMagnifyingGlass,
     NewsCard,
   },

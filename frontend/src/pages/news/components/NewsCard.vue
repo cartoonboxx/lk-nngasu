@@ -1,5 +1,12 @@
 <template>
-  <article :class="[style.card, featured ? style.featured : '']">
+   <article
+    :class="[style.card, featured ? style.featured : '']"
+    :role="canOpen ? 'link' : undefined"
+    :tabindex="canOpen ? 0 : undefined"
+    :aria-label="title"
+    @click="openNews"
+    @keydown.enter.prevent="openNews"
+  >
     <div
       v-if="image"
       :class="style.image"
@@ -13,22 +20,18 @@
       </time>
 
       <component :is="featured ? 'h2' : 'h3'" :class="style.title">
-        <a :href="url" :class="style.titleLink">
-          {{ title }}
-        </a>
+        {{ title }}
       </component>
 
-      <p :class="style.description">
-        {{ description }}
-      </p>
-
-      <div :class="style.actions">
-        <Button :variant="featured ? 'primary' : 'secondary'" @click="openNews">
-        Читать подробнее
-        <PhArrowRight :size="20" aria-hidden="true" />
-      </Button>
+      <div ref="descriptionBox" :class="style.descriptionBox">
+        <p
+          ref="descriptionText"
+          :class="style.description"
+          :style="{ WebkitLineClamp: descriptionLines }"
+        >
+          {{ description }}
+        </p>
       </div>
-      
     </div>
   </article>
 </template>
@@ -77,10 +80,15 @@ export default defineComponent({
   data() {
     return {
       style,
+       descriptionLines: 1,
+      resizeObserver: null as ResizeObserver | null,
     }
   },
 
   computed: {
+    canOpen(): boolean {
+      return Boolean(this.url && this.url !== '#')
+    },
     formattedDate(): string {
       return new Intl.DateTimeFormat('ru-RU', {
         day: 'numeric',
@@ -89,11 +97,39 @@ export default defineComponent({
       }).format(new Date(`${this.date}T00:00:00`))
     },
   },
-  methods: {
-    openNews() {
-      if (!this.url || this.url === '#') return
+  mounted() {
+    const box = this.$refs.descriptionBox as HTMLElement
 
-      window.location.assign(this.url)
+    this.resizeObserver = new ResizeObserver(this.updateDescriptionLines)
+    this.resizeObserver.observe(box)
+    this.updateDescriptionLines()
+  },
+
+  beforeUnmount() {
+    this.resizeObserver?.disconnect()
+  },
+
+  methods: {
+    updateDescriptionLines() {
+      const box = this.$refs.descriptionBox as HTMLElement
+      const text = this.$refs.descriptionText as HTMLElement
+
+      const lineHeight = Number.parseFloat(
+        window.getComputedStyle(text).lineHeight,
+      )
+
+      if (!Number.isFinite(lineHeight) || lineHeight <= 0) return
+
+      this.descriptionLines = Math.max(
+        1,
+        Math.floor(box.clientHeight / lineHeight),
+      )
+    },
+
+    openNews() {
+      if (this.canOpen) {
+        window.location.assign(this.url)
+      }
     },
   },
 })
