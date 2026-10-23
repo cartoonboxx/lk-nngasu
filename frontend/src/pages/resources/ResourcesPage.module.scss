@@ -4,12 +4,6 @@
   @include mixins.setLayout()
 }
 
-.pageInput {
-  display: flex;
-  width: 100%;
-  margin-bottom: var(--space-6);
-}
-
 .section {
   margin-bottom: var(--space-6);
 }

@@ -2,17 +2,7 @@
   <section :class="style.resoursePage">
     <SectionHeader
       header="Ресурсы и сервисы"
-      paragraph="Учебные платформы, боты и контакты университета"
-    />
-
-    <section :class="style.pageInput">
-      <StyleInput v-model="searchQuery" placeholder="Поиск ресурса или службы" :full-width="true">
-        <template #prefix>
-          <PhMagnifyingGlass :size="20" />
-        </template>
-      </StyleInput>
-    </section>
-
+      paragraph="Учебные платформы, боты и контакты университета"/>
     <section :class="style.section">
       <div :class="style.sectionHeading">
         <h2>Сервисы университета</h2>
