@@ -17,7 +17,7 @@
         v-for="subject in filteredSubjects"
         :key="subject.value"
         :variant="selectedSubject === subject.value ? 'secondary' : 'secondary'"
-        @click="selectedSubject = subject.value"
+        @click="openSubject(subject.value)"
       >
         {{ subject.label }}
       </Button>
@@ -118,6 +118,11 @@ export default defineComponent({
         },
       ] as Subject[],
     }
+  },
+  methods: {
+    openSubject(idSubject: string) {
+      this.$router.push(`/subject/${encodeURIComponent(idSubject)}`)
+    },
   },
   computed: {
     filteredSubjects(): Subject[] {
