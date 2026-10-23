@@ -1,0 +1,5 @@
+@use './breakpoints';
+
+:export {
+  phoneMax: breakpoints.$screen-phone-max;
+}

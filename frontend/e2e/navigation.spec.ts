@@ -67,3 +67,31 @@ test('mobile tabs fit narrow screens and keep courses active', async ({ page }) 
   await navigation.getByRole('link', { name: 'Главная' }).click()
   await expect(page).toHaveURL(/\/dashboard$/)
 })
+
+test('mobile more menu uses Modal and supports swipe dismissal', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 })
+  await page.goto('/dashboard')
+  const menu = page.getByRole('button', { name: 'Ещё', exact: true, includeHidden: true })
+  await menu.click()
+  const dialog = page.getByRole('dialog')
+  const panel = dialog.locator(':scope > div')
+  const handle = dialog.locator('[class*=handle]')
+  await expect(handle).toBeVisible()
+  await expect(menu).toHaveClass(/active/)
+  await expect
+    .poll(async () => {
+      const bounds = (await panel.boundingBox())!
+      return Math.round(bounds.y + bounds.height)
+    })
+    .toBe(812)
+  const grip = (await handle.boundingBox())!
+  await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2)
+  await page.mouse.down()
+  await page.mouse.move(grip.x + grip.width / 2, 800, { steps: 16 })
+  await page.mouse.up()
+  await expect(dialog).toBeHidden()
+  await expect(menu).not.toHaveClass(/active/)
+  await expect(menu).toBeFocused()
+  await expect(page.locator('body')).not.toHaveCSS('overflow', 'hidden')
+  await expect(page.locator('main')).not.toHaveAttribute('inert')
+})

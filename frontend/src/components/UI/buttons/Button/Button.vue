@@ -7,6 +7,7 @@
     :disabled="disabled"
     :full-width="fullWidth"
     :loading="loading"
+    :round="round"
   >
     <slot />
   </BaseButton>
@@ -45,6 +46,10 @@ export default defineComponent({
       default: false,
     },
     fullWidth: {
+      type: Boolean,
+      default: false,
+    },
+    round: {
       type: Boolean,
       default: false,
     },

@@ -5,6 +5,7 @@
   background: transparent;
   color: var(--color-text-secondary);
   box-shadow: none;
+  width: 100%;
 
   &:hover:not([data-disabled='true']) {
     border-color: transparent;

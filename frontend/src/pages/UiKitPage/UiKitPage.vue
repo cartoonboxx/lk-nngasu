@@ -496,11 +496,26 @@
         <article :class="style.group">
           <h3>Произвольное содержимое</h3>
           <div :class="style.row">
+            <StyleTab
+              v-for="size in modalSizes"
+              :key="size.label"
+              :text="size.label"
+              :active="modalSize.label === size.label"
+              @select="modalSize = size"
+            />
+          </div>
+          <div :class="style.row">
             <Button @click="modalOpen = true">Открыть модальное окно</Button>
           </div>
         </article>
       </div>
-      <Modal v-model="modalOpen" v-slot="{ close }">
+      <Modal
+        v-model="modalOpen"
+        v-slot="{ close }"
+        :width="modalSize.width"
+        :height="modalSize.height"
+        :breakpoints="[0, 0.5, 1]"
+      >
         <div :class="style.modalActions">
           <div :class="style.header">
             <h3>Обратная связь</h3>
@@ -650,6 +665,12 @@ export default defineComponent({
       mediaAttachmentVisible: true,
       modalOpen: false,
       modalMessage: '',
+      modalSize: { label: 'Обычная', width: 540, height: 'auto' as string | number },
+      modalSizes: [
+        { label: 'Компактная', width: 360, height: 'auto' as string | number },
+        { label: 'Обычная', width: 540, height: 'auto' as string | number },
+        { label: 'Широкая', width: 800, height: 560 as string | number },
+      ],
       activeTab: 'schedule',
       popupTab: 'schedule',
       selectedSubject: '',

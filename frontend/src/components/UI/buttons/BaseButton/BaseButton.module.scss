@@ -46,6 +46,10 @@
     width: 100%;
   }
 
+  &.round {
+    border-radius: var(--radius-round);
+  }
+
   &.active {
     transform: translateY(1px);
   }

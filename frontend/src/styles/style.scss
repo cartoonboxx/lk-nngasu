@@ -1,3 +1,5 @@
+@use '@/styles/breakpoints';
+
 :root {
   // spacing
   --space-0: 0;
@@ -105,7 +107,7 @@
   --max-width-pc: 1200px;
 }
 
-@media screen and (max-width: 540px) {
+@media screen and (max-width: breakpoints.$screen-phone-content-max) {
   :root {
     // font size
     --font-size-h1: 24px;
@@ -162,7 +164,7 @@ a {
 }
 
 body {
-  min-width: 320px;
+  min-width: breakpoints.$screen-phone-min;
   min-height: 100vh;
   margin: 0;
   background: var(--color-surface-page);

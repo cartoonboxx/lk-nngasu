@@ -1,3 +1,5 @@
+@use '@/styles/breakpoints';
+
 .sectionHeader {
   display: flex;
   justify-content: space-between;
@@ -12,17 +14,18 @@
     p {
       font-size: var(--font-size-body-small);
       font-weight: 300;
-      color: var(--color-text-secondary)
+      color: var(--color-text-secondary);
     }
   }
 
   .actions {
     display: flex;
+    align-items: center;
     gap: var(--space-2);
   }
 }
 
-@media screen and (max-width: 540px) {
+@media screen and (max-width: breakpoints.$screen-phone-content-max) {
   .sectionHeader {
     margin-bottom: var(--space-3);
   }

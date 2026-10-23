@@ -5,6 +5,7 @@
       style[size],
       state !== 'default' ? style[state] : null,
       fullWidth ? style.fullWidth : null,
+      round ? style.round : null,
     ]"
     :type="type"
     :disabled="disabled || loading || state === 'disabled'"
@@ -40,6 +41,10 @@ export default defineComponent({
       default: false,
     },
     fullWidth: {
+      type: Boolean,
+      default: false,
+    },
+    round: {
       type: Boolean,
       default: false,
     },

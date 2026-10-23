@@ -1,10 +1,12 @@
+@use '@/styles/breakpoints';
+
 .page {
   min-height: 100vh;
   padding: var(--space-10);
   background: var(--color-surface-level-0);
   color: var(--color-text-primary);
 
-  @media screen and (max-width: 540px) {
+  @media screen and (max-width: breakpoints.$screen-phone-content-max) {
     padding: var(--space-5);
   }
 
@@ -57,7 +59,7 @@
       color: var(--color-text-secondary);
     }
 
-    @media screen and (max-width: 540px) {
+    @media screen and (max-width: breakpoints.$screen-phone-content-max) {
       padding: var(--space-4);
     }
   }

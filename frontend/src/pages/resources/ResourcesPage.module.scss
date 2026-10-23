@@ -1,7 +1,9 @@
+@use '@/styles/breakpoints';
+
 @use '@/styles/mixins';
 
 .resoursePage {
-  @include mixins.setLayout()
+  @include mixins.setLayout();
 }
 
 .pageInput {
@@ -44,13 +46,11 @@
   gap: var(--space-3);
 }
 
-@media (max-width: 1024px) {
+@media (max-width: breakpoints.$screen-tablet-max) {
   .contactsGrid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
-
-
 
 @media (max-width: 640px) {
   .header {
@@ -87,7 +87,7 @@
     }
 
     p {
-      font-size:var(--font-size-caption);
+      font-size: var(--font-size-caption);
     }
   }
 

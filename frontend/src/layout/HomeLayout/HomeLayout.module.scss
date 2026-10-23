@@ -1,3 +1,5 @@
+@use '@/styles/breakpoints';
+
 .mainContent {
   min-height: 100vh;
   margin-left: 280px;
@@ -15,7 +17,7 @@
   }
 }
 
-@media (max-width: 767px) {
+@media (max-width: breakpoints.$screen-phone-max) {
   .mainContent,
   .mainContent.collapsed {
     min-width: 0;

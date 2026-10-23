@@ -3,18 +3,34 @@
     <dialog
       ref="dialog"
       v-bind="$attrs"
-      :class="style.overlay"
+      :class="[
+        style.overlay,
+        isPopover ? style.popover : null,
+        entered ? style.entered : null,
+        closing ? style.leaving : null,
+        dragging ? style.dragging : null,
+      ]"
+      :style="modalStyle"
       @cancel.self.prevent="close"
+      @keydown.esc.prevent.stop="close"
+      @keydown.tab="trapFocus"
       @close="onNativeClose"
       @pointerdown="backdropPressed = $event.target === $event.currentTarget"
       @click="onBackdropClick"
     >
-      <div
-        :class="style.modal"
-        :style="{ width: typeof width === 'number' ? `${width}px` : width }"
-      >
+      <div ref="panel" :class="style.modal">
+        <div
+          v-if="handle"
+          ref="handle"
+          :class="style.handle"
+          @pointerdown="startDrag"
+          @pointermove="moveDrag"
+          @pointerup="finishDrag"
+          @pointercancel="cancelDrag"
+          @lostpointercapture="cancelDrag"
+        />
         <div :class="style.content">
-          <slot :close="close" />
+          <slot :close="close" :breakpoint="currentBreakpoint" :set-breakpoint="setBreakpoint" />
         </div>
       </div>
     </dialog>
@@ -22,10 +38,11 @@
 </template>
 
 <script lang="ts">
-import { defineComponent } from 'vue'
+import { defineComponent, type CSSProperties, type PropType } from 'vue'
+import screenSizes from '@/styles/breakpoints.module.scss'
 import style from './BaseModal.module.scss'
 
-// Keep the page locked until the last modal closes.
+// Keep the page locked until the last modal closes, including its exit animation.
 const scrollLocks = new Set<HTMLDialogElement>()
 let previousOverflow = ''
 
@@ -35,66 +52,373 @@ function unlockScroll(dialog: HTMLDialogElement) {
   }
 }
 
+function cssSize(value: number | string) {
+  return typeof value === 'number' ? `${value}px` : value
+}
+
 export default defineComponent({
   name: 'Modal',
   inheritAttrs: false,
   props: {
-    modelValue: { type: Boolean, default: false },
-    width: { type: [Number, String], default: 540 },
-    closeOnOverlay: { type: Boolean, default: true },
+    modelValue: {
+      type: Boolean,
+      default: false,
+    },
+    width: {
+      type: [Number, String],
+      default: 540,
+    },
+    height: {
+      type: [Number, String],
+      default: 'auto',
+    },
+    maxWidth: {
+      type: [Number, String],
+      default: '100%',
+    },
+    maxHeight: {
+      type: [Number, String],
+      default: '100%',
+    },
+    closeOnOverlay: {
+      type: Boolean,
+      default: true,
+    },
+    handle: {
+      type: Boolean,
+      default: true,
+    },
+    swipeToClose: {
+      type: Boolean,
+      default: true,
+    },
+    breakpoints: {
+      type: Array as PropType<number[]>,
+      default: () => [0, 1],
+    },
+    initialBreakpoint: {
+      type: Number,
+      default: 1,
+    },
+    anchor: {
+      type: [Object, Function] as PropType<HTMLElement | (() => HTMLElement | null) | null>,
+      default: null,
+    },
   },
   emits: {
     'update:modelValue': (value: boolean) => typeof value === 'boolean',
+    'breakpoint-change': (value: number) => typeof value === 'number',
     close: () => true,
   },
   data() {
-    return { style, backdropPressed: false }
+    return {
+      style,
+      backdropPressed: false,
+      entered: false,
+      closing: false,
+      isMobile: false,
+      dragging: false,
+      currentBreakpoint: 1,
+      panelHeight: 0,
+      dragOffset: 0,
+      dragStartY: 0,
+      dragStartOffset: 0,
+      dragStartTime: 0,
+      pointerId: null as number | null,
+      viewportHeight: 0,
+      viewportTop: 0,
+      popupX: 0,
+      popupY: 0,
+      mediaQuery: null as MediaQueryList | null,
+      resizeObserver: null as ResizeObserver | null,
+      enterFrame: 0,
+      closeTimer: undefined as ReturnType<typeof setTimeout> | undefined,
+    }
+  },
+  computed: {
+    isPopover(): boolean {
+      return Boolean(this.anchor && !this.isMobile)
+    },
+    sheetBreakpoints(): number[] {
+      const values = [...new Set(this.breakpoints)]
+        .filter((value) => Number.isFinite(value) && value >= 0 && value <= 1)
+        .sort((a, b) => a - b)
+      return values.some((value) => value > 0) ? values : [0, 1]
+    },
+    modalStyle(): CSSProperties {
+      const offset = this.dragging
+        ? this.dragOffset
+        : this.panelHeight * (1 - this.currentBreakpoint)
+      return {
+        '--modal-width': cssSize(this.width),
+        '--modal-height': cssSize(this.height),
+        '--modal-max-width': cssSize(this.maxWidth),
+        '--modal-max-height': cssSize(this.maxHeight),
+        '--sheet-offset': `${offset}px`,
+        '--modal-x': `${this.popupX}px`,
+        '--modal-y': `${this.popupY}px`,
+        ...(this.viewportHeight
+          ? {
+              '--modal-viewport-height': `${this.viewportHeight}px`,
+              '--modal-viewport-top': `${this.viewportTop}px`,
+            }
+          : {}),
+      }
+    },
   },
   watch: {
     modelValue() {
       this.syncDialog()
     },
+    sheetBreakpoints() {
+      this.setBreakpoint(this.currentBreakpoint)
+    },
+    async isPopover() {
+      const dialog = this.$refs.dialog as HTMLDialogElement | undefined
+      if (!dialog?.open || !this.modelValue) return
+      await this.$nextTick()
+      if (!this.modelValue || !dialog.open) return
+      const focused = document.activeElement as HTMLElement | null
+      dialog.close()
+      unlockScroll(dialog)
+      this.presentDialog()
+      if (focused && dialog.contains(focused)) focused.focus({ preventScroll: true })
+    },
   },
   mounted() {
+    this.mediaQuery = window.matchMedia(`(max-width: ${screenSizes.phoneMax})`)
+    this.isMobile = this.mediaQuery.matches
+    this.mediaQuery.addEventListener('change', this.onViewportChange)
+    window.visualViewport?.addEventListener('resize', this.updateViewport)
+    window.visualViewport?.addEventListener('scroll', this.updateViewport)
+    window.addEventListener('resize', this.updateViewport)
+    window.addEventListener('scroll', this.updatePosition, true)
+    document.addEventListener('pointerdown', this.onOutsidePointer)
+    if (typeof ResizeObserver !== 'undefined') {
+      this.resizeObserver = new ResizeObserver(this.measurePanel)
+      this.resizeObserver.observe(this.$refs.panel as HTMLElement)
+    }
+    this.updateViewport()
     this.syncDialog()
   },
   beforeUnmount() {
+    this.clearAnimation()
+    this.cancelDrag()
+    this.resizeObserver?.disconnect()
+    this.mediaQuery?.removeEventListener('change', this.onViewportChange)
+    window.visualViewport?.removeEventListener('resize', this.updateViewport)
+    window.visualViewport?.removeEventListener('scroll', this.updateViewport)
+    window.removeEventListener('resize', this.updateViewport)
+    window.removeEventListener('scroll', this.updatePosition, true)
+    document.removeEventListener('pointerdown', this.onOutsidePointer)
     const dialog = this.$refs.dialog as HTMLDialogElement
     if (dialog.open) dialog.close()
     unlockScroll(dialog)
   },
   methods: {
+    clearAnimation() {
+      cancelAnimationFrame(this.enterFrame)
+      clearTimeout(this.closeTimer)
+      this.closeTimer = undefined
+    },
     syncDialog() {
       const dialog = this.$refs.dialog as HTMLDialogElement | undefined
       if (!dialog) return
-      if (this.modelValue && !dialog.open) {
+      if (this.modelValue) {
+        this.clearAnimation()
+        this.closing = false
+        if (!dialog.open) {
+          this.currentBreakpoint = this.nearestBreakpoint(this.initialBreakpoint, false)
+          this.entered = false
+          this.presentDialog()
+          this.measurePanel()
+          // Commit the starting position before the opening transition.
+          void dialog.offsetHeight
+          this.enterFrame = requestAnimationFrame(() => {
+            this.enterFrame = requestAnimationFrame(() => {
+              this.entered = true
+            })
+          })
+        } else {
+          this.entered = true
+        }
+      } else if (dialog.open && !this.closing) {
+        this.clearAnimation()
+        this.cancelDrag()
+        this.closing = true
+        const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 220
+        this.closeTimer = setTimeout(() => {
+          this.closeTimer = undefined
+          if (!this.modelValue && dialog.open) {
+            dialog.close()
+            unlockScroll(dialog)
+          }
+        }, duration)
+      }
+    },
+    close() {
+      this.$emit('update:modelValue', false)
+    },
+    trapFocus(event: KeyboardEvent) {
+      if (this.isPopover) return
+      const panel = this.$refs.panel as HTMLElement
+      const controls = Array.from(
+        panel.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, [tabindex]'),
+      ).filter(
+        (element) =>
+          element.tabIndex >= 0 &&
+          !element.matches(':disabled') &&
+          !element.closest('[inert]') &&
+          element.getClientRects().length,
+      )
+      const first = controls[0]
+      const last = controls[controls.length - 1]
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault()
+        last?.focus()
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault()
+        first?.focus()
+      }
+    },
+    presentDialog() {
+      const dialog = this.$refs.dialog as HTMLDialogElement
+      if (this.isPopover) {
+        dialog.show()
+        this.updatePosition()
+      } else {
         dialog.showModal()
         if (!scrollLocks.size) {
           previousOverflow = document.body.style.overflow
           document.body.style.overflow = 'hidden'
         }
         scrollLocks.add(dialog)
-      } else if (!this.modelValue && dialog.open) {
-        dialog.close()
-        unlockScroll(dialog)
       }
     },
-    close() {
-      this.$emit('update:modelValue', false)
+    updatePosition() {
+      const dialog = this.$refs.dialog as HTMLDialogElement | undefined
+      if (!this.isPopover || !dialog?.open || !this.anchor) return
+      const element = this.getAnchor()
+      if (!element) return
+      const anchor = element.getBoundingClientRect()
+      const right = anchor.right + 8
+      const horizontal =
+        right + dialog.offsetWidth <= window.innerWidth - 12
+          ? right
+          : anchor.left - dialog.offsetWidth - 8
+      this.popupX = Math.max(12, Math.min(horizontal, window.innerWidth - dialog.offsetWidth - 12))
+      this.popupY = Math.max(
+        12,
+        Math.min(anchor.top, window.innerHeight - dialog.offsetHeight - 12),
+      )
+    },
+    onOutsidePointer(event: PointerEvent) {
+      if (!this.isPopover || !this.modelValue || !this.closeOnOverlay) return
+      const target = event.target as Node
+      if (
+        !(this.$refs.dialog as HTMLDialogElement).contains(target) &&
+        !this.getAnchor()?.contains(target)
+      )
+        this.close()
+    },
+    getAnchor(): HTMLElement | null {
+      return typeof this.anchor === 'function' ? this.anchor() : this.anchor
     },
     onBackdropClick(event: MouseEvent) {
-      if (this.closeOnOverlay && this.backdropPressed && event.target === event.currentTarget) {
+      if (this.closeOnOverlay && this.backdropPressed && event.target === event.currentTarget)
         this.close()
-      }
       this.backdropPressed = false
     },
     onNativeClose() {
-      const dialog = this.$refs.dialog as HTMLDialogElement | undefined
-      // A queued close event can arrive after the dialog has reopened.
-      if (!dialog || dialog.open) return
+      const dialog = this.$refs.dialog as HTMLDialogElement
+      if (dialog.open) return
+      this.clearAnimation()
+      this.cancelDrag()
+      this.entered = false
+      this.closing = false
       unlockScroll(dialog)
       if (this.modelValue) this.close()
       this.$emit('close')
+    },
+    updateViewport() {
+      this.viewportHeight = window.visualViewport?.height ?? window.innerHeight
+      this.viewportTop = window.visualViewport?.offsetTop ?? 0
+      void this.$nextTick(this.updatePosition)
+    },
+    onViewportChange() {
+      this.cancelDrag()
+      this.isMobile = this.mediaQuery?.matches ?? false
+      this.updateViewport()
+    },
+    measurePanel() {
+      this.panelHeight = (this.$refs.panel as HTMLElement).offsetHeight
+      this.updatePosition()
+    },
+    nearestBreakpoint(value: number, includeClosed?: boolean): number {
+      const options = this.sheetBreakpoints.filter(
+        (point) => (includeClosed ?? this.swipeToClose) || point > 0,
+      )
+      const target = Number.isFinite(value) ? value : 1
+      return options.reduce(
+        (nearest, point) =>
+          Math.abs(point - target) < Math.abs(nearest - target) ? point : nearest,
+        options[0]!,
+      )
+    },
+    setBreakpoint(value: number) {
+      const next = this.nearestBreakpoint(value)
+      if (!next) {
+        if (this.isMobile && this.modelValue) this.close()
+        return
+      }
+      this.currentBreakpoint = next
+      this.$emit('breakpoint-change', next)
+    },
+    startDrag(event: PointerEvent) {
+      if (!this.isMobile || this.closing || !event.isPrimary || event.button !== 0) return
+      this.measurePanel()
+      if (!this.panelHeight) return
+      this.pointerId = event.pointerId
+      this.dragStartY = event.clientY
+      this.dragStartTime = event.timeStamp
+      this.dragStartOffset = this.panelHeight * (1 - this.currentBreakpoint)
+      this.dragOffset = this.dragStartOffset
+      this.dragging = true
+      ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
+    },
+    moveDrag(event: PointerEvent) {
+      if (!this.dragging || event.pointerId !== this.pointerId) return
+      const lowest = this.swipeToClose
+        ? this.sheetBreakpoints[0]!
+        : this.sheetBreakpoints.find((point) => point > 0)!
+      this.dragOffset = Math.max(
+        0,
+        Math.min(
+          this.panelHeight * (1 - lowest),
+          this.dragStartOffset + event.clientY - this.dragStartY,
+        ),
+      )
+    },
+    finishDrag(event: PointerEvent) {
+      if (!this.dragging || event.pointerId !== this.pointerId) return
+      this.moveDrag(event)
+      const distance = event.clientY - this.dragStartY
+      const velocity = distance / Math.max(16, event.timeStamp - this.dragStartTime)
+      const momentum = Math.max(
+        -this.panelHeight * 0.2,
+        Math.min(this.panelHeight * 0.2, velocity * 120),
+      )
+      const projected = this.dragOffset + (Math.abs(distance) > 48 ? momentum : 0)
+      const next = 1 - projected / this.panelHeight
+      this.cancelDrag()
+      this.setBreakpoint(next)
+    },
+    cancelDrag() {
+      this.dragging = false
+      const handle = this.$refs.handle as HTMLElement | undefined
+      if (this.pointerId !== null && handle?.hasPointerCapture(this.pointerId))
+        handle.releasePointerCapture(this.pointerId)
+      this.pointerId = null
     },
   },
 })
