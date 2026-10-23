@@ -1,0 +1,144 @@
+.card {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-3);
+  box-sizing: border-box;
+  border: 1px solid var(--color-border-level-2);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-level-2);
+}
+
+.image {
+  flex: 0 0 120px;
+  width: 120px;
+  height: 150px;
+  min-height: 0;
+  align-self: flex-start;
+
+  object-fit: cover;
+  object-position: center;
+
+  border-radius: var(--radius-lg);
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+.date {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.title {
+  margin: var(--space-2);
+  font-size: var(--font-size-body);
+  overflow-wrap: anywhere;
+}
+
+.titleLink {
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.description {
+  margin: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-body-small);
+  overflow-wrap: anywhere;
+}
+
+.readMore {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 44px;
+  margin-top: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  box-sizing: border-box;
+
+  border-radius: var(--radius-lg);
+  background: var(--color-accent, #ff7a00);
+  color: #07131d;
+  text-decoration: none;
+
+  svg {
+    flex-shrink: 0;
+  }
+}
+
+.titleLink:focus-visible,
+.readMore:focus-visible {
+  outline: 2px solid var(--color-accent, #ff7a00);
+  outline-offset: 3px;
+}
+
+.featured {
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-4);
+
+  .image {
+    flex: 0 0 46%;
+    width: 46%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
+
+  .title {
+    font-size: var(--font-size-h2);
+  }
+
+  .description {
+    font-size: var(--font-size-body);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .titleLink:hover {
+    text-decoration: underline;
+  }
+
+  .readMore:hover {
+    text-decoration: underline;
+  }
+}
+
+@media (max-width: 1024px) {
+  .featured {
+    gap: var(--space-3);
+  }
+}
+
+@media (max-width: 640px) {
+  .image {
+    flex-basis: 96px;
+    width: 96px;
+    height: 120px;
+  }
+
+  .featured {
+    flex-direction: column;
+    align-items: stretch;
+    padding: var(--space-3);
+
+    .image {
+      flex: none;
+      width: 100%;
+      height: auto;
+    }
+
+    .title {
+      font-size: var(--font-size-body);
+    }
+
+    .description {
+      font-size: var(--font-size-label);
+    }
+  }
+}

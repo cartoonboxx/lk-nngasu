@@ -1,0 +1,58 @@
+@use '@/styles/mixins';
+
+.newsPage {
+  @include mixins.setLayout();
+  min-width: 0;
+}
+
+.search {
+  width: 100%;
+  max-width: 420px;
+  min-width: 0;
+}
+
+.newsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  margin-top: var(--space-3);
+}
+
+.showMore {
+  display: flex;
+  justify-content: center;
+  margin-top: var(--space-4);
+
+  > * {
+    width: 100%;
+    max-width: 460px;
+    min-height: 44px;
+  }
+}
+
+.empty {
+  margin: 0;
+  padding: var(--space-6) var(--space-4);
+  color: var(--color-text-secondary);
+  text-align: center;
+}
+
+@media (max-width: 1024px) {
+  .newsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .search {
+    max-width: none;
+  }
+
+  .newsGrid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .showMore > * {
+    max-width: none;
+  }
+}
