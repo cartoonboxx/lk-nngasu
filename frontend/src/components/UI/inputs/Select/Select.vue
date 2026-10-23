@@ -1,5 +1,6 @@
 <template>
   <FloatingPopup
+    v-bind="$attrs"
     :class="[style.root, fullWidth && style.fullWidth]"
     :items="options"
     :model-value="modelValue"
@@ -47,6 +48,7 @@ import style from './Select.module.scss'
 
 export default defineComponent({
   name: 'Select',
+  inheritAttrs: false,
   components: { FloatingPopup, StyleTab, PhCaretDown },
   props: {
     modelValue: {

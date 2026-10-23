@@ -10,7 +10,7 @@
             @click="toggleCollapsed"
           >
             <img v-if="collapsed" :class="style.toggleLogo" src="$images/logo.svg" alt="" />
-            <PhSquareHalf :class="style.toggleIcon" />
+            <PhSidebarSimple :class="style.toggleIcon" />
           </IconButton>
         </Tooltip>
       </div>
@@ -95,7 +95,7 @@
       <StudentCard
         :compact="collapsed"
         name="Анна Иванова"
-        role="Студентка"
+        role="Студент"
         @click="navigate('settings')"
       />
     </Tooltip>
@@ -110,7 +110,7 @@ import {
   PhChatsCircle,
   PhGearSix,
   PhHouse,
-  PhSquareHalf,
+  PhSidebarSimple,
   PhSquaresFour,
 } from '@phosphor-icons/vue'
 import { defineComponent, markRaw } from 'vue'
@@ -124,7 +124,14 @@ import style from './DesktopNavBar.module.scss'
 
 export default defineComponent({
   name: 'DesktopNavBar',
-  components: { BrandHeader, StudentCard, NavTab, IconButton, Tooltip, PhSquareHalf },
+  components: {
+    PhSidebarSimple,
+    BrandHeader,
+    StudentCard,
+    NavTab,
+    IconButton,
+    Tooltip,
+  },
   emits: ['collapse-change'],
   data() {
     return { style, collapsed: false }

@@ -44,6 +44,7 @@ export default defineComponent({
     },
     disabled: {
       type: Boolean,
+      default: false,
     },
     isShow: {
       type: Boolean,

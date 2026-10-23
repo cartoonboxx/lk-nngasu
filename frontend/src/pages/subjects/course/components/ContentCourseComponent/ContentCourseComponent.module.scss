@@ -120,5 +120,10 @@
     .assignmentSection .assignment {
       padding: var(--space-4);
     }
+
+    .footer {
+      flex-direction: column;
+      gap: var(--space-3);
+    }
   }
 }

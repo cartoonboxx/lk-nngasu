@@ -1,0 +1,49 @@
+@use '@/styles/breakpoints';
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-5);
+  margin-top: var(--space-4);
+  list-style: none;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    color: var(--color-text-secondary);
+    font-size: 11px;
+  }
+}
+
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: var(--radius-round);
+}
+
+.lecture {
+  background: var(--schedule-lecture);
+}
+
+.practice {
+  background: var(--schedule-practice);
+}
+
+.lab {
+  background: var(--schedule-lab);
+}
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .legend {
+    gap: var(--space-2);
+
+    li {
+      padding: 6px var(--space-2);
+      border: 1px solid var(--color-border-level-1);
+      border-radius: var(--radius-round);
+      background: var(--color-surface-navigation);
+    }
+  }
+}

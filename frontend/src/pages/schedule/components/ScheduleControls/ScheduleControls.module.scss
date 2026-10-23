@@ -1,0 +1,81 @@
+@use '@/styles/breakpoints';
+
+.filterBlock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  margin-bottom: var(--space-6);
+
+  .leftPart {
+    display: flex;
+    gap: var(--space-4);
+  }
+
+  .dailyPart {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-4);
+  }
+}
+
+.weekLabel {
+  color: var(--color-text-primary);
+  font-size: var(--font-size-body-small);
+  font-weight: 500;
+}
+
+.inputGroup {
+  display: flex;
+  gap: var(--space-2);
+  input {
+    width: 180px;
+  }
+}
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .leftPart {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .filterBlock .leftPart .dailyPart {
+    display: grid;
+    grid-template-columns: var(--control-height-md) minmax(0, 1fr) var(--control-height-md);
+    width: 100%;
+  }
+
+  .weekLabel {
+    text-align: center;
+  }
+
+  .inputGroup {
+    width: 100%;
+
+    .input {
+      width: 100%;
+    }
+  }
+}
+
+@media (max-width: breakpoints.$screen-phone-content-max) {
+  .filterBlock {
+    gap: var(--space-3);
+    .dailyPart {
+      gap: var(--space-2);
+    }
+  }
+
+  .weekLabel {
+    font-size: 12px;
+  }
+
+  .inputGroup {
+    width: 100%;
+    input {
+      width: 100%;
+    }
+  }
+}

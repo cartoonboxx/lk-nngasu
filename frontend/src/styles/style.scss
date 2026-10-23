@@ -1,3 +1,5 @@
+@use '@/styles/breakpoints';
+
 :root {
   // spacing
   --space-0: 0;
@@ -10,6 +12,11 @@
   --space-8: 32px;
   --space-10: 40px;
   --space-12: 48px;
+
+  // shared control heights
+  --control-height-sm: 36px;
+  --control-height-md: 46px;
+  --control-height-lg: 54px;
 
   // radius
   --radius-none: 0;
@@ -100,7 +107,7 @@
   --max-width-pc: 1200px;
 }
 
-@media screen and (max-width: 540px) {
+@media screen and (max-width: breakpoints.$screen-phone-content-max) {
   :root {
     // font size
     --font-size-h1: 24px;
@@ -153,11 +160,11 @@ a {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  -webkit-tap-highlight-color: transparent
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  min-width: 320px;
+  min-width: breakpoints.$screen-phone-min;
   min-height: 100vh;
   margin: 0;
   background: var(--color-surface-page);

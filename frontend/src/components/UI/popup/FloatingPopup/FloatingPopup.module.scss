@@ -4,8 +4,8 @@
   min-width: 0;
   max-width: 100%;
   .trigger {
-    min-height: 46px;
-    padding: var(--space-3) var(--space-4);
+    min-height: var(--control-height-md);
+    padding: 0 var(--space-4);
     border: 1px solid var(--color-border-level-2);
     border-radius: var(--radius-md);
     background: var(--color-surface-raised);
