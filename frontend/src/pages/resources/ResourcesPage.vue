@@ -5,14 +5,6 @@
       paragraph="Учебные платформы, боты и контакты университета"
     />
 
-    <section :class="style.pageInput">
-      <StyleInput v-model="searchQuery" placeholder="Поиск ресурса или службы" :full-width="true">
-        <template #prefix>
-          <PhMagnifyingGlass :size="20" aria-hidden="true" />
-        </template>
-      </StyleInput>
-    </section>
-
     <section :class="style.section">
       <div :class="style.sectionHeading">
         <h2>Сервисы университета</h2>
@@ -64,11 +56,9 @@ import VK_logo from '$images/vk-logo.svg'
 import Max_logo from '$images/MAX.svg'
 
 import ServiceCard from './components/ServiceCard/ServiceCard.vue'
-import StyleInput from '@/components/UI/inputs/Input/Input.vue'
 import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 
 import {
-  PhMagnifyingGlass,
   PhGraduationCap,
   PhPlayCircle,
   PhUsersThree,
@@ -98,9 +88,7 @@ export default defineComponent({
 
   components: {
     SectionHeader,
-    StyleInput,
     ServiceCard,
-    PhMagnifyingGlass,
   },
 
   data() {
