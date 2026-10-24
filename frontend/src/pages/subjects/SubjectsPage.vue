@@ -15,9 +15,9 @@
     <section :class="style.pageSubjectSemester">
       <Button
         v-for="subject in filteredSubjects"
-        :key="subject.value"
-        :variant="selectedSubject === subject.value ? 'secondary' : 'secondary'"
-        @click="openSubject(subject.value)"
+        :key="subject.id"
+        variant="secondary"
+        @click="openSubject(subject.id)"
       >
         {{ subject.label }}
       </Button>
@@ -36,6 +36,7 @@ import Button from '@/components/UI/buttons/Button/Button.vue'
 import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 
 interface Subject {
+  id: number
   label: string
   value: string
   semester: string
@@ -67,51 +68,61 @@ export default defineComponent({
 
       subjects: [
         {
+          id: 1,
           label: 'Программирование',
           value: 'programming',
           semester: '1',
         },
         {
+          id: 2,
           label: 'Математика',
           value: 'math',
           semester: '1',
         },
         {
+          id: 3,
           label: 'Базы данных',
           value: 'database',
           semester: '1',
         },
         {
+          id: 4,
           label: 'Веб-разработка',
           value: 'web',
           semester: '2',
         },
         {
+          id: 5,
           label: 'Компьютерные сети',
           value: 'cet',
           semester: '2',
         },
         {
+          id: 6,
           label: 'ОС',
           value: 'oc',
           semester: '1',
         },
         {
+          id: 7,
           label: 'Тестирование',
           value: 'test',
           semester: '1',
         },
         {
+          id: 8,
           label: 'Качество ПО',
           value: 'po',
           semester: '1',
         },
         {
+          id: 9,
           label: 'Логическое программирование',
           value: 'log',
           semester: '2',
         },
         {
+          id: 10,
           label: 'Веб',
           value: 'web2',
           semester: '2',
@@ -120,8 +131,8 @@ export default defineComponent({
     }
   },
   methods: {
-    openSubject(idSubject: string) {
-      this.$router.push(`/subject/${encodeURIComponent(idSubject)}`)
+    openSubject(idSubject: number) {
+      this.$router.push(`/subject/${idSubject}`)
     },
   },
   computed: {
