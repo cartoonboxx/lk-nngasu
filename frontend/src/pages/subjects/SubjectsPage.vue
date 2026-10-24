@@ -132,7 +132,7 @@ export default defineComponent({
   },
   methods: {
     openSubject(idSubject: number) {
-      this.$router.push(`/subject/${idSubject}`)
+      this.$router.push(`/subjects/${idSubject}`)
     },
   },
   computed: {
