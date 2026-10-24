@@ -1,0 +1,138 @@
+.card {
+  display: flex;
+  align-items: stretch;
+  gap: var(--space-3);
+  min-width: 0;
+  padding: var(--space-3);
+  box-sizing: border-box;
+  border: 1px solid var(--color-border-level-1);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-level-2);
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not([data-disabled='true']) {
+    background: var(--color-surface-level-4);
+    color: var(--color-text-primary);
+  }
+
+    &:active:not([data-disabled='true']),
+    &[data-active='true'] {
+      border-color: var(--color-border-level-1);
+      background: var(--color-surface-level-5);
+      color: var(--color-text-primary);
+  }
+  }
+  
+}
+.image {
+  flex: 0 0 120px;
+  width: 120px;
+  height: 150px;
+  align-self: flex-start;
+
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-color: var(--color-surface-level-3);
+
+  border-radius: var(--radius-md);
+}
+
+.content {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-width: 0;
+  overflow: hidden;
+  height: 157px;
+}
+
+.date {
+  display: block;
+  flex-shrink: 0;
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+}
+.descriptionBox {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.title {
+  overflow-wrap: anywhere;
+  display: -webkit-box;
+  flex-shrink: 0;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow-wrap: anywhere;
+}
+
+.titleLink {
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.description {
+  margin: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  color: var(--color-text-secondary);
+  font-size: var(--font-size-body-small);
+  overflow-wrap: anywhere;
+  line-height: 1.5;
+}
+
+.titleLink:focus-visible,
+.readMore:focus-visible {
+  outline: 2px solid var(--color-accent, #ff7a00);
+  outline-offset: 3px;
+}
+
+.featured {
+  align-items: center;
+  gap: var(--space-5);
+  padding: var(--space-4);
+
+  .image {
+    flex: 0 0 46%;
+    width: 46%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+  }
+  .description {
+    font-size: var(--font-size-body);
+  }
+}
+
+@media (max-width: 1024px) {
+  .featured {
+    gap: var(--space-3);
+  }
+}
+
+@media (max-width: 640px) {
+  .image {
+    flex-basis: 96px;
+    width: 96px;
+    height: 120px;
+  }
+
+  .featured {
+    flex-direction: column;
+    align-items: stretch;
+    padding: var(--space-3);
+
+    .image {
+      flex: none;
+      width: 100%;
+      height: auto;
+    }
+    .description {
+      font-size: var(--font-size-label);
+    }
+  }
+}
