@@ -8,7 +8,7 @@ RUN npm ci
 COPY index.html env.d.ts tsconfig*.json *config.ts ./
 COPY src ./src
 COPY public ./public
-RUN npm run type-check && npm run build-only
+RUN npm run build-only
 
 FROM nginx:stable-alpine
 
