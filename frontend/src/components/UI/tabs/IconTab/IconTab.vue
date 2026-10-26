@@ -1,5 +1,6 @@
 <template>
   <button
+    v-press
     :class="[style.tab, style[size], style[variant], state !== 'default' ? style[state] : null]"
     type="button"
     :disabled="disabled || state === 'disabled'"
@@ -9,10 +10,12 @@
 </template>
 
 <script lang="ts">
+import { pressFeedback } from '@/directives/pressFeedback'
 import { defineComponent, type PropType } from 'vue'
 import style from './IconTab.module.scss'
 
 export default defineComponent({
+  directives: { press: pressFeedback },
   name: 'IconTab',
   props: {
     variant: {

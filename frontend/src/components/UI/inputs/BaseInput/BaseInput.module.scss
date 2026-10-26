@@ -17,12 +17,19 @@
     color: var(--color-text-muted);
   }
 
-  &:hover:not(:disabled),
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      border-color: var(--color-border-level-2);
+      background: var(--color-surface-level-2);
+    }
+  }
+
   &.hover {
     border-color: var(--color-border-level-2);
     background: var(--color-surface-level-2);
   }
 
+  &:focus:not(:disabled),
   &.active {
     border-color: var(--color-border-focus);
     background: var(--color-surface-level-1);
@@ -96,5 +103,18 @@
   }
   to {
     opacity: 1;
+  }
+}
+
+@media (pointer: coarse) {
+  .base {
+    // Avoid Safari zooming the page when focusing a small text field.
+    font-size: max(16px, var(--font-size-body-small));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .base {
+    transition: none;
   }
 }

@@ -2,12 +2,17 @@
   background: var(--color-accent-default);
   color: var(--color-text-primary);
 
-  &:hover:not(:disabled),
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      background: var(--color-accent-hover);
+    }
+  }
+
   &.hover {
     background: var(--color-accent-hover);
   }
 
-  &:active:not(:disabled),
+  &:is(:active, [data-pressed='true']):not(:disabled),
   &.active {
     background: var(--color-accent-pressed);
   }
@@ -18,13 +23,19 @@
   background: var(--color-surface-level-4);
   color: var(--color-text-primary);
 
-  &:hover:not(:disabled),
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      border-color: var(--color-border-level-2);
+      background: var(--color-surface-level-5);
+    }
+  }
+
   &.hover {
     border-color: var(--color-border-level-2);
     background: var(--color-surface-level-5);
   }
 
-  &:active:not(:disabled),
+  &:is(:active, [data-pressed='true']):not(:disabled),
   &.active {
     border-color: var(--color-border-level-3);
     background: var(--color-surface-level-3);
@@ -35,12 +46,17 @@
   background: transparent;
   color: var(--color-content-interactive);
 
-  &:hover:not(:disabled),
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      background: var(--color-status-info-surface);
+    }
+  }
+
   &.hover {
     background: var(--color-status-info-surface);
   }
 
-  &:active:not(:disabled),
+  &:is(:active, [data-pressed='true']):not(:disabled),
   &.active {
     background: var(--color-surface-level-4);
   }
@@ -51,7 +67,16 @@
   background: var(--color-status-error-surface);
   color: var(--color-status-error-content);
 
-  &:hover:not(:disabled),
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      background: color-mix(
+        in srgb,
+        var(--color-status-error-surface),
+        var(--color-status-error-content) 10%
+      );
+    }
+  }
+
   &.hover {
     background: color-mix(
       in srgb,
@@ -60,7 +85,7 @@
     );
   }
 
-  &:active:not(:disabled),
+  &:is(:active, [data-pressed='true']):not(:disabled),
   &.active {
     background: color-mix(
       in srgb,

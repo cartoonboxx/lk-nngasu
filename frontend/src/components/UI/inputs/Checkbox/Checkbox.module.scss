@@ -87,7 +87,20 @@
     --checkbox-radius: var(--radius-sm);
   }
 
-  &:hover:not(.disabled),
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(.disabled) {
+      .control {
+        border-color: var(--color-border-level-2);
+        background: var(--color-surface-level-2);
+      }
+
+      .input:checked + .control {
+        border-color: var(--color-border-accent);
+        background: var(--color-accent-hover);
+      }
+    }
+  }
+
   &.hover {
     .control {
       border-color: var(--color-border-level-2);
@@ -108,6 +121,7 @@
     }
   }
 
+  &:is(:active, [data-pressed='true']):not(.disabled),
   &.active {
     .control {
       border-color: var(--color-border-level-3);
@@ -138,5 +152,31 @@
   &.disabled {
     cursor: not-allowed;
     opacity: 0.56;
+  }
+}
+
+@media (pointer: coarse) {
+  .root {
+    touch-action: manipulation;
+  }
+  .root .control {
+    transition:
+      background-color 160ms ease,
+      border-color 160ms ease,
+      scale 180ms ease;
+  }
+  .root:is(:active, [data-pressed='true']):not(.disabled) .control {
+    scale: 0.9;
+    transition-duration: 60ms;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root .control,
+  .root .control::after {
+    transition: none;
+  }
+  .root:is(:active, [data-pressed='true']):not(.disabled) .control {
+    scale: none;
   }
 }

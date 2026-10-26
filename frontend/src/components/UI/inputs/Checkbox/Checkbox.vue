@@ -1,5 +1,6 @@
 <template>
   <label
+    v-press
     :class="[
       style.root,
       style[size],
@@ -22,11 +23,13 @@
 </template>
 
 <script lang="ts">
+import { pressFeedback } from '@/directives/pressFeedback'
 import { defineComponent, type PropType } from 'vue'
 
 import style from './Checkbox.module.scss'
 
 export default defineComponent({
+  directives: { press: pressFeedback },
   name: 'Checkbox',
   props: {
     name: {

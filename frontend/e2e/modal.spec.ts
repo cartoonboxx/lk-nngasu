@@ -204,3 +204,78 @@ for (const sample of [
     }
   })
 }
+
+test('touching sheet content scrolls first and dismisses from the top', async ({
+  browser,
+  browserName,
+}) => {
+  // eslint-disable-next-line playwright/no-skipped-test -- CDP touch input is Chromium-only.
+  test.skip(browserName !== 'chromium', 'Native touch input uses the Chromium protocol')
+  const context = await browser.newContext({
+    viewport: { width: 375, height: 812 },
+    hasTouch: true,
+    isMobile: true,
+  })
+  const page = await context.newPage()
+  const session = await context.newCDPSession(page)
+  const swipe = async (x: number, y: number, distance: number) => {
+    await session.send('Input.dispatchTouchEvent', {
+      type: 'touchStart',
+      touchPoints: [{ x, y }],
+    })
+    for (let step = 1; step <= 20; step++) {
+      await session.send('Input.dispatchTouchEvent', {
+        type: 'touchMove',
+        touchPoints: [{ x, y: y + (distance * step) / 20 }],
+      })
+    }
+    await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+  }
+  await page.goto('/subjects/logic')
+  await page.getByRole('button', { name: 'Открыть задание', exact: true }).click()
+  const dialog = page.getByRole('dialog')
+  const panel = dialog.locator(':scope > div')
+  const content = dialog.locator('[class*=content]').first()
+  await expect.poll(async () => Math.round((await panel.boundingBox())!.y)).toBeGreaterThan(0)
+  await expect
+    .poll(async () => {
+      const box = (await panel.boundingBox())!
+      return Math.round(box.y + box.height)
+    })
+    .toBe(812)
+  const top = (await panel.boundingBox())!.y
+
+  // An upward swipe must scroll the content without moving the sheet.
+  await swipe(30, 650, -250)
+  await expect.poll(() => content.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+  await expect.poll(async () => (await panel.boundingBox())!.y).toBeCloseTo(top, 0)
+  await expect(dialog).toBeVisible()
+
+  // Starting below the top keeps a downward swipe in the scroll container.
+  await content.evaluate((element) => {
+    element.scrollTop = 400
+  })
+  await swipe(30, 250, 100)
+  await expect(dialog).toBeVisible()
+  await expect.poll(async () => (await panel.boundingBox())!.y).toBeCloseTo(top, 0)
+
+  await content.evaluate((element) => {
+    element.scrollTop = 0
+  })
+  await swipe(30, top + 90, 570)
+  await expect(dialog).toBeHidden()
+
+  // Short, non-scrollable content also supports the same gesture.
+  await page.goto('/ui-kit')
+  await page.getByRole('button', { name: 'Открыть модальное окно', exact: true }).click()
+  await expect
+    .poll(async () => {
+      const box = (await panel.boundingBox())!
+      return Math.round(box.y + box.height)
+    })
+    .toBe(812)
+  const box = (await panel.boundingBox())!
+  await swipe(30, box.y + 50, box.height * 0.7)
+  await expect(dialog).toBeHidden()
+  await context.close()
+})

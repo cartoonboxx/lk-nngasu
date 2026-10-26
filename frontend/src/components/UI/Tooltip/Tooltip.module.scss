@@ -59,7 +59,11 @@
 }
 
 .enterTransition {
-  transition: opacity 160ms ease .4s;
+  transition: opacity 160ms ease 0.4s;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 }
 
 .hidden {

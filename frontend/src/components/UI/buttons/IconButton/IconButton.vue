@@ -1,5 +1,6 @@
 <template>
   <button
+    v-press
     :class="[
       style.button,
       style[size],
@@ -15,10 +16,12 @@
 </template>
 
 <script lang="ts">
+import { pressFeedback } from '@/directives/pressFeedback'
 import { defineComponent, type PropType } from 'vue'
 import style from './IconButton.module.scss'
 
 export default defineComponent({
+  directives: { press: pressFeedback },
   name: 'IconButton',
   props: {
     variant: {

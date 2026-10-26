@@ -7,10 +7,12 @@
   box-shadow: none;
   width: 100%;
 
-  &:hover:not([data-disabled='true']) {
-    border-color: transparent;
-    background: var(--color-surface-navigation-hover);
-    color: var(--color-text-primary);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not([data-disabled='true']) {
+      border-color: transparent;
+      background: var(--color-surface-navigation-hover);
+      color: var(--color-text-primary);
+    }
   }
 
   &[data-active='true'] {
@@ -41,4 +43,9 @@
   height: var(--control-height-md);
   flex-shrink: 0;
   align-self: center;
+}
+
+.tab:has(> button:is(:active, [data-pressed='true']):not(:disabled)) {
+  background: var(--color-surface-navigation-selected);
+  color: var(--color-content-accent);
 }

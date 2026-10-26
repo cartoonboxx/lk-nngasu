@@ -1,3 +1,5 @@
+@use '@/styles/mixins';
+
 .base {
   position: relative;
   display: inline-flex;
@@ -14,7 +16,13 @@
     border-color 160ms ease,
     color 160ms ease;
 
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
+
   .trigger {
+    @include mixins.press-feedback(0.98);
+
     display: flex;
     min-width: 0;
     flex: 1;
@@ -29,6 +37,10 @@
     font-size: var(--font-size-action);
     text-align: left;
     cursor: pointer;
+
+    &:is(:active, [data-pressed='true']):not(:disabled) {
+      background: color-mix(in srgb, currentColor 8%, transparent);
+    }
 
     &:focus-visible {
       outline: 2px solid var(--color-border-focus);

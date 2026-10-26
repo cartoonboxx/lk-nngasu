@@ -5,6 +5,7 @@
         :class="[style.trigger, opened ? style.active : null]"
         variant="ghost"
         round
+        :size="location === 'header' ? 'lg' : 'md'"
         @click="opened ? close() : open()"
       >
         <PhCalendar />

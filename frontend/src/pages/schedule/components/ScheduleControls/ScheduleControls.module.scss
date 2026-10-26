@@ -35,6 +35,14 @@
   }
 }
 
+.buttonUp {
+  opacity: 0;
+  display: none;
+  svg {
+    fill: var(--color-text-primary);
+  }
+}
+
 @media (max-width: breakpoints.$screen-phone-max) {
   .leftPart {
     width: 100%;
@@ -56,6 +64,19 @@
 
     .input {
       width: 100%;
+    }
+  }
+
+  .buttonUp {
+    position: fixed;
+    bottom: calc(76px + var(--space-4));
+    right: var(--space-4);
+    z-index: 1000;
+    transition: .2s;
+    display: flex;
+
+    &.isVisible {
+      opacity: 1;
     }
   }
 }

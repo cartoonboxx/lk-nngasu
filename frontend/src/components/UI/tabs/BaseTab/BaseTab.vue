@@ -5,6 +5,7 @@
     :data-disabled="disabled"
   >
     <button
+      v-press
       :class="style.trigger"
       type="button"
       :disabled="disabled"
@@ -28,12 +29,14 @@
 </template>
 
 <script lang="ts">
+import { pressFeedback } from '@/directives/pressFeedback'
 import { defineComponent } from 'vue'
 import { baseTabProps } from '../tabProps'
 
 import style from './BaseTab.module.scss'
 
 export default defineComponent({
+  directives: { press: pressFeedback },
   name: 'BaseTab',
   emits: ['select'],
   props: baseTabProps,

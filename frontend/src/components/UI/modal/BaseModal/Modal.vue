@@ -29,7 +29,13 @@
           @pointercancel="cancelDrag"
           @lostpointercapture="cancelDrag"
         />
-        <div :class="style.content">
+        <div
+          :class="style.content"
+          @touchstart.passive="startContentTouch"
+          @touchmove="moveContentTouch"
+          @touchend="finishContentTouch"
+          @touchcancel="cancelDrag"
+        >
           <slot :close="close" :breakpoint="currentBreakpoint" :set-breakpoint="setBreakpoint" />
         </div>
       </div>
@@ -125,6 +131,7 @@ export default defineComponent({
       dragStartOffset: 0,
       dragStartTime: 0,
       pointerId: null as number | null,
+      contentTouch: null as { id: number; x: number; y: number; time: number } | null,
       viewportHeight: 0,
       viewportTop: 0,
       popupX: 0,
@@ -376,34 +383,41 @@ export default defineComponent({
     },
     startDrag(event: PointerEvent) {
       if (!this.isMobile || this.closing || !event.isPrimary || event.button !== 0) return
+      this.beginDrag(event.clientY, event.timeStamp)
+      if (!this.dragging) return
+      this.pointerId = event.pointerId
+      ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
+    },
+    beginDrag(y: number, time: number) {
       this.measurePanel()
       if (!this.panelHeight) return
-      this.pointerId = event.pointerId
-      this.dragStartY = event.clientY
-      this.dragStartTime = event.timeStamp
+      this.dragStartY = y
+      this.dragStartTime = time
       this.dragStartOffset = this.panelHeight * (1 - this.currentBreakpoint)
       this.dragOffset = this.dragStartOffset
       this.dragging = true
-      ;(event.currentTarget as HTMLElement).setPointerCapture(event.pointerId)
     },
     moveDrag(event: PointerEvent) {
       if (!this.dragging || event.pointerId !== this.pointerId) return
+      this.updateDrag(event.clientY)
+    },
+    updateDrag(y: number) {
       const lowest = this.swipeToClose
         ? this.sheetBreakpoints[0]!
         : this.sheetBreakpoints.find((point) => point > 0)!
       this.dragOffset = Math.max(
         0,
-        Math.min(
-          this.panelHeight * (1 - lowest),
-          this.dragStartOffset + event.clientY - this.dragStartY,
-        ),
+        Math.min(this.panelHeight * (1 - lowest), this.dragStartOffset + y - this.dragStartY),
       )
     },
     finishDrag(event: PointerEvent) {
       if (!this.dragging || event.pointerId !== this.pointerId) return
-      this.moveDrag(event)
-      const distance = event.clientY - this.dragStartY
-      const velocity = distance / Math.max(16, event.timeStamp - this.dragStartTime)
+      this.endDrag(event.clientY, event.timeStamp)
+    },
+    endDrag(y: number, time: number) {
+      this.updateDrag(y)
+      const distance = y - this.dragStartY
+      const velocity = distance / Math.max(16, time - this.dragStartTime)
       const momentum = Math.max(
         -this.panelHeight * 0.2,
         Math.min(this.panelHeight * 0.2, velocity * 120),
@@ -413,7 +427,62 @@ export default defineComponent({
       this.cancelDrag()
       this.setBreakpoint(next)
     },
+    startContentTouch(event: TouchEvent) {
+      if (!this.isMobile || this.closing || this.dragging || event.touches.length !== 1) {
+        this.cancelDrag()
+        return
+      }
+      this.contentTouch = null
+      // Let every scrollable ancestor (including textareas) consume its own scroll first.
+      const content = event.currentTarget as HTMLElement
+      let element = event.target instanceof Element ? event.target : null
+      if (element?.closest('input, select, [contenteditable="true"]')) return
+      while (element) {
+        const overflow = getComputedStyle(element).overflowY
+        if (/(auto|scroll)/.test(overflow) && element.scrollTop > 0) return
+        if (element === content) break
+        element = element.parentElement
+      }
+      const touch = event.touches[0]!
+      this.contentTouch = {
+        id: touch.identifier,
+        x: touch.clientX,
+        y: touch.clientY,
+        time: event.timeStamp,
+      }
+    },
+    moveContentTouch(event: TouchEvent) {
+      const start = this.contentTouch
+      if (!start) return
+      const touch = Array.from(event.touches).find((touch) => touch.identifier === start.id)
+      if (!touch || event.touches.length !== 1 || !event.cancelable) {
+        this.cancelDrag()
+        return
+      }
+      if (!this.dragging) {
+        const dy = touch.clientY - start.y
+        const dx = Math.abs(touch.clientX - start.x)
+        if (Math.max(Math.abs(dy), dx) < 8) return
+        if (dy <= 0 || dx >= dy) {
+          this.contentTouch = null
+          return
+        }
+        this.beginDrag(start.y, start.time)
+      }
+      if (this.dragging) {
+        event.preventDefault()
+        this.updateDrag(touch.clientY)
+      }
+    },
+    finishContentTouch(event: TouchEvent) {
+      const start = this.contentTouch
+      if (!start) return
+      const touch = Array.from(event.changedTouches).find((touch) => touch.identifier === start.id)
+      if (touch && this.dragging) this.endDrag(touch.clientY, event.timeStamp)
+      else this.cancelDrag()
+    },
     cancelDrag() {
+      this.contentTouch = null
       this.dragging = false
       const handle = this.$refs.handle as HTMLElement | undefined
       if (this.pointerId !== null && handle?.hasPointerCapture(this.pointerId))

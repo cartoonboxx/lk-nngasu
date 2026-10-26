@@ -109,6 +109,7 @@ const week: (LessonKey | null)[][] = [
   ['webLecture', null, 'databaseLecture', 'englishLecture', null, 'programmingPractice'],
   [null, 'webPractice', 'englishPractice', 'physicsLab', 'mathLecture', null],
   [null, 'programmingLecture', null, 'webLab', 'englishPractice', null],
+  [null, 'programmingLecture', null, 'webLab', 'englishPractice', null],
 ]
 
 export const periods = [
@@ -118,7 +119,10 @@ export const periods = [
   { start: '13:20', end: '14:50' },
   { start: '15:10', end: '16:40' },
   { start: '16:55', end: '18:25' },
+  { start: '18:35', end: '19:55' },
 ].map((period, index) => ({
   ...period,
   lessons: week[index]!.map((key) => (key ? lessons[key] : null)),
 }))
+
+console.log(periods)
