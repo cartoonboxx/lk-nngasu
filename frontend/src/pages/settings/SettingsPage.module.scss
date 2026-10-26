@@ -86,6 +86,52 @@
     }
   }
 }
+
+.passwordForm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
+.passwordField {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+
+  input {
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    box-sizing: border-box;
+    padding: var(--space-3);
+
+    border: 1px solid var(--color-border-level-1);
+    border-radius: var(--radius-md);
+    background: var(--color-surface-level-2);
+    color: var(--color-text-primary);
+    font: inherit;
+
+    &:focus-visible {
+      outline: 2px solid var(--color-accent, #ff7a00);
+      outline-offset: 2px;
+    }
+  }
+}
+
+.passwordError {
+  margin: 0;
+  color: var(--color-status-error-content);
+}
+
+.passwordActions {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+
 @media screen and (max-width: 640px) {
   .settingsPage {
     min-width: 0;
@@ -166,5 +212,16 @@
       min-height: 44px;
       text-align: center;
     }
+  }
+  .passwordActions {
+    flex-direction: column;
+
+    > * {
+      width: 100%;
+    }
+  }
+
+  .passwordField input {
+    font-size: var(--font-size-body);
   }
 }
