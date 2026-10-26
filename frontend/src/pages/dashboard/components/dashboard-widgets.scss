@@ -1,0 +1,75 @@
+@use '@/styles/mixins';
+
+@mixin card {
+  min-width: 0;
+  width: 100%;
+  padding: var(--space-3);
+  border: 1px solid var(--color-border-level-1);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-navigation);
+}
+
+@mixin header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+@mixin heading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-width: 0;
+  color: var(--color-text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+
+  svg {
+    flex-shrink: 0;
+  }
+}
+
+@mixin link {
+  @include mixins.press-feedback(0.98);
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: var(--space-1);
+  min-height: 32px;
+  border-radius: var(--radius-sm);
+  color: var(--color-content-interactive);
+  font-size: 11px;
+  white-space: nowrap;
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      color: var(--color-text-primary);
+    }
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+}
+
+@mixin row {
+  @include mixins.press-feedback(0.99);
+  border-radius: var(--radius-sm);
+  color: var(--color-text-primary);
+
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: var(--color-surface-navigation-hover);
+    }
+  }
+  &:is(:active, [data-pressed='true']) {
+    background: var(--color-surface-interactive);
+  }
+  &:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 2px;
+  }
+}

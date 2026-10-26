@@ -1,0 +1,37 @@
+@use '@/styles/mixins';
+@use '@/styles/breakpoints';
+
+.dashboardPage {
+  @include mixins.setLayout();
+  min-width: 0;
+}
+
+.content {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 7fr) minmax(280px, 3fr);
+  gap: var(--space-4);
+
+  .scheduler {
+    width: 100%;
+
+    .headerScheduler {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2);
+    }
+  }
+
+  .infoPart {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-5);
+  }
+}
+
+@media (max-width: breakpoints.$screen-tablet-max) {
+  .content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

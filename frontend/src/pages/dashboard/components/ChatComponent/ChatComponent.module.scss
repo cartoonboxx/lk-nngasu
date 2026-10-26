@@ -1,0 +1,116 @@
+@use '../dashboard-widgets' as widget;
+
+.chatBlock {
+  @include widget.card;
+}
+.header {
+  @include widget.header;
+  margin-bottom: var(--space-1);
+}
+.heading {
+  @include widget.heading;
+  svg {
+    color: var(--color-text-secondary);
+  }
+}
+.allLink {
+  @include widget.link;
+}
+.list {
+  list-style: none;
+}
+.chatItem {
+  @include widget.row;
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  min-height: 52px;
+  padding: var(--space-2) 0;
+}
+.avatar {
+  position: relative;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-round);
+  color: var(--color-text-primary);
+  font-size: 14px;
+}
+.slate {
+  background: var(--color-surface-level-5);
+}
+.orange {
+  background: var(--color-accent-default);
+  color: var(--color-content-on-accent);
+}
+.blue {
+  background: var(--color-brand-blue);
+}
+.online {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--color-surface-navigation);
+  border-radius: var(--radius-round);
+  background: var(--color-status-success-content);
+}
+.copy {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+.name {
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 500;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.preview {
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 10px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.meta {
+  display: flex;
+  align-self: start;
+  align-items: flex-end;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding-top: 2px;
+}
+.time {
+  color: var(--color-text-muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
+.unread {
+  display: grid;
+  place-items: center;
+  min-width: 17px;
+  height: 17px;
+  padding: 0 var(--space-1);
+  border-radius: var(--radius-round);
+  background: var(--color-brand-blue);
+  color: var(--color-text-primary);
+  font-size: 10px;
+  line-height: 1;
+}
+.compose {
+  @include widget.row;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  margin-top: var(--space-2);
+  padding: var(--space-2);
+  background: var(--color-surface-level-3);
+  color: var(--color-text-secondary);
+  font-size: 11px;
+}

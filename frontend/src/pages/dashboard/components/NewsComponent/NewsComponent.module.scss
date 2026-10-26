@@ -1,0 +1,64 @@
+@use '../dashboard-widgets' as widget;
+
+.newsBlock {
+  @include widget.card;
+}
+.header {
+  @include widget.header;
+}
+.heading {
+  @include widget.heading;
+  svg {
+    color: var(--color-content-accent);
+  }
+}
+.allLink {
+  @include widget.link;
+}
+.list {
+  list-style: none;
+  li + li {
+    margin-top: var(--space-3);
+    padding-top: var(--space-3);
+    border-top: 1px solid var(--color-border-level-1);
+  }
+}
+.newsItem {
+  @include widget.row;
+  display: grid;
+  grid-template-columns: 60px minmax(0, 1fr);
+  align-items: start;
+  gap: var(--space-3);
+}
+.image {
+  width: 60px;
+  height: 68px;
+  border-radius: var(--radius-sm);
+  object-fit: cover;
+}
+.copy {
+  min-width: 0;
+}
+.title {
+  margin-bottom: var(--space-1);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+.description {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  color: var(--color-text-secondary);
+  font-size: 11px;
+  line-height: 1.5;
+}
+.date {
+  display: block;
+  margin-top: var(--space-1);
+  color: var(--color-text-muted);
+  font-size: 10px;
+  line-height: 1.4;
+}
