@@ -7,8 +7,9 @@
 
 .search {
   width: 100%;
-  max-width: 420px;
+  max-width: none;
   min-width: 0;
+  
 }
 
 .newsGrid {
@@ -45,8 +46,23 @@
 }
 
 @media (max-width: 640px) {
+  .newsPage > :first-child {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-3);
+
+    > * {
+      width: 100%;
+      min-width: 0;
+      max-width: none;
+    }
+  }
+
   .search {
+    width: 100%;
     max-width: none;
+    min-width: 0;
   }
 
   .newsGrid {

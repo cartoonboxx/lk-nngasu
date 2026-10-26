@@ -1,5 +1,5 @@
 <template>
-   <article
+  <article
     :class="[style.card, featured ? style.featured : '']"
     :role="canOpen ? 'link' : undefined"
     :tabindex="canOpen ? 0 : undefined"
@@ -32,6 +32,12 @@
           {{ description }}
         </p>
       </div>
+
+      <div v-if="canOpen" :class="style.readHint">
+        Читать далее
+        <PhArrowRight :size="14" aria-hidden="true" />
+      </div>
+
     </div>
   </article>
 </template>
@@ -80,7 +86,7 @@ export default defineComponent({
   data() {
     return {
       style,
-       descriptionLines: 1,
+      descriptionLines: 1,
       resizeObserver: null as ResizeObserver | null,
     }
   },
@@ -114,16 +120,11 @@ export default defineComponent({
       const box = this.$refs.descriptionBox as HTMLElement
       const text = this.$refs.descriptionText as HTMLElement
 
-      const lineHeight = Number.parseFloat(
-        window.getComputedStyle(text).lineHeight,
-      )
+      const lineHeight = Number.parseFloat(window.getComputedStyle(text).lineHeight)
 
       if (!Number.isFinite(lineHeight) || lineHeight <= 0) return
 
-      this.descriptionLines = Math.max(
-        1,
-        Math.floor(box.clientHeight / lineHeight),
-      )
+      this.descriptionLines = Math.max(1, Math.floor(box.clientHeight / lineHeight))
     },
 
     openNews() {
