@@ -1,0 +1,32 @@
+.reviewed {
+  --status-color: var(--color-status-success-content);
+  --status-surface: var(--color-status-success-surface);
+}
+
+.pending {
+  --status-color: var(--color-status-info-content);
+  --status-surface: var(--color-status-info-surface);
+}
+
+.not-submitted {
+  --status-color: var(--color-content-accent);
+  --status-surface: var(--color-surface-accent);
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--status-color);
+  white-space: nowrap;
+  font-size: var(--font-size-caption);
+
+  &::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    flex: 0 0 8px;
+    border-radius: var(--radius-round);
+    background: currentColor;
+  }
+}

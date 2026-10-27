@@ -1,0 +1,20 @@
+@use '@/styles/mixins';
+
+.page {
+  @include mixins.setLayout();
+  min-width: 0;
+}
+
+.footnote {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+  color: var(--color-text-muted);
+  font-size: var(--font-size-caption);
+}
+
+.footnote svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}

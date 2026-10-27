@@ -30,7 +30,13 @@
             >
           </p>
         </div>
-        <IconButton :class="style.close" variant="ghost" @click="$emit('update:modelValue', false)">
+        <IconButton
+          :class="style.close"
+          variant="ghost"
+          size="md"
+          round
+          @click="$emit('update:modelValue', false)"
+        >
           <PhX :size="24" />
         </IconButton>
       </header>
