@@ -17,7 +17,7 @@
         :title="featuredNews.title"
         :description="featuredNews.description"
         :date="featuredNews.date"
-        :url="featuredNews.url"
+        :url="`/news/${featuredNews.id}`"
         :image="featuredNews.image"
         featured
       />
@@ -29,7 +29,7 @@
           :title="item.title"
           :description="item.description"
           :date="item.date"
-          :url="item.url"
+          :url="`/news/${item.id}`"
           :image="item.image"
         />
       </div>
