@@ -13,9 +13,14 @@
         <RouterLink v-press :class="style.newsItem" :to="`/news/${item.id}`">
           <img :class="style.image" :src="item.image" alt="" loading="lazy" />
           <div :class="style.copy">
+            <div :class="style.meta">
+              <time :class="style.date" :datetime="item.date">{{ formatDate(item.date) }}</time>
+            </div>
             <h3 :class="style.title">{{ item.title }}</h3>
             <p :class="style.description">{{ item.description }}</p>
-            <time :class="style.date" :datetime="item.date">{{ formatDate(item.date) }}</time>
+            <span :class="style.readMore">
+              Читать новость <PhArrowRight :size="16" aria-hidden="true" />
+            </span>
           </div>
         </RouterLink>
       </li>

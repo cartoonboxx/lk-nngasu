@@ -34,3 +34,5 @@ const lessons: ScheduleDayItem[] = [
 Props: `title`, `lessons` обязательны; `date` задаёт ISO-дату для `<time>`, `today` выделяет заголовок.
 
 Слоты: `header` заменяет заголовок и получает `title`, `date`, `today`; `header-actions` дополняет шапку; `lesson-trailing` получает `lesson`; `empty` заменяет сообщение для пустого списка.
+
+`layout="grid"` располагает занятия в две колонки в широком контейнере и переключается в одну на узком. По умолчанию используется `layout="list"`.

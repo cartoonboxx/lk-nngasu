@@ -34,7 +34,7 @@
         />
       </div>
 
-      
+
     </template>
 
     <p v-else :class="style.empty" role="status">По вашему запросу ничего не найдено.</p>

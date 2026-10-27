@@ -1,5 +1,5 @@
 <template>
-  <section :class="style.daySchedule">
+  <section :class="[style.daySchedule, layout === 'grid' && style.grid]">
     <header :class="[style.dayHeader, today ? style.today : null]">
       <slot name="header" :title="title" :date="date" :today="today">
         <h2>
@@ -57,6 +57,10 @@ export default defineComponent({
   name: 'ScheduleDay',
   components: { PhUser },
   props: {
+    layout: {
+      type: String as PropType<'list' | 'grid'>,
+      default: 'list',
+    },
     title: {
       type: String,
       default: '',

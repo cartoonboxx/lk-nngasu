@@ -1,37 +1,65 @@
 @use '@/styles/mixins';
-@use '@/styles/breakpoints';
+@use './components/dashboard-widgets' as widget;
 
 .dashboardPage {
   @include mixins.setLayout();
   min-width: 0;
+  container-type: inline-size;
 }
-
 .content {
-  width: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 7fr) minmax(280px, 3fr);
-  gap: var(--space-4);
-
-  .scheduler {
-    width: 100%;
-
-    .headerScheduler {
-      display: flex;
-      align-items: center;
-      gap: var(--space-2);
-    }
-  }
-
-  .infoPart {
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-5);
-  }
+  grid-template-columns: minmax(0, 1.4fr) minmax(330px, 1fr);
+  grid-template-areas: 'schedule chat' 'news news';
+  align-items: stretch;
+  gap: var(--space-8) var(--space-5);
+  width: 100%;
+}
+.scheduler {
+  grid-area: schedule;
+  min-width: 0;
+  --schedule-row-height: 80px;
+}
+.scheduler > .scheduleCard {
+  padding: 0 var(--space-5);
+  border-radius: var(--radius-sheet);
+}
+.chatPanel {
+  grid-area: chat;
+  min-width: 0;
+}
+.newsPanel {
+  grid-area: news;
+  min-width: 0;
+}
+.headerScheduler {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+}
+.scheduler .headerScheduler h2 {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.4;
 }
 
-@media (max-width: breakpoints.$screen-tablet-max) {
+@container (max-width: 820px) {
   .content {
     grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'schedule' 'chat' 'news';
+  }
+}
+@container (max-width: 400px) {
+  .content {
+    gap: var(--space-6);
+  }
+  .scheduler > .scheduleCard {
+    padding: 0 var(--space-4);
+  }
+  .scheduler .headerScheduler h2 {
+    font-size: 16px;
+  }
+  .todayLabel {
+    font-size: 12px;
   }
 }

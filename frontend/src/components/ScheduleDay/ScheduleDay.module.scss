@@ -44,7 +44,7 @@
   grid-template-columns: 94px minmax(0, 1fr);
   align-items: center;
   gap: var(--space-3);
-  min-height: 104px;
+  min-height: var(--schedule-row-height, 104px);
   padding: var(--space-4) 0 var(--space-4) var(--space-5);
   background: transparent;
 
@@ -165,5 +165,50 @@
 @media (max-width: 420px) {
   .daySchedule {
     padding: 0 var(--space-3);
+  }
+}
+
+.grid {
+  .dayLessons {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--space-8);
+  }
+  .dayLesson {
+    grid-template-columns: 94px minmax(0, 1fr);
+    min-height: 112px;
+  }
+  .dayLesson:nth-child(2) {
+    border-top: 0;
+  }
+  .lessonTime {
+    font-size: 13px;
+  }
+  .lessonDetails h3 {
+    font-size: 15px;
+  }
+  .lessonMeta,
+  .lessonTeacher {
+    font-size: 12px;
+  }
+}
+
+@container (max-width: 700px) {
+  .grid {
+    .dayLessons {
+      grid-template-columns: minmax(0, 1fr);
+    }
+    .dayLesson {
+      min-height: 96px;
+    }
+    .dayLesson:nth-child(2) {
+      border-top: 1px solid var(--color-border-level-1);
+    }
+  }
+}
+
+@container (max-width: 380px) {
+  .grid .dayLesson {
+    grid-template-columns: 44px minmax(0, 1fr);
   }
 }

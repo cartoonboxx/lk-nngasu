@@ -124,5 +124,3 @@ export const periods = [
   ...period,
   lessons: week[index]!.map((key) => (key ? lessons[key] : null)),
 }))
-
-console.log(periods)

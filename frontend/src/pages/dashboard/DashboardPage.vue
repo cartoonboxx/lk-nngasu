@@ -1,21 +1,21 @@
 <template>
   <section :class="style.dashboardPage">
-    <SectionHeader header="Главная" paragraph="Вся основная информация на дашборде" />
+    <SectionHeader header="Главная" paragraph="Расписание, общение и события университета" />
     <section :class="style.content">
       <div :class="style.scheduler">
-        <ScheduleDay :lessons="lessons">
+        <ScheduleDay :class="style.scheduleCard" :lessons="lessons" layout="list">
           <template #header>
             <div :class="style.headerScheduler">
               <PhCalendar size="24" />
-              <h4>Расписание на сегодня</h4>
+              <div>
+                <h2>Расписание на сегодня</h2>
+              </div>
             </div>
           </template>
         </ScheduleDay>
       </div>
-      <aside :class="style.infoPart">
-        <NewsComponent />
-        <ChatComponent />
-      </aside>
+      <ChatComponent :class="style.chatPanel" />
+      <NewsComponent :class="style.newsPanel" />
     </section>
   </section>
 </template>
@@ -27,12 +27,20 @@ import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import ScheduleDay from '@/components/ScheduleDay/ScheduleDay.vue'
 import type { ScheduleDayItem } from '@/components/ScheduleDay/schedule-day.types'
 import { PhCalendar } from '@phosphor-icons/vue'
+import { pressFeedback } from '@/directives/pressFeedback'
 import NewsComponent from '@/pages/dashboard/components/NewsComponent/NewsComponent.vue'
 import ChatComponent from './components/ChatComponent/ChatComponent.vue'
 
 export default defineComponent({
   name: 'DashboardPage',
-  components: { ChatComponent, NewsComponent, PhCalendar, ScheduleDay, SectionHeader },
+  components: {
+    ChatComponent,
+    NewsComponent,
+    PhCalendar,
+    ScheduleDay,
+    SectionHeader,
+  },
+  directives: { press: pressFeedback },
   data() {
     return {
       style,
