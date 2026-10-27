@@ -180,9 +180,7 @@ export function createChats(): Chat[] {
   ]
 }
 
-const storageKey = 'lk-nngasu-messages-v1'
-
-function isChat(value: unknown): value is Chat {
+export function isChat(value: unknown): value is Chat {
   if (!value || typeof value !== 'object') return false
   const chat = value as Chat
   return (
@@ -205,29 +203,4 @@ function isChat(value: unknown): value is Chat {
         Number.isFinite(Date.parse(message.sentAt)),
     )
   )
-}
-
-export function loadChats(): Chat[] {
-  try {
-    const saved: unknown = JSON.parse(localStorage.getItem(storageKey) ?? 'null')
-    if (
-      Array.isArray(saved) &&
-      saved.length &&
-      saved.every(isChat) &&
-      new Set(saved.map((chat) => chat.id)).size === saved.length
-    )
-      return saved
-  } catch {
-    // A blocked or invalid browser store should not prevent opening messages.
-  }
-  return createChats()
-}
-
-export function saveChats(chats: Chat[]): boolean {
-  try {
-    localStorage.setItem(storageKey, JSON.stringify(chats))
-    return true
-  } catch {
-    return false
-  }
 }

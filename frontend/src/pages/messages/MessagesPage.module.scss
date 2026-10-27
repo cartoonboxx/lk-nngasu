@@ -437,8 +437,19 @@
 }
 @media (max-width: breakpoints.$screen-phone-max) {
   .page {
-    height: calc(100dvh - 72px - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    position: fixed;
+    z-index: 20;
+    top: var(--messages-viewport-top, 0px);
+    left: 0;
+    width: 100%;
+    height: calc(
+      var(--messages-viewport-height, 100dvh) - var(
+          --messages-navigation-space,
+          calc(var(--mobile-navigation-height) + env(safe-area-inset-bottom))
+        )
+    );
     min-height: 0;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
   }
 }
 
@@ -574,4 +585,23 @@
   .modalHeader .headerAction {
     --icon-size: 20px;
   }
+}
+
+.storageError {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  max-height: min(72px, calc(var(--messages-viewport-height, 100dvh) * 0.15));
+  overflow-y: auto;
+  margin-bottom: var(--space-2);
+  color: var(--color-status-error-content);
+  font-size: var(--font-size-caption);
+}
+.sidebarHeader h2:focus,
+.conversationTitle h2:focus {
+  outline: none;
+}
+.messageMeta button {
+  min-width: 0;
 }

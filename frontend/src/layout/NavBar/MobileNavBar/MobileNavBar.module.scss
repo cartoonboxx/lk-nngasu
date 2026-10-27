@@ -6,6 +6,7 @@
 
 @media (max-width: breakpoints.$screen-phone-max) {
   .bottomNavigation {
+    height: calc(var(--mobile-navigation-height) + env(safe-area-inset-bottom));
     position: fixed;
     z-index: 30;
     inset: auto 0 0;
@@ -38,4 +39,9 @@
     display: grid;
     gap: var(--space-1);
   }
+}
+
+:global(body[data-message-keyboard='true']) .bottomNavigation {
+  visibility: hidden;
+  pointer-events: none;
 }

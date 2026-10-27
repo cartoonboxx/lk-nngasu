@@ -63,6 +63,7 @@ import { RouterLink } from 'vue-router'
 import { PhChatsCircle, PhNotePencil, PhArrowUpRight, PhUsersThree } from '@phosphor-icons/vue'
 import { pressFeedback } from '@/directives/pressFeedback'
 import style from './ChatComponent.module.scss'
+import { useMessagesStore } from '@/stores/messages'
 
 export default defineComponent({
   name: 'ChatComponent',
@@ -71,40 +72,32 @@ export default defineComponent({
   data() {
     return {
       style,
-      chats: [
-        {
-          id: 'group-it-202',
-          name: 'Группа ИТ-202',
-          sender: 'Иван',
-          preview: 'Кто будет на практике сегодня?',
-          time: '10:24',
-          group: true,
-          unread: 2,
-        },
-        {
-          id: 'curator',
-          name: 'Куратор группы',
-          preview: 'Хорошо, спасибо!',
-          time: '09:42',
-          initials: 'КГ',
-        },
-        {
-          id: 'general',
-          name: 'Общий чат',
-          sender: 'Мария',
-          preview: 'Привет! Есть вопросы по заданию?',
-          time: 'Вчера',
-          group: true,
-        },
-        {
-          id: 'alexey',
-          name: 'Алексей Смирнов',
-          preview: 'Договорились, созвонимся завтра.',
-          time: 'Вчера',
-          initials: 'АС',
-        },
-      ],
+      messageStore: useMessagesStore(),
     }
+  },
+  computed: {
+    chats() {
+      return this.messageStore.state.chats
+        .map((chat) => {
+          const last = chat.messages[chat.messages.length - 1]
+          return {
+            ...chat,
+            sender: last?.own ? 'Вы' : chat.group ? last?.sender.split(' ')[0] : undefined,
+            preview: last?.text ?? 'Начните разговор',
+            time: last
+              ? new Date(last.sentAt).toDateString() === new Date().toDateString()
+                ? new Date(last.sentAt).toLocaleTimeString('ru', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })
+                : new Date(last.sentAt).toLocaleDateString('ru', { day: 'numeric', month: 'short' })
+              : '',
+            timestamp: last ? Date.parse(last.sentAt) : 0,
+          }
+        })
+        .sort((a, b) => b.timestamp - a.timestamp)
+        .slice(0, 4)
+    },
   },
 })
 </script>
