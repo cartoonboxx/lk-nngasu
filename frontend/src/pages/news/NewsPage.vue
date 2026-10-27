@@ -34,7 +34,9 @@
         />
       </div>
 
-
+      <div v-if="hasMoreNews" :class="style.showMore">
+        <Button variant="secondary" @click="showMore"> Показать ещё новости </Button>
+      </div>
     </template>
 
     <p v-else :class="style.empty" role="status">По вашему запросу ничего не найдено.</p>
@@ -49,6 +51,7 @@ import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import StyleInput from '@/components/UI/inputs/Input/Input.vue'
 import NewsCard from './components/NewsCard.vue'
 import style from './NewsPage.module.scss'
+import Button from '@/components/UI/buttons/Button/Button.vue'
 
 import Nngasu from '$images/photoNews/Nngasu.png'
 import ImageNews2 from '$images/photoNews/news2.png'
@@ -74,6 +77,7 @@ export default defineComponent({
     StyleInput,
     PhMagnifyingGlass,
     NewsCard,
+    Button,
   },
 
   data() {
@@ -106,7 +110,7 @@ export default defineComponent({
           title: 'Встреча с работодателями',
           description: 'Приглашаются все желающие. Регистрация открыта.',
           date: '2025-04-08',
-          url: '#',
+          url: 'https://vk.ru/wall-32470414_16813',
           image: ImageNews3,
         },
         {

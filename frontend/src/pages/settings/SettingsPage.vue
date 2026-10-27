@@ -50,9 +50,57 @@
         </div>
 
         <div>
-          <Button variant="secondary">Изменить пароль</Button>
+          <Button variant="secondary" @click="openPasswordModal">Изменить пароль</Button>
         </div>
       </div>
+
+      <Modal
+        v-model="isPasswordModalOpen"
+        :width="460"
+        aria-labelledby="password-modal-title"
+        @close="resetPasswordForm"
+      >
+        <template #default="{ close }">
+          <form :class="style.passwordForm" @submit.prevent="submitPasswordChange">
+            <h2 id="password-modal-title">Изменить пароль</h2>
+
+            <label :class="style.passwordField">
+              <span>Текущий пароль</span>
+              <input
+                v-model="currentPassword"
+                type="password"
+                autocomplete="current-password"
+                required
+              />
+            </label>
+
+            <label :class="style.passwordField">
+              <span>Новый пароль</span>
+              <input v-model="newPassword" type="password" autocomplete="new-password" required />
+            </label>
+
+            <label :class="style.passwordField">
+              <span>Повторите новый пароль</span>
+              <input
+                v-model="confirmPassword"
+                type="password"
+                autocomplete="new-password"
+                required
+              />
+            </label>
+
+            <p v-if="passwordError" :class="style.passwordError" role="alert">
+              {{ passwordError }}
+            </p>
+
+            <div :class="style.passwordActions">
+              <Button variant="secondary" type="button" @click="close"> Отмена </Button>
+
+              <Button type="submit"> Сохранить </Button>
+            </div>
+          </form>
+        </template>
+      </Modal>
     </section>
   </section>
 </template>
@@ -63,19 +111,25 @@ import style from './SettingsPage.module.scss'
 import StyleTab from '@/components/UI/tabs/StyleTab/StyleTab.vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
 import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
-
+import Modal from '@/components/UI/modal/BaseModal/Modal.vue'
 export default defineComponent({
   name: 'SettingsPage',
 
   components: {
     SectionHeader,
     StyleTab,
+    Modal,
     Button,
   },
 
   data() {
     return {
       style,
+      isPasswordModalOpen: false,
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: '',
+      passwordError: '',
       photoPreview: null as string | null,
       theme: 'dark',
       themeOptions: [
@@ -83,7 +137,37 @@ export default defineComponent({
         { value: 'dark', label: 'Тёмная' },
         { value: 'system', label: 'Системная' },
       ],
+      
     }
   },
+  methods: {
+  openPasswordModal() {
+    this.resetPasswordForm()
+    this.isPasswordModalOpen = true
+  },
+
+  resetPasswordForm() {
+    this.currentPassword = ''
+    this.newPassword = ''
+    this.confirmPassword = ''
+    this.passwordError = ''
+  },
+
+  submitPasswordChange() {
+    this.passwordError = ''
+
+    if (this.newPassword !== this.confirmPassword) {
+      this.passwordError = 'Новые пароли не совпадают.'
+      return
+    }
+
+    if (this.newPassword === this.currentPassword) {
+      this.passwordError = 'Новый пароль должен отличаться от текущего.'
+      return
+    }
+
+    this.passwordError = 'Сервис смены пароля пока не подключён.'
+  },
+},
 })
 </script>
