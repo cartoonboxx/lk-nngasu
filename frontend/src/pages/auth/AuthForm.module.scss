@@ -17,7 +17,6 @@
     gap: var(--space-4);
 
     input {
-      height: 52px;
       border-radius: var(--radius-lg);
       font-size: var(--font-size-body);
     }
@@ -30,13 +29,11 @@
   }
 
   .remember {
-    min-height: 32px;
     align-self: flex-start;
     margin-top: calc(var(--space-1) * -1);
   }
 
   .submit {
-    min-height: 52px;
     margin-top: var(--space-1);
     border-radius: var(--radius-lg);
   }

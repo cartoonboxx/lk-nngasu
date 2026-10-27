@@ -46,7 +46,7 @@
   }
 
   &.sm {
-    height: 36px;
+    height: var(--control-height-sm);
     padding: 0 var(--space-3);
 
     &.textarea {
@@ -57,7 +57,7 @@
   }
 
   &.md {
-    height: 46px;
+    height: var(--control-height-md);
     padding: 0 var(--space-4);
 
     &.textarea {
@@ -68,7 +68,7 @@
   }
 
   &.lg {
-    height: 54px;
+    height: var(--control-height-lg);
     padding: 0 var(--space-5);
 
     &.textarea {

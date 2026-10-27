@@ -1,0 +1,9 @@
+@use '@/styles/mixins';
+
+.schedulePage {
+  @include mixins.setLayout();
+  --schedule-lecture: var(--color-content-accent);
+  --schedule-practice: var(--color-brand-blue);
+  --schedule-lab: #bd3df5;
+  min-width: 0;
+}

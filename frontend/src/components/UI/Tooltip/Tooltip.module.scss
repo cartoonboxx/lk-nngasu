@@ -1,3 +1,5 @@
+@use '@/styles/breakpoints';
+
 .root {
   display: inline-flex;
   min-width: 0;
@@ -62,4 +64,10 @@
 
 .hidden {
   opacity: 0;
+}
+
+@media screen and (max-width: breakpoints.$screen-phone-max) {
+  .tooltip {
+    display: none;
+  }
 }

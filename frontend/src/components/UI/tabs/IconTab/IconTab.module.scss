@@ -1,5 +1,6 @@
 .tab {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   justify-content: center;
   width: var(--icon-tab-size);
@@ -46,17 +47,17 @@
   }
 
   &.sm {
-    --icon-tab-size: 32px;
+    --icon-tab-size: var(--control-height-sm);
     --icon-size: 16px;
   }
 
   &.md {
-    --icon-tab-size: 40px;
+    --icon-tab-size: var(--control-height-md);
     --icon-size: 20px;
   }
 
   &.lg {
-    --icon-tab-size: 44px;
+    --icon-tab-size: var(--control-height-lg);
     --icon-size: 22px;
   }
 

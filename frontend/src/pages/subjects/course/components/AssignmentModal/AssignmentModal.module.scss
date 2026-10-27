@@ -1,3 +1,5 @@
+@use '@/styles/breakpoints';
+
 .layout {
   --assignment-padding: 32px;
   display: grid;
@@ -245,7 +247,7 @@
   white-space: nowrap;
 }
 
-@media (max-width: 540px) {
+@media (max-width: breakpoints.$screen-phone-content-max) {
   .layout {
     --assignment-padding: 20px;
     gap: var(--space-5);

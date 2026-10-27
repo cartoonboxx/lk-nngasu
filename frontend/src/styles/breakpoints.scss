@@ -1,0 +1,11 @@
+// Минимальная ширина каждого класса экранов.
+$screen-phone-min: 320px;
+$screen-tablet-min: 768px;
+$screen-desktop-min: 1025px;
+
+// Верхние границы получаем из начала следующего диапазона.
+$screen-phone-max: $screen-tablet-min - 1px;
+$screen-tablet-max: $screen-desktop-min - 1px;
+
+// Дополнительный порог для компактного содержимого на телефоне.
+$screen-phone-content-max: 540px;

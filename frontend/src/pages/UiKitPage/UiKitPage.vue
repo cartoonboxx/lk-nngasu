@@ -7,6 +7,35 @@
 
     <section :class="style.section">
       <div :class="style.sectionHeading">
+        <h2>Общая шкала размеров</h2>
+      </div>
+      <div :class="style.showcase">
+        <article v-for="size in sizes" :key="size.value" :class="style.group">
+          <h3>{{ size.label }}</h3>
+          <div :class="style.row">
+            <Button :size="size.value">Кнопка</Button>
+            <IconButton :size="size.value"><PhHouse /></IconButton>
+            <IconTab :size="size.value"><PhHouse /></IconTab>
+            <Input
+              :class="style.sizeField"
+              :size="size.value"
+              placeholder="Поле ввода"
+              full-width
+            />
+            <Select
+              :class="style.sizeField"
+              :size="size.value"
+              :options="selectOptions"
+              placeholder="Выбор"
+            />
+            <Checkbox :size="size.value" label="Чекбокс" />
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section :class="style.section">
+      <div :class="style.sectionHeading">
         <h2>Tooltip</h2>
       </div>
       <div :class="style.showcase">
@@ -467,11 +496,26 @@
         <article :class="style.group">
           <h3>Произвольное содержимое</h3>
           <div :class="style.row">
+            <StyleTab
+              v-for="size in modalSizes"
+              :key="size.label"
+              :text="size.label"
+              :active="modalSize.label === size.label"
+              @select="modalSize = size"
+            />
+          </div>
+          <div :class="style.row">
             <Button @click="modalOpen = true">Открыть модальное окно</Button>
           </div>
         </article>
       </div>
-      <Modal v-model="modalOpen" v-slot="{ close }">
+      <Modal
+        v-model="modalOpen"
+        v-slot="{ close }"
+        :width="modalSize.width"
+        :height="modalSize.height"
+        :breakpoints="[0, 0.5, 1]"
+      >
         <div :class="style.modalActions">
           <div :class="style.header">
             <h3>Обратная связь</h3>
@@ -506,6 +550,7 @@ import Button from '@/components/UI/buttons/Button/Button.vue'
 import MediaButton from '@/components/UI/buttons/MediaButton/MediaButton.vue'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 import Input from '@/components/UI/inputs/Input/Input.vue'
+import Checkbox from '@/components/UI/inputs/Checkbox/Checkbox.vue'
 import Select from '@/components/UI/inputs/Select/Select.vue'
 import Modal from '@/components/UI/modal/BaseModal/Modal.vue'
 import FloatingPopup from '@/components/UI/popup/FloatingPopup/FloatingPopup.vue'
@@ -590,6 +635,7 @@ const iconTabStates: Array<{ value: IconTabState; label: string }> = [
 export default defineComponent({
   name: 'UiKitPage',
   components: {
+    Checkbox,
     Tooltip,
     MediaButton,
     PhFileText,
@@ -619,6 +665,12 @@ export default defineComponent({
       mediaAttachmentVisible: true,
       modalOpen: false,
       modalMessage: '',
+      modalSize: { label: 'Обычная', width: 540, height: 'auto' as string | number },
+      modalSizes: [
+        { label: 'Компактная', width: 360, height: 'auto' as string | number },
+        { label: 'Обычная', width: 540, height: 'auto' as string | number },
+        { label: 'Широкая', width: 800, height: 560 as string | number },
+      ],
       activeTab: 'schedule',
       popupTab: 'schedule',
       selectedSubject: '',

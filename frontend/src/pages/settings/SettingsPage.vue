@@ -19,7 +19,7 @@
 
           <div :class="style.profileInfo">
             <p>Анна Иванова</p>
-            <p>Студентка</p>
+            <p>Студент</p>
           </div>
 
           <Button variant="secondary">Изменить фото</Button>
@@ -135,7 +135,7 @@ export default defineComponent({
       themeOptions: [
         { value: 'light', label: 'Светлая' },
         { value: 'dark', label: 'Тёмная' },
-        { value: 'system', label: 'Системный' },
+        { value: 'system', label: 'Системная' },
       ],
       
     }
