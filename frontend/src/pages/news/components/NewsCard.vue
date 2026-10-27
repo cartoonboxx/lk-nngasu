@@ -1,12 +1,5 @@
 <template>
-  <article
-    :class="[style.card, featured ? style.featured : '']"
-    :role="canOpen ? 'link' : undefined"
-    :tabindex="canOpen ? 0 : undefined"
-    :aria-label="title"
-    @click="openNews"
-    @keydown.enter.prevent="openNews"
-  >
+  <a :class="[style.card, featured ? style.featured : '']" :href="url">
     <div
       v-if="image"
       :class="style.image"
@@ -37,9 +30,8 @@
         Читать далее
         <PhArrowRight :size="14" aria-hidden="true" />
       </div>
-
     </div>
-  </article>
+  </a>
 </template>
 
 <script lang="ts">
@@ -125,12 +117,6 @@ export default defineComponent({
       if (!Number.isFinite(lineHeight) || lineHeight <= 0) return
 
       this.descriptionLines = Math.max(1, Math.floor(box.clientHeight / lineHeight))
-    },
-
-    openNews() {
-      if (this.canOpen) {
-        window.location.assign(this.url)
-      }
     },
   },
 })

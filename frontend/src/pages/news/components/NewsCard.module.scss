@@ -8,7 +8,9 @@
   border: 1px solid var(--color-border-level-1);
   border-radius: var(--radius-md);
   background: var(--color-surface-level-2);
-
+  color: var(--color-text-primary);
+text-decoration: none;
+cursor: pointer;
   @media (hover: hover) and (pointer: fine) {
     &:hover:not([data-disabled='true']) {
     background: var(--color-surface-level-4);
@@ -44,9 +46,8 @@
   align-self: flex-end;
   gap: var(--space-1);
   margin-top: auto;
-  color: var(--color-text-secondary);
   font-size: var(--font-size-caption);
-  line-height: 1.2;
+  color: #42a5f5;
 }
 .content {
   display: flex;
