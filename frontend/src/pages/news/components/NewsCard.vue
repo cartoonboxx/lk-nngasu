@@ -26,7 +26,7 @@
         </p>
       </div>
 
-      <div v-if="canOpen" :class="style.readHint">
+      <div :class="style.readHint">
         Читать далее
         <PhArrowRight :size="14" aria-hidden="true" />
       </div>

@@ -106,7 +106,7 @@ cursor: pointer;
 }
 
 .featured {
-  align-items: center;
+  position: relative;
   gap: var(--space-5);
   padding: var(--space-4);
 
@@ -115,6 +115,12 @@ cursor: pointer;
     width: 46%;
     height: auto;
     aspect-ratio: 16 / 9;
+  }
+  .readHint {
+    position: absolute;
+    right: var(--space-4);
+    bottom: var(--space-4);
+    margin-top: 0;
   }
   .description {
     font-size: var(--font-size-body);
