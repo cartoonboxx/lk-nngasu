@@ -63,7 +63,6 @@ import { RouterLink } from 'vue-router'
 import { PhChatsCircle, PhNotePencil, PhArrowUpRight, PhUsersThree } from '@phosphor-icons/vue'
 import { pressFeedback } from '@/directives/pressFeedback'
 import style from './ChatComponent.module.scss'
-import { useMessagesStore } from '@/stores/messages'
 
 export default defineComponent({
   name: 'ChatComponent',
@@ -72,12 +71,11 @@ export default defineComponent({
   data() {
     return {
       style,
-      messageStore: useMessagesStore(),
     }
   },
   computed: {
     chats() {
-      return this.messageStore.state.chats
+      return this.$messageStore.chats
         .map((chat) => {
           const last = chat.messages[chat.messages.length - 1]
           return {

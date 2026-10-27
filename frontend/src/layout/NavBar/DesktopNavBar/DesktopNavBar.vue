@@ -60,7 +60,7 @@
             :active="$route.name === 'messages'"
             @select="navigate('messages')"
           >
-            <template v-if="!collapsed" #actions>
+            <template v-if="!collapsed && unreadMessages" #actions>
               <span
                 v-if="unreadMessages"
                 :class="style.tabBadge"
@@ -126,7 +126,6 @@ import NavTab from '@/components/UI/tabs/NavTab/NavTab.vue'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 import Tooltip from '@/components/UI/Tooltip/Tooltip.vue'
 import style from './DesktopNavBar.module.scss'
-import { useMessagesStore } from '@/stores/messages'
 
 export default defineComponent({
   name: 'DesktopNavBar',
@@ -140,7 +139,7 @@ export default defineComponent({
   },
   emits: ['collapse-change'],
   data() {
-    return { style, collapsed: false, messageStore: useMessagesStore() }
+    return { style, collapsed: false }
   },
   methods: {
     toggleCollapsed() {
@@ -155,7 +154,7 @@ export default defineComponent({
   },
   computed: {
     unreadMessages(): number {
-      return this.messageStore.unreadMessages.value
+      return this.$messageStore.unreadMessages
     },
     icons() {
       return {

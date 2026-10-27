@@ -67,7 +67,6 @@ import breakpoints from '@/styles/breakpoints.module.scss'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 import NavigationItem from '@/components/UI/navigation/NavigationItem/NavigationItem.vue'
 import Modal from '@/components/UI/modal/BaseModal/Modal.vue'
-import { useMessagesStore } from '@/stores/messages'
 
 export default defineComponent({
   name: 'MobileNavBar',
@@ -82,7 +81,6 @@ export default defineComponent({
   data() {
     return {
       style,
-      messageStore: useMessagesStore(),
       isMobile: false,
       mobileOpen: false,
       mediaQuery: null as MediaQueryList | null,
@@ -137,7 +135,7 @@ export default defineComponent({
   },
   computed: {
     unreadMessages(): number {
-      return this.messageStore.unreadMessages.value
+      return this.$messageStore.unreadMessages
     },
     mobileTabs() {
       return [
