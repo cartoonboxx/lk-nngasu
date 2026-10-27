@@ -10,6 +10,8 @@
         $slots.prefix ? style.withPrefix : null,
         $slots.actions ? style.withActions : null,
       ]"
+      :aria-invalid="ariaInvalid"
+      :aria-describedby="ariaDescribedby"
       :name="name"
       :autocomplete="autocomplete"
       :required="required"
@@ -43,6 +45,14 @@ export default defineComponent({
   },
   props: {
     id: {
+      type: String,
+      default: undefined,
+    },
+    ariaInvalid: {
+      type: Boolean,
+      default: undefined,
+    },
+    ariaDescribedby: {
       type: String,
       default: undefined,
     },

@@ -15,3 +15,11 @@
     line-height: 1.2;
   }
 }
+
+.error {
+  margin: 0;
+  color: var(--color-status-error-content);
+  font-size: var(--font-size-caption);
+  line-height: 1.5;
+  overflow-wrap: anywhere;
+}

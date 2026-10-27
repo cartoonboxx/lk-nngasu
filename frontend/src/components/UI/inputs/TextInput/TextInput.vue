@@ -10,7 +10,9 @@
       :required="required"
       :model-value="modelValue"
       :placeholder="placeholder"
-      :variant="variant"
+      :variant="error && variant !== 'disabled' ? 'error' : variant"
+      :aria-invalid="error || variant === 'error' ? true : undefined"
+      :aria-describedby="error ? `${fieldId}-error` : undefined"
       :size="size"
       :type="type"
       :disabled="disabled"
@@ -26,6 +28,9 @@
         <slot name="actions" />
       </template>
     </Input>
+    <p v-if="error" :id="`${fieldId}-error`" :class="style.error" role="alert">
+      {{ error }}
+    </p>
   </div>
 </template>
 
@@ -48,6 +53,10 @@ export default defineComponent({
       default: undefined,
     },
     label: {
+      type: String,
+      default: '',
+    },
+    error: {
       type: String,
       default: '',
     },
@@ -109,7 +118,7 @@ export default defineComponent({
   },
   computed: {
     fieldId(): string | undefined {
-      return this.id ?? (this.label ? this.generatedId : undefined)
+      return this.id ?? (this.label || this.error ? this.generatedId : undefined)
     },
   },
   methods: {

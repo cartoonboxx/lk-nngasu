@@ -238,6 +238,44 @@
 
     <section :class="style.section">
       <div :class="style.sectionHeading">
+        <h2>TextInput</h2>
+      </div>
+      <div :class="style.showcase">
+        <article :class="style.group">
+          <h3>Подпись и сообщение об ошибке</h3>
+          <div :class="style.textInputExamples">
+            <TextInput v-model="textInputName" label="Имя" placeholder="Введите имя" full-width />
+            <TextInput
+              v-model="textInputEmail"
+              label="Электронная почта"
+              type="email"
+              placeholder="name@example.ru"
+              :error="textInputErrorVisible ? 'Введите корректный адрес электронной почты.' : ''"
+              full-width
+            />
+          </div>
+          <Checkbox
+            v-model="textInputErrorVisible"
+            :class="style.errorToggle"
+            label="Показать ошибку"
+          />
+        </article>
+        <article :class="style.group">
+          <h3>Многострочное поле с ошибкой</h3>
+          <TextInput
+            v-model="textInputDescription"
+            label="Описание"
+            placeholder="Расскажите подробнее"
+            error="Описание должно содержать не менее 20 символов."
+            multiline
+            full-width
+          />
+        </article>
+      </div>
+    </section>
+
+    <section :class="style.section">
+      <div :class="style.sectionHeading">
         <h2>Select</h2>
       </div>
       <div :class="style.showcase">
@@ -550,6 +588,7 @@ import Button from '@/components/UI/buttons/Button/Button.vue'
 import MediaButton from '@/components/UI/buttons/MediaButton/MediaButton.vue'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 import Input from '@/components/UI/inputs/Input/Input.vue'
+import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
 import Checkbox from '@/components/UI/inputs/Checkbox/Checkbox.vue'
 import Select from '@/components/UI/inputs/Select/Select.vue'
 import Modal from '@/components/UI/modal/BaseModal/Modal.vue'
@@ -651,6 +690,7 @@ export default defineComponent({
     IconButton,
     IconTab,
     Input,
+    TextInput,
     Select,
     FloatingPopup,
     Modal,
@@ -663,6 +703,10 @@ export default defineComponent({
       style,
       tooltipPositions: ['top', 'bottom', 'left', 'right'] as TooltipPosition[],
       mediaAttachmentVisible: true,
+      textInputName: '',
+      textInputEmail: 'name@',
+      textInputDescription: '',
+      textInputErrorVisible: true,
       modalOpen: false,
       modalMessage: '',
       modalSize: { label: 'Обычная', width: 540, height: 'auto' as string | number },
