@@ -22,9 +22,11 @@
     text-align: left;
     cursor: pointer;
 
-    &:hover:not([data-disabled='true']) {
-      border-color: var(--color-border-level-2);
-      color: var(--color-text-primary);
+    @media (hover: hover) and (pointer: fine) {
+      &:hover:not([data-disabled='true']) {
+        border-color: var(--color-border-level-2);
+        color: var(--color-text-primary);
+      }
     }
 
     &.sm {
@@ -73,5 +75,11 @@
     &.open {
       transform: rotate(180deg);
     }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .root .caret {
+    transition: none;
   }
 }

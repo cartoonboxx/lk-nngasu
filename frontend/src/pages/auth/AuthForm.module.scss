@@ -1,3 +1,5 @@
+@use '@/styles/breakpoints';
+
 .form {
   display: flex;
   flex-direction: column;
@@ -15,17 +17,6 @@
   .fields {
     display: grid;
     gap: var(--space-4);
-
-    input {
-      border-radius: var(--radius-lg);
-      font-size: var(--font-size-body);
-    }
-
-    label {
-      margin-bottom: var(--space-1);
-      font-size: var(--font-size-body-small);
-      font-weight: 500;
-    }
   }
 
   .remember {
@@ -111,6 +102,18 @@
   .form {
     .link {
       transition: none;
+    }
+  }
+}
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .form {
+    gap: var(--mobile-gap);
+    .header h2 {
+      font-size: var(--font-size-h1);
+    }
+    .fields {
+      gap: var(--mobile-gap);
     }
   }
 }

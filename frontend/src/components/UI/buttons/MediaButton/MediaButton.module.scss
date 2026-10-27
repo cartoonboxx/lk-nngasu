@@ -1,3 +1,5 @@
+@use '@/styles/mixins';
+
 .mediaButton {
   display: flex;
   width: 100%;
@@ -8,13 +10,16 @@
   border-radius: var(--radius-md);
   background: var(--color-surface-raised);
   color: var(--color-text-primary);
+
   transition:
     background-color 160ms ease,
     border-color 160ms ease;
 
-  &:not(.readonly, .disabled):hover {
-    border-color: var(--color-border-level-2);
-    background: var(--color-surface-interactive);
+  @media (hover: hover) and (pointer: fine) {
+    &:not(.readonly, .disabled):hover {
+      border-color: var(--color-border-level-2);
+      background: var(--color-surface-interactive);
+    }
   }
 
   &.readonly {
@@ -46,6 +51,8 @@
   text-align: left;
 
   &:is(button) {
+    @include mixins.press-feedback(0.985);
+
     cursor: pointer;
     &:focus-visible {
       outline: 2px solid var(--color-border-focus);
@@ -112,4 +119,15 @@
   gap: var(--space-2);
   padding-right: var(--space-4);
   color: var(--color-content-interactive);
+}
+
+.mediaButton:has(> button:is(:active, [data-pressed='true']):not(:disabled)) {
+  border-color: var(--color-border-level-3);
+  background: var(--color-surface-interactive);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mediaButton {
+    transition: none;
+  }
 }

@@ -3,6 +3,7 @@
     :class="[style.mediaButton, readonly ? style.readonly : null, disabled ? style.disabled : null]"
   >
     <component
+      v-press
       :is="readonly ? 'div' : 'button'"
       :class="style.main"
       :type="readonly ? undefined : type"
@@ -27,11 +28,13 @@
 </template>
 
 <script lang="ts">
+import { pressFeedback } from '@/directives/pressFeedback'
 import { defineComponent, type PropType } from 'vue'
 import { PhDownloadSimple } from '@phosphor-icons/vue'
 import style from './MediaButton.module.scss'
 
 export default defineComponent({
+  directives: { press: pressFeedback },
   name: 'MediaButton',
   components: { PhDownloadSimple },
   props: {

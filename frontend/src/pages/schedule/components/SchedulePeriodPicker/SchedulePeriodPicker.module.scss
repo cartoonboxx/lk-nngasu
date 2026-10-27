@@ -182,3 +182,23 @@
     height: 40px;
   }
 }
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .header h2 {
+    font-size: var(--font-size-h2);
+  }
+  .selectionHeader {
+    font-size: var(--font-size-caption);
+  }
+  .monthNavigation {
+    font-size: var(--font-size-body-small);
+  }
+  .calendar th {
+    font-size: var(--font-size-caption);
+  }
+  .day {
+    width: 44px;
+    height: 44px;
+    font-size: var(--font-size-body-small);
+  }
+}

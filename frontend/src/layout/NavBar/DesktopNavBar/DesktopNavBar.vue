@@ -60,8 +60,13 @@
             :active="$route.name === 'messages'"
             @select="navigate('messages')"
           >
-            <template v-if="!collapsed" #actions>
-              <span :class="style.tabBadge">2</span>
+            <template v-if="!collapsed && unreadMessages" #actions>
+              <span
+                v-if="unreadMessages"
+                :class="style.tabBadge"
+                :aria-label="`Непрочитанных сообщений: ${unreadMessages}`"
+                >{{ unreadMessages }}</span
+              >
             </template>
           </NavTab>
         </Tooltip>
@@ -148,6 +153,9 @@ export default defineComponent({
     },
   },
   computed: {
+    unreadMessages(): number {
+      return this.$messageStore.unreadMessages
+    },
     icons() {
       return {
         house: markRaw(PhHouse),

@@ -1,4 +1,9 @@
+@use '@/styles/breakpoints';
+@use '@/styles/mixins';
+
 .button {
+  @include mixins.press-feedback(0.92);
+
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
@@ -11,11 +16,6 @@
   color: var(--color-text-primary);
   background: transparent;
   cursor: pointer;
-  transition:
-    background-color 160ms ease,
-    border-color 160ms ease,
-    color 160ms ease,
-    transform 120ms ease;
 
   :global(svg) {
     width: var(--icon-size);
@@ -57,12 +57,17 @@
     background: var(--color-accent-default);
     color: var(--color-content-on-accent);
 
-    &:hover:not(:disabled),
+    @media (hover: hover) and (pointer: fine) {
+      &:hover:not(:disabled) {
+        background: var(--color-accent-hover);
+      }
+    }
+
     &.hover {
       background: var(--color-accent-hover);
     }
 
-    &:active:not(:disabled),
+    &:is(:active, [data-pressed='true']):not(:disabled),
     &.active {
       background: var(--color-accent-pressed);
     }
@@ -72,13 +77,19 @@
     border-color: var(--color-border-level-1);
     background: var(--color-surface-level-4);
 
-    &:hover:not(:disabled),
+    @media (hover: hover) and (pointer: fine) {
+      &:hover:not(:disabled) {
+        border-color: var(--color-border-level-2);
+        background: var(--color-surface-level-5);
+      }
+    }
+
     &.hover {
       border-color: var(--color-border-level-2);
       background: var(--color-surface-level-5);
     }
 
-    &:active:not(:disabled),
+    &:is(:active, [data-pressed='true']):not(:disabled),
     &.active {
       border-color: var(--color-border-level-3);
       background: var(--color-surface-level-3);
@@ -89,13 +100,19 @@
     background: transparent;
     color: var(--color-text-secondary);
 
-    &:hover:not(:disabled),
+    @media (hover: hover) and (pointer: fine) {
+      &:hover:not(:disabled) {
+        background: color-mix(in srgb, var(--color-content-interactive) 10%, transparent);
+        color: var(--color-text-primary);
+      }
+    }
+
     &.hover {
       background: color-mix(in srgb, var(--color-content-interactive) 10%, transparent);
       color: var(--color-text-primary);
     }
 
-    &:active:not(:disabled),
+    &:is(:active, [data-pressed='true']):not(:disabled),
     &.active {
       background: var(--color-surface-level-4);
     }
@@ -106,7 +123,16 @@
     background: var(--color-status-error-surface);
     color: var(--color-status-error-content);
 
-    &:hover:not(:disabled),
+    @media (hover: hover) and (pointer: fine) {
+      &:hover:not(:disabled) {
+        background: color-mix(
+          in srgb,
+          var(--color-status-error-surface),
+          var(--color-status-error-content) 10%
+        );
+      }
+    }
+
     &.hover {
       background: color-mix(
         in srgb,
@@ -115,7 +141,7 @@
       );
     }
 
-    &:active:not(:disabled),
+    &:is(:active, [data-pressed='true']):not(:disabled),
     &.active {
       background: color-mix(
         in srgb,
@@ -123,5 +149,17 @@
         var(--color-status-error-content) 20%
       );
     }
+  }
+}
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .button.sm {
+    --icon-size: 20px;
+  }
+  .button.md {
+    --icon-size: 22px;
+  }
+  .button.lg {
+    --icon-size: 26px;
   }
 }

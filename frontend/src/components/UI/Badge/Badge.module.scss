@@ -25,3 +25,9 @@
     transform: translate(42%, -42%);
   }
 }
+
+.root.inline .badge {
+  position: static;
+  z-index: auto;
+  transform: none;
+}

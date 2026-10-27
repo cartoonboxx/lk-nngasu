@@ -43,7 +43,7 @@
           autocomplete="new-password"
           placeholder="Введи пароль ещё раз"
           :type="showConfirmation ? 'text' : 'password'"
-          :variant="passwordMismatch ? 'error' : 'default'"
+          :error="passwordMismatch ? 'Пароли не совпадают. Проверь введённые значения.' : ''"
           required
           full-width
         >
@@ -54,9 +54,6 @@
             </IconButton>
           </template>
         </TextInput>
-        <p v-if="passwordMismatch" :class="[style.hint, style.error]">
-          Пароли не совпадают. Проверь введённые значения.
-        </p>
       </div>
 
       <Checkbox

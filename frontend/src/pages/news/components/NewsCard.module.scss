@@ -1,3 +1,5 @@
+@use '@/styles/breakpoints';
+
 .card {
   display: flex;
   align-items: stretch;
@@ -13,18 +15,17 @@ text-decoration: none;
 cursor: pointer;
   @media (hover: hover) and (pointer: fine) {
     &:hover:not([data-disabled='true']) {
-    background: var(--color-surface-level-4);
-    color: var(--color-text-primary);
-  }
+      background: var(--color-surface-level-4);
+      color: var(--color-text-primary);
+    }
 
     &:active:not([data-disabled='true']),
     &[data-active='true'] {
       border-color: var(--color-border-level-1);
       background: var(--color-surface-level-5);
       color: var(--color-text-primary);
+    }
   }
-  }
-  
 }
 .image {
   flex: 0 0 120px;
@@ -32,7 +33,7 @@ cursor: pointer;
   height: 150px;
   align-self: flex-start;
   background-position: center top;
-  
+
   background-size: cover;
   background-repeat: no-repeat;
   background-color: var(--color-surface-level-3);
@@ -155,5 +156,44 @@ cursor: pointer;
     .description {
       font-size: var(--font-size-label);
     }
+  }
+}
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .card,
+  .featured {
+    padding: var(--mobile-card-padding);
+    gap: var(--mobile-gap);
+  }
+  .content {
+    height: auto;
+    min-height: 180px;
+  }
+  .image {
+    flex-basis: 112px;
+    width: 112px;
+    height: 140px;
+  }
+}
+
+@media (max-width: breakpoints.$screen-phone-regular-max) {
+  .content {
+    min-height: 168px;
+  }
+  .image {
+    flex-basis: 104px;
+    width: 104px;
+    height: 130px;
+  }
+}
+
+@media (max-width: breakpoints.$screen-phone-compact-max) {
+  .content {
+    min-height: 152px;
+  }
+  .image {
+    flex-basis: 88px;
+    width: 88px;
+    height: 110px;
   }
 }

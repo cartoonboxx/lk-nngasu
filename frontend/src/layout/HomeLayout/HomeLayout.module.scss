@@ -22,10 +22,22 @@
   .mainContent.collapsed {
     min-width: 0;
     margin-left: 0;
-    padding: max(var(--space-4), env(safe-area-inset-top))
-      max(var(--space-4), env(safe-area-inset-right))
-      calc(72px + env(safe-area-inset-bottom) + var(--space-4))
-      max(var(--space-4), env(safe-area-inset-left));
+    padding: max(var(--mobile-gutter), env(safe-area-inset-top))
+      max(var(--mobile-gutter), env(safe-area-inset-right))
+      calc(var(--mobile-navigation-height) + env(safe-area-inset-bottom) + var(--mobile-gutter))
+      max(var(--mobile-gutter), env(safe-area-inset-left));
     transition: none;
+  }
+}
+
+.mainContent.fullBleed {
+  min-height: 100dvh;
+  padding: 0;
+}
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .mainContent.fullBleed {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right)
+      calc(var(--mobile-navigation-height) + env(safe-area-inset-bottom)) env(safe-area-inset-left);
   }
 }

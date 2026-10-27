@@ -1,0 +1,39 @@
+@use '@/styles/breakpoints';
+
+.avatar {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid var(--color-border-level-1);
+  border-radius: var(--radius-round);
+  background: var(--color-surface-raised);
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+}
+@media (max-width: breakpoints.$screen-phone-max) {
+  .avatar {
+    width: 48px;
+    height: 48px;
+    font-size: var(--font-size-caption);
+
+    svg {
+      width: 24px;
+      height: 24px;
+    }
+  }
+}
+@media (max-width: breakpoints.$screen-phone-regular-max) {
+  .avatar {
+    width: 44px;
+    height: 44px;
+  }
+}
+@media (max-width: breakpoints.$screen-phone-compact-max) {
+  .avatar {
+    width: 40px;
+    height: 40px;
+  }
+}

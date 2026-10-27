@@ -152,3 +152,22 @@
 .mediaWarning {
   color: var(--color-status-warning-content);
 }
+
+.textInputExamples {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+  align-items: start;
+  gap: var(--space-5);
+}
+.errorToggle {
+  margin-top: var(--space-4);
+}
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .page {
+    padding: var(--mobile-gutter);
+  }
+  .page .group {
+    padding: var(--mobile-card-padding);
+  }
+}

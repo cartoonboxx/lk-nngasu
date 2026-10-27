@@ -1,4 +1,8 @@
+@use '@/styles/mixins';
+
 .tab {
+  @include mixins.press-feedback(0.92);
+
   display: inline-flex;
   flex-shrink: 0;
   align-items: center;
@@ -11,10 +15,6 @@
   background: transparent;
   color: var(--color-text-secondary);
   cursor: pointer;
-  transition:
-    background-color 160ms ease,
-    border-color 160ms ease,
-    color 160ms ease;
 
   :global(svg) {
     width: var(--icon-size);
@@ -27,13 +27,19 @@
     outline-offset: 2px;
   }
 
-  &:hover:not(:disabled),
+  @media (hover: hover) and (pointer: fine) {
+    &:hover:not(:disabled) {
+      background: var(--color-surface-level-4);
+      color: var(--color-text-primary);
+    }
+  }
+
   &.hover {
     background: var(--color-surface-level-4);
     color: var(--color-text-primary);
   }
 
-  &:active:not(:disabled),
+  &:is(:active, [data-pressed='true']):not(:disabled),
   &.active {
     background: var(--color-surface-level-5);
     color: var(--color-text-primary);
@@ -70,13 +76,19 @@
     background: var(--color-surface-active);
     color: var(--color-text-primary);
 
-    &:hover:not(:disabled),
+    @media (hover: hover) and (pointer: fine) {
+      &:hover:not(:disabled) {
+        background: color-mix(in srgb, var(--color-surface-active), var(--color-text-primary) 6%);
+        color: var(--color-text-primary);
+      }
+    }
+
     &.hover {
       background: color-mix(in srgb, var(--color-surface-active), var(--color-text-primary) 6%);
       color: var(--color-text-primary);
     }
 
-    &:active:not(:disabled),
+    &:is(:active, [data-pressed='true']):not(:disabled),
     &.active {
       background: var(--color-surface-level-4);
     }

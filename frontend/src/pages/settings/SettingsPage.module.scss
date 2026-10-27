@@ -1,7 +1,9 @@
+@use '@/styles/breakpoints';
+
 @use '@/styles/mixins';
 
 .settingsPage {
-  @include mixins.setLayout()
+  @include mixins.setLayout();
 }
 
 .settingsCard {
@@ -100,7 +102,6 @@
   gap: var(--space-2);
 }
 
-
 @media screen and (max-width: 640px) {
   .settingsPage {
     min-width: 0;
@@ -117,7 +118,7 @@
 
   .settingsSection {
     h2 {
-      margin-bottom:var(--space-4);
+      margin-bottom: var(--space-4);
       font-size: var(--font-size-h2);
     }
   }
@@ -190,4 +191,44 @@
     }
   }
 
+  .passwordField input {
+    font-size: var(--font-size-body);
+  }
+}
+@media (max-width: breakpoints.$screen-phone-max) {
+  .settingsPage {
+    --profile-mobile-avatar: 64px;
+  }
+  .settingsSection,
+  .settingsSectionRow {
+    padding: var(--mobile-card-padding);
+  }
+  .settingsSection h2 {
+    margin-bottom: var(--mobile-gap);
+  }
+  .profileRow {
+    grid-template-columns: var(--profile-mobile-avatar) minmax(0, 1fr);
+  }
+  .profileAvatar {
+    width: var(--profile-mobile-avatar);
+    height: var(--profile-mobile-avatar);
+  }
+  .tabColumn > *,
+  .profileRow > button,
+  .settingsSectionRow > div:last-child button,
+  .passwordField input {
+    min-height: var(--control-height-md);
+  }
+}
+
+@media (max-width: breakpoints.$screen-phone-regular-max) {
+  .settingsPage {
+    --profile-mobile-avatar: 60px;
+  }
+}
+
+@media (max-width: breakpoints.$screen-phone-compact-max) {
+  .settingsPage {
+    --profile-mobile-avatar: 52px;
+  }
 }

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, it, expect, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import App from '../App.vue'
 import router from '../router'
+import stores from '@/stores'
 
 describe('App', () => {
   beforeEach(() => {
@@ -26,11 +27,12 @@ describe('App', () => {
 
     const wrapper = mount(App, {
       global: {
-        plugins: [router],
+        plugins: [stores, router],
       },
     })
 
     expect(wrapper.text()).toContain('Компоненты интерфейса')
+    wrapper.unmount()
   })
 
   it('renders nested page content inside the home layout', async () => {
@@ -39,7 +41,7 @@ describe('App', () => {
 
     const wrapper = mount(App, {
       global: {
-        plugins: [router],
+        plugins: [stores, router],
       },
     })
 
@@ -49,5 +51,6 @@ describe('App', () => {
     await wrapper.vm.$nextTick()
 
     expect(wrapper.get('h1').text()).toBe('Расписание')
+    wrapper.unmount()
   })
 })

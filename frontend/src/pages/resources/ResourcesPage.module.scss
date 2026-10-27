@@ -85,3 +85,13 @@
     gap: var(--space-3);
   }
 }
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .section {
+    margin-bottom: calc(var(--mobile-gap) + 8px);
+  }
+  .servicesGrid,
+  .contactsGrid {
+    gap: var(--mobile-gap);
+  }
+}

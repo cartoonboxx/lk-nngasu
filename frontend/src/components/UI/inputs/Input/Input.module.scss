@@ -43,17 +43,24 @@
 
   .filled,
   .default:is(:autofill, :-webkit-autofill) {
-    border-color: var(--color-border-level-2);
+    border-color: var(--input-border-emphasis);
     background: var(--color-surface-level-3);
   }
 
   .error {
+    &:focus:not(:disabled) {
+      border-color: var(--color-border-error);
+      background: var(--color-status-error-surface);
+    }
+
     --input-autofill-surface: var(--color-status-error-surface);
     border-color: var(--color-border-error);
 
-    &:hover:not(:disabled) {
-      border-color: var(--color-border-error);
-      background: var(--color-status-error-surface);
+    @media (hover: hover) and (pointer: fine) {
+      &:hover:not(:disabled) {
+        border-color: var(--color-border-error);
+        background: var(--color-status-error-surface);
+      }
     }
   }
 

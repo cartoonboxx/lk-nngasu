@@ -1,0 +1,73 @@
+@use '@/styles/breakpoints';
+
+.page {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100dvh;
+  min-height: 0;
+  container-type: inline-size;
+}
+.messenger {
+  display: grid;
+  grid-template-columns: 320px minmax(0, 1fr);
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--color-surface-navigation);
+}
+@container (max-width: 820px) {
+  .messenger {
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+}
+@container (max-width: 620px) {
+  .messenger {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .welcome,
+  .conversation {
+    display: none;
+  }
+  .conversationOpen {
+    .sidebar {
+      display: none;
+    }
+    .conversation {
+      display: flex;
+    }
+  }
+}
+@media (max-width: breakpoints.$screen-phone-max) {
+  .page {
+    position: fixed;
+    z-index: 20;
+    top: var(--messages-viewport-top, 0px);
+    left: 0;
+    width: 100%;
+    height: calc(
+      var(--messages-viewport-height, 100dvh) - var(
+          --messages-navigation-space,
+          calc(var(--mobile-navigation-height) + env(safe-area-inset-bottom))
+        )
+    );
+    min-height: 0;
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left);
+  }
+}
+@media (max-width: breakpoints.$screen-phone-max) {
+  .page {
+    --messages-inset: 16px;
+  }
+}
+@media (max-width: breakpoints.$screen-phone-regular-max) {
+  .page {
+    --messages-inset: 12px;
+  }
+}
+@media (max-width: breakpoints.$screen-phone-compact-max) {
+  .page {
+    --messages-inset: 10px;
+  }
+}

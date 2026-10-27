@@ -1,6 +1,7 @@
 <template>
   <textarea
     v-if="multiline"
+    rows="1"
     :id="id"
     ref="field"
     :class="[style.base, style.textarea, style[size], fullWidth ? style.fullWidth : null]"
@@ -11,7 +12,11 @@
     :placeholder="placeholder"
     :maxlength="maxlength"
     :disabled="disabled"
-    :style="{ minHeight: normalizedBaseHeight }"
+    :style="{
+      minHeight: normalizedBaseHeight,
+      maxHeight: maxHeight ? `${maxHeight}px` : undefined,
+      overflowY: maxHeight ? 'auto' : undefined,
+    }"
     @input="handleInput"
     @change="handleInput"
   />
@@ -90,6 +95,10 @@ export default defineComponent({
       type: Boolean,
       default: false,
     },
+    maxHeight: {
+      type: Number,
+      default: undefined,
+    },
     baseHeight: {
       type: [Number, String],
       default: 96,
@@ -114,6 +123,9 @@ export default defineComponent({
     this.resizeTextarea()
   },
   methods: {
+    focus() {
+      ;(this.$refs.field as HTMLInputElement | HTMLTextAreaElement | undefined)?.focus()
+    },
     syncValue() {
       const field = this.$refs.field as HTMLInputElement | HTMLTextAreaElement | undefined
       if (field && field.value !== this.modelValue) {
@@ -141,7 +153,8 @@ export default defineComponent({
       }
 
       field.style.height = this.normalizedBaseHeight
-      field.style.height = `${Math.max(field.scrollHeight, field.clientHeight)}px`
+      const height = Math.max(field.scrollHeight, field.clientHeight)
+      field.style.height = `${this.maxHeight ? Math.min(height, this.maxHeight) : height}px`
     },
   },
 })

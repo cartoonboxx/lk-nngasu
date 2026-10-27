@@ -1,5 +1,6 @@
 <template>
   <component
+    v-press
     :is="to ? 'RouterLink' : 'button'"
     :to="to"
     :type="to ? undefined : 'button'"
@@ -20,12 +21,14 @@
 </template>
 
 <script lang="ts">
+import { pressFeedback } from '@/directives/pressFeedback'
 import { defineComponent, type Component, type PropType } from 'vue'
 import { RouterLink, type RouteLocationRaw } from 'vue-router'
 import { PhCaretRight } from '@phosphor-icons/vue'
 import style from './NavigationItem.module.scss'
 
 export default defineComponent({
+  directives: { press: pressFeedback },
   name: 'NavigationItem',
   components: { RouterLink, PhCaretRight },
   props: {

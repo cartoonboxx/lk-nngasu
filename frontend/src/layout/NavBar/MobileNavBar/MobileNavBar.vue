@@ -15,7 +15,7 @@
       :icon="icons.squares"
       :active="isMoreActive || mobileOpen"
       variant="bottom"
-      notification
+      :notification="unreadMessages > 0"
       @click="openMobileMenu"
     />
   </nav>
@@ -39,7 +39,7 @@
           :text="item.text"
           :icon="item.icon"
           :active="$route.name === item.route"
-          :badge="item.route === 'messages' ? 2 : undefined"
+          :badge="item.route === 'messages' && unreadMessages ? unreadMessages : undefined"
           @click="navigate(item.route)"
         />
       </div>
@@ -134,6 +134,9 @@ export default defineComponent({
     },
   },
   computed: {
+    unreadMessages(): number {
+      return this.$messageStore.unreadMessages
+    },
     mobileTabs() {
       return [
         {

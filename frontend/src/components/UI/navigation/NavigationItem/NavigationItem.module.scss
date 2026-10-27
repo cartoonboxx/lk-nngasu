@@ -1,4 +1,9 @@
+@use '@/styles/breakpoints';
+@use '@/styles/mixins';
+
 .item {
+  @include mixins.press-feedback(0.96);
+
   display: flex;
   border: 0;
   border-radius: var(--radius-lg);
@@ -64,8 +69,10 @@
     color: var(--color-content-accent);
   }
 
-  &:hover {
-    background: var(--color-surface-navigation-hover);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: var(--color-surface-navigation-hover);
+    }
   }
 }
 
@@ -94,4 +101,14 @@
   background: var(--color-brand-blue);
   color: var(--color-text-primary);
   font-size: 11px;
+}
+
+.item:is(:active, [data-pressed='true']) {
+  background: var(--color-surface-navigation-selected);
+}
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .bottom {
+    font-size: 12px;
+  }
 }

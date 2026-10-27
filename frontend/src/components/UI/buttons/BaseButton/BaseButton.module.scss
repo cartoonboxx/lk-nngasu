@@ -1,4 +1,8 @@
+@use '@/styles/mixins';
+
 .base {
+  @include mixins.press-feedback(0.97);
+
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -11,11 +15,6 @@
   font-size: var(--font-size-action);
   white-space: nowrap;
   cursor: pointer;
-  transition:
-    background-color 160ms ease,
-    border-color 160ms ease,
-    color 160ms ease,
-    transform 120ms ease;
 
   &:focus-visible {
     outline: 2px solid var(--color-border-focus);

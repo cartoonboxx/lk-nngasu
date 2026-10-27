@@ -1,3 +1,5 @@
+@use '@/styles/breakpoints';
+
 .card {
   display: flex;
   justify-content: space-between;
@@ -85,4 +87,35 @@
   color: var(--color-content-interactive);
   background: var(--color-surface-active);
   border-radius: 50%;
+}
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .card {
+    padding: var(--mobile-card-padding);
+    min-height: 180px;
+    gap: var(--mobile-gap);
+  }
+  .link {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: breakpoints.$screen-phone-regular-max) {
+  .card {
+    min-height: 168px;
+  }
+  .icon img {
+    width: 48px;
+    height: 48px;
+  }
+}
+
+@media (max-width: breakpoints.$screen-phone-compact-max) {
+  .card {
+    min-height: 156px;
+  }
+  .icon img {
+    width: 40px;
+    height: 40px;
+  }
 }

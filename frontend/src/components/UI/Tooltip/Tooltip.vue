@@ -2,8 +2,9 @@
   <div
     ref="trigger"
     :class="style.root"
-    @mouseenter="isShow ? onMouseOn() : null"
-    @mouseleave="onMouseleave"
+    @pointerenter="onPointerEnter"
+    @pointerleave="onMouseleave"
+    @pointerdown="onMouseleave"
   >
     <slot />
     <Teleport to="body">
@@ -113,8 +114,14 @@ export default defineComponent({
       this.hovered = false
       this.dismissed = false
     },
-    onMouseOn() {
-      this.hovered = true
+    onPointerEnter(event: PointerEvent) {
+      if (
+        this.isShow &&
+        event.pointerType === 'mouse' &&
+        window.matchMedia('(hover: hover)').matches
+      ) {
+        this.hovered = true
+      }
     },
     onKeydown(event: KeyboardEvent) {
       if (event.key === 'Escape') this.dismissed = true

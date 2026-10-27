@@ -105,3 +105,17 @@
     }
   }
 }
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .pageInput {
+    gap: var(--mobile-gap);
+    margin-bottom: var(--mobile-gap);
+  }
+  .pageSubjectSemester {
+    gap: calc(var(--mobile-gap) / 2);
+    > * {
+      min-height: var(--control-height-lg);
+      padding: var(--mobile-card-padding);
+    }
+  }
+}
