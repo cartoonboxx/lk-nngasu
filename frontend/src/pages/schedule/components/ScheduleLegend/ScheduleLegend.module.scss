@@ -47,3 +47,10 @@
     }
   }
 }
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .legend li {
+    font-size: 14px;
+    padding: var(--space-2) var(--space-3);
+  }
+}

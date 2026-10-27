@@ -1,7 +1,13 @@
 .base {
+  --input-border-emphasis: color-mix(
+    in srgb,
+    var(--color-border-level-1) 75%,
+    var(--color-border-level-2)
+  );
+
   width: 240px;
   border: 1px solid var(--color-border-level-1);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--color-surface-level-1) 80%, transparent);
   color: var(--color-text-primary);
   font: inherit;
@@ -19,20 +25,19 @@
 
   @media (hover: hover) and (pointer: fine) {
     &:hover:not(:disabled) {
-      border-color: var(--color-border-level-2);
+      border-color: var(--input-border-emphasis);
       background: var(--color-surface-level-2);
     }
   }
 
   &.hover {
-    border-color: var(--color-border-level-2);
+    border-color: var(--input-border-emphasis);
     background: var(--color-surface-level-2);
   }
 
   &:focus:not(:disabled),
   &.active {
-    border-color: var(--color-border-focus);
-    background: var(--color-surface-level-1);
+    border-color: var(--input-border-emphasis);
   }
 
   &:disabled,
@@ -46,7 +51,7 @@
 
   &.textarea {
     display: block;
-    min-width: 240px;
+    min-width: 0;
     overflow: hidden;
     resize: none;
     line-height: 1.5;

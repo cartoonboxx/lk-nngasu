@@ -1,3 +1,4 @@
+@use '@/styles/breakpoints';
 @use '../dashboard-widgets' as widget;
 
 .newsBlock {
@@ -104,5 +105,29 @@
       flex: 0 0 82%;
       scroll-snap-align: start;
     }
+  }
+}
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .heading {
+    font-size: 20px;
+  }
+  .allLink {
+    font-size: 16px;
+    min-height: 44px;
+  }
+  .date {
+    font-size: 14px;
+  }
+  .title {
+    font-size: 18px;
+  }
+  .description {
+    font-size: 16px;
+    line-height: 1.6;
+  }
+  .readMore {
+    font-size: 16px;
+    min-height: 44px;
   }
 }

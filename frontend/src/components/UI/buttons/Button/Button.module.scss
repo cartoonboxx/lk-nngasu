@@ -43,22 +43,25 @@
 }
 
 .ghost {
+  min-width: 0;
+  border-color: transparent;
   background: transparent;
-  color: var(--color-content-interactive);
+  color: var(--color-text-muted);
 
   @media (hover: hover) and (pointer: fine) {
     &:hover:not(:disabled) {
-      background: var(--color-status-info-surface);
+      color: var(--color-text-primary);
     }
   }
 
   &.hover {
-    background: var(--color-status-info-surface);
+    color: var(--color-text-primary);
   }
 
-  &:is(:active, [data-pressed='true']):not(:disabled),
+  &:is(:active, [data-pressed='true'], [aria-pressed='true']):not(:disabled),
   &.active {
-    background: var(--color-surface-level-4);
+    background: var(--color-surface-interactive);
+    color: var(--color-text-primary);
   }
 }
 

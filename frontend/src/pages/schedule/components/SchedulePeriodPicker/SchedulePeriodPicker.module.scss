@@ -182,3 +182,23 @@
     height: 40px;
   }
 }
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .header h2 {
+    font-size: 22px;
+  }
+  .selectionHeader {
+    font-size: 14px;
+  }
+  .monthNavigation {
+    font-size: 16px;
+  }
+  .calendar th {
+    font-size: 13px;
+  }
+  .day {
+    width: 44px;
+    height: 44px;
+    font-size: 16px;
+  }
+}

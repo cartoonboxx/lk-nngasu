@@ -6,9 +6,10 @@ async function bounds(locator: Locator) {
   return box!
 }
 
-for (const { width, alignedControls } of [
-  { width: 1280, alignedControls: 6 },
-  { width: 375, alignedControls: 3 },
+for (const { width, alignedControls, heights } of [
+  { width: 1280, alignedControls: 6, heights: [36, 46, 54] },
+  { width: 375, alignedControls: 3, heights: [44, 52, 60] },
+  { width: 440, alignedControls: 3, heights: [44, 52, 60] },
 ]) {
   test(`controls share heights at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 })
@@ -17,9 +18,9 @@ for (const { width, alignedControls } of [
       has: page.getByRole('heading', { name: 'Общая шкала размеров', exact: true }),
     })
     for (const [name, height] of [
-      ['Small', 36],
-      ['Medium', 46],
-      ['Large', 54],
+      ['Small', heights[0]],
+      ['Medium', heights[1]],
+      ['Large', heights[2]],
     ] as const) {
       const row = scale
         .locator('article')

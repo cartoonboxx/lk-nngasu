@@ -1,3 +1,4 @@
+@use '@/styles/breakpoints';
 @use '@/styles/mixins';
 
 .button {
@@ -148,5 +149,17 @@
         var(--color-status-error-content) 20%
       );
     }
+  }
+}
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .button.sm {
+    --icon-size: 20px;
+  }
+  .button.md {
+    --icon-size: 22px;
+  }
+  .button.lg {
+    --icon-size: 26px;
   }
 }

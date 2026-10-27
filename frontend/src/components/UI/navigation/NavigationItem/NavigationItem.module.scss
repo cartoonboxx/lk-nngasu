@@ -1,3 +1,4 @@
+@use '@/styles/breakpoints';
 @use '@/styles/mixins';
 
 .item {
@@ -104,4 +105,10 @@
 
 .item:is(:active, [data-pressed='true']) {
   background: var(--color-surface-navigation-selected);
+}
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .bottom {
+    font-size: 12px;
+  }
 }

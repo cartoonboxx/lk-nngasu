@@ -1,3 +1,4 @@
+@use '@/styles/breakpoints';
 @use '@/styles/mixins';
 @use './components/dashboard-widgets' as widget;
 
@@ -61,5 +62,11 @@
   }
   .todayLabel {
     font-size: 12px;
+  }
+}
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .scheduler .headerScheduler h2 {
+    font-size: 20px;
   }
 }

@@ -1,3 +1,4 @@
+@use '@/styles/breakpoints';
 .root {
   display: inline-flex;
   width: fit-content;
@@ -178,5 +179,17 @@
   }
   .root:is(:active, [data-pressed='true']):not(.disabled) .control {
     scale: none;
+  }
+}
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .root.sm {
+    --checkbox-size: 20px;
+  }
+  .root.md {
+    --checkbox-size: 24px;
+  }
+  .root.lg {
+    --checkbox-size: 28px;
   }
 }

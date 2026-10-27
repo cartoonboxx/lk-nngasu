@@ -30,3 +30,9 @@
     margin-bottom: var(--space-3);
   }
 }
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .sectionHeader {
+    margin-bottom: var(--space-6);
+  }
+}

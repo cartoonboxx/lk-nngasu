@@ -5,7 +5,11 @@
   />
   <main
     :inert="mobileMenuOpen"
-    :class="[style.mainContent, navigationCollapsed ? style.collapsed : null]"
+    :class="[
+      style.mainContent,
+      navigationCollapsed ? style.collapsed : null,
+      $route.name === 'messages' ? style.fullBleed : null,
+    ]"
   >
     <RouterView />
   </main>

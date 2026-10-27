@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
+import BaseInput from '@/components/UI/inputs/BaseInput/BaseInput.vue'
 import inputStyle from '@/components/UI/inputs/Input/Input.module.scss'
 
 describe('TextInput errors', () => {
@@ -47,5 +48,36 @@ describe('TextInput errors', () => {
     expect(first.get('[role="alert"]').attributes('id')).not.toBe(
       second.get('[role="alert"]').attributes('id'),
     )
+  })
+
+  it('forwards field attributes and exposes focus through the UI Kit layers', () => {
+    const wrapper = mount(TextInput, {
+      attachTo: document.body,
+      props: {
+        ariaLabel: 'Сообщение',
+        maxlength: 4000,
+        multiline: true,
+        baseHeight: 46,
+        maxHeight: 144,
+      },
+    })
+    try {
+      const field = wrapper.get('textarea')
+      expect(field.attributes('aria-label')).toBe('Сообщение')
+      expect(field.attributes('maxlength')).toBe('4000')
+      wrapper.vm.focus()
+      expect(document.activeElement).toBe(field.element)
+
+      const base = wrapper.getComponent(BaseInput)
+      Object.defineProperty(field.element, 'scrollHeight', { value: 320, configurable: true })
+      base.vm.resizeTextarea()
+      expect(field.element.style.height).toBe('144px')
+      expect(field.element.style.overflowY).toBe('auto')
+      Object.defineProperty(field.element, 'scrollHeight', { value: 46, configurable: true })
+      base.vm.resizeTextarea()
+      expect(field.element.style.height).toBe('46px')
+    } finally {
+      wrapper.unmount()
+    }
   })
 })

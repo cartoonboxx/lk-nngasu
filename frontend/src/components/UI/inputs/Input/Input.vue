@@ -4,6 +4,9 @@
       <slot name="prefix" />
     </div>
     <BaseInput
+      ref="field"
+      :aria-label="ariaLabel"
+      :max-height="maxHeight"
       :id="id"
       :class="[
         style[effectiveVariant],
@@ -46,6 +49,14 @@ export default defineComponent({
   props: {
     id: {
       type: String,
+      default: undefined,
+    },
+    ariaLabel: {
+      type: String,
+      default: undefined,
+    },
+    maxHeight: {
+      type: Number,
       default: undefined,
     },
     ariaInvalid: {
@@ -127,6 +138,9 @@ export default defineComponent({
     },
   },
   methods: {
+    focus() {
+      ;(this.$refs.field as InstanceType<typeof BaseInput> | undefined)?.focus()
+    },
     handleUpdate(value: string) {
       this.currentValue = value
       this.$emit('update:modelValue', value)

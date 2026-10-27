@@ -1,3 +1,4 @@
+@use '@/styles/breakpoints';
 @use '../dashboard-widgets' as widget;
 
 .chatBlock {
@@ -184,5 +185,38 @@
   }
   .footer {
     margin-inline: var(--space-4);
+  }
+}
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .heading {
+    font-size: 20px;
+  }
+  .chatItem {
+    grid-template-columns: 48px minmax(0, 1fr);
+    min-height: 96px;
+  }
+  .avatar {
+    width: 48px;
+    height: 48px;
+    font-size: 14px;
+  }
+  .name {
+    font-size: 16px;
+  }
+  .preview {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+  .time {
+    font-size: 12px;
+  }
+  .list li + li::before {
+    left: 76px;
+  }
+  .allLink,
+  .compose {
+    min-height: 44px;
+    font-size: 16px;
   }
 }

@@ -43,7 +43,7 @@
 
   .filled,
   .default:is(:autofill, :-webkit-autofill) {
-    border-color: var(--color-border-level-2);
+    border-color: var(--input-border-emphasis);
     background: var(--color-surface-level-3);
   }
 

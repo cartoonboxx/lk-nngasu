@@ -75,6 +75,28 @@
         </article>
 
         <article :class="style.group">
+          <h3>Ghost — выбор фильтра</h3>
+          <div :class="style.row" role="group" aria-label="Пример фильтров">
+            <Button
+              variant="ghost"
+              size="sm"
+              round
+              :aria-pressed="ghostFilter === 'all'"
+              @click="ghostFilter = 'all'"
+              >Все</Button
+            >
+            <Button
+              variant="ghost"
+              size="sm"
+              round
+              :aria-pressed="ghostFilter === 'unread'"
+              @click="ghostFilter = 'unread'"
+              >Непрочитанные</Button
+            >
+          </div>
+        </article>
+
+        <article :class="style.group">
           <h3>Размеры</h3>
           <div :class="style.row">
             <Button v-for="size in sizes" :key="size.value" :size="size.value">
@@ -264,6 +286,7 @@
           <h3>Многострочное поле с ошибкой</h3>
           <TextInput
             v-model="textInputDescription"
+            :max-height="144"
             label="Описание"
             placeholder="Расскажите подробнее"
             error="Описание должно содержать не менее 20 символов."
@@ -404,6 +427,15 @@
             <Badge :value="12">
               <span :class="style.badgeTarget">Элемент</span>
             </Badge>
+          </div>
+        </article>
+        <article :class="style.group">
+          <h3>Счётчик в строке</h3>
+          <div :class="style.row">
+            <Button variant="secondary" size="sm" round>
+              Непрочитанные <Badge :value="2" inline />
+            </Button>
+            <Badge :value="12" inline aria-label="12 непрочитанных сообщений" />
           </div>
         </article>
       </div>
@@ -703,6 +735,7 @@ export default defineComponent({
       style,
       tooltipPositions: ['top', 'bottom', 'left', 'right'] as TooltipPosition[],
       mediaAttachmentVisible: true,
+      ghostFilter: 'all',
       textInputName: '',
       textInputEmail: 'name@',
       textInputDescription: '',

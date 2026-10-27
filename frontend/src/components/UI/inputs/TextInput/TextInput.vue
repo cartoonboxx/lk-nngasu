@@ -4,6 +4,10 @@
       {{ label }}
     </label>
     <Input
+      ref="field"
+      :aria-label="ariaLabel"
+      :maxlength="maxlength"
+      :max-height="maxHeight"
       :id="fieldId"
       :name="name"
       :autocomplete="autocomplete"
@@ -50,6 +54,18 @@ export default defineComponent({
   props: {
     id: {
       type: String,
+      default: undefined,
+    },
+    ariaLabel: {
+      type: String,
+      default: undefined,
+    },
+    maxlength: {
+      type: Number,
+      default: undefined,
+    },
+    maxHeight: {
+      type: Number,
       default: undefined,
     },
     label: {
@@ -122,6 +138,9 @@ export default defineComponent({
     },
   },
   methods: {
+    focus() {
+      ;(this.$refs.field as InstanceType<typeof Input> | undefined)?.focus()
+    },
     handleUpdate(value: string) {
       this.$emit('update:modelValue', value)
     },
