@@ -190,33 +190,45 @@
 
 @media (max-width: breakpoints.$screen-phone-max) {
   .heading {
-    font-size: 20px;
+    font-size: var(--font-size-h3);
   }
   .chatItem {
-    grid-template-columns: 48px minmax(0, 1fr);
-    min-height: 96px;
+    grid-template-columns: var(--dashboard-chat-avatar, 48px) minmax(0, 1fr);
+    min-height: var(--mobile-row-height);
   }
   .avatar {
-    width: 48px;
-    height: 48px;
-    font-size: 14px;
+    width: var(--dashboard-chat-avatar, 48px);
+    height: var(--dashboard-chat-avatar, 48px);
+    font-size: var(--font-size-caption);
   }
   .name {
-    font-size: 16px;
+    font-size: var(--font-size-body-small);
   }
   .preview {
-    font-size: 14px;
+    font-size: var(--font-size-caption);
     line-height: 1.5;
   }
   .time {
-    font-size: 12px;
+    font-size: max(11px, calc(var(--font-size-caption) - 2px));
   }
   .list li + li::before {
-    left: 76px;
+    left: calc(var(--dashboard-chat-avatar, 48px) + 28px);
   }
   .allLink,
   .compose {
     min-height: 44px;
-    font-size: 16px;
+    font-size: var(--font-size-body-small);
+  }
+}
+
+@media (max-width: breakpoints.$screen-phone-regular-max) {
+  .chatBlock {
+    --dashboard-chat-avatar: 44px;
+  }
+}
+
+@media (max-width: breakpoints.$screen-phone-compact-max) {
+  .chatBlock {
+    --dashboard-chat-avatar: 40px;
   }
 }

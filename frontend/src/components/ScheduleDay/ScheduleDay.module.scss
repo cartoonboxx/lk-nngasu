@@ -217,13 +217,15 @@
 
 @media (max-width: breakpoints.$screen-phone-max) {
   .daySchedule {
-    padding-inline: var(--space-4);
+    --schedule-mobile-time-width: 56px;
+    --schedule-mobile-row-height: 128px;
+    padding-inline: var(--mobile-card-padding);
   }
   .dayHeader {
-    min-height: 64px;
-    padding-block: var(--space-4);
+    min-height: calc(var(--control-height-md) + 12px);
+    padding-block: var(--mobile-card-padding);
     h2 {
-      font-size: 18px;
+      font-size: var(--font-size-h4);
       line-height: 1.4;
     }
   }
@@ -235,14 +237,14 @@
   }
   .dayLesson,
   .grid .dayLesson {
-    grid-template-columns: 56px minmax(0, 1fr);
-    min-height: 128px;
+    grid-template-columns: var(--schedule-mobile-time-width) minmax(0, 1fr);
+    min-height: var(--schedule-mobile-row-height);
     gap: var(--space-3);
-    padding: var(--space-5) 0 var(--space-5) var(--space-4);
+    padding: var(--mobile-card-padding) 0 var(--mobile-card-padding) var(--space-3);
   }
   .lessonTime,
   .grid .lessonTime {
-    font-size: 14px;
+    font-size: var(--font-size-caption);
     line-height: 1.6;
   }
   .lessonTime span {
@@ -253,14 +255,14 @@
   }
   .lessonDetails h3,
   .grid .lessonDetails h3 {
-    font-size: 17px;
+    font-size: var(--font-size-body);
     line-height: 1.45;
   }
   .lessonMeta,
   .lessonTeacher,
   .grid .lessonMeta,
   .grid .lessonTeacher {
-    font-size: 14px;
+    font-size: var(--font-size-caption);
     line-height: 1.55;
   }
   .lessonTeacher svg {
@@ -271,6 +273,20 @@
     grid-column: 2;
   }
   .emptyDay {
-    font-size: 16px;
+    font-size: var(--font-size-body-small);
+  }
+}
+
+@media (max-width: breakpoints.$screen-phone-regular-max) {
+  .daySchedule {
+    --schedule-mobile-time-width: 50px;
+    --schedule-mobile-row-height: 116px;
+  }
+}
+
+@media (max-width: breakpoints.$screen-phone-compact-max) {
+  .daySchedule {
+    --schedule-mobile-time-width: 44px;
+    --schedule-mobile-row-height: 104px;
   }
 }

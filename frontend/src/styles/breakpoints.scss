@@ -9,3 +9,9 @@ $screen-tablet-max: $screen-desktop-min - 1px;
 
 // Дополнительный порог для компактного содержимого на телефоне.
 $screen-phone-content-max: 540px;
+
+// Ширина окна в CSS-пикселях, независимо от плотности пикселей устройства.
+$screen-phone-regular-min: 375px;
+$screen-phone-large-min: 414px;
+$screen-phone-compact-max: $screen-phone-regular-min - 1px;
+$screen-phone-regular-max: $screen-phone-large-min - 1px;

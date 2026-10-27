@@ -36,3 +36,9 @@
     margin-bottom: var(--space-6);
   }
 }
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .sectionHeader {
+    margin-bottom: var(--mobile-gap);
+  }
+}

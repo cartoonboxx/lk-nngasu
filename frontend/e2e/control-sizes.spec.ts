@@ -8,7 +8,11 @@ async function bounds(locator: Locator) {
 
 for (const { width, alignedControls, heights } of [
   { width: 1280, alignedControls: 6, heights: [36, 46, 54] },
-  { width: 375, alignedControls: 3, heights: [44, 52, 60] },
+  { width: 320, alignedControls: 3, heights: [44, 46, 52] },
+  { width: 374, alignedControls: 3, heights: [44, 46, 52] },
+  { width: 375, alignedControls: 3, heights: [44, 48, 56] },
+  { width: 413, alignedControls: 3, heights: [44, 48, 56] },
+  { width: 414, alignedControls: 3, heights: [44, 52, 60] },
   { width: 440, alignedControls: 3, heights: [44, 52, 60] },
 ]) {
   test(`controls share heights at ${width}px`, async ({ page }) => {

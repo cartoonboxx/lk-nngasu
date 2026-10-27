@@ -443,15 +443,22 @@
 }
 
 @media (max-width: breakpoints.$screen-phone-max) {
+  .page {
+    --messages-inset: 16px;
+  }
+  .history,
+  .composer {
+    padding: var(--messages-inset);
+  }
   .sidebarHeader {
     padding-top: var(--space-4);
 
     h2 {
-      font-size: 22px;
+      font-size: var(--font-size-h2);
     }
   }
   .chatCount {
-    font-size: 15px;
+    font-size: var(--font-size-body-small);
   }
   .sidebarHeader .headerAction,
   .conversationHeader .headerAction,
@@ -459,12 +466,12 @@
     --icon-size: 22px;
   }
   .chatRow {
-    --tab-min-height: 96px;
+    --tab-min-height: var(--mobile-row-height);
   }
   .avatar {
     width: 48px;
     height: 48px;
-    font-size: 14px;
+    font-size: var(--font-size-caption);
 
     svg {
       width: 24px;
@@ -475,24 +482,24 @@
     gap: 6px;
   }
   .chatName {
-    font-size: 16px;
+    font-size: var(--font-size-body-small);
   }
   .preview {
-    font-size: 14px;
+    font-size: var(--font-size-caption);
   }
   .chatTime,
   .localNote {
-    font-size: 12px;
+    font-size: max(11px, calc(var(--font-size-caption) - 2px));
   }
   .conversationHeader {
     flex-shrink: 0;
-    min-height: 84px;
+    min-height: calc(var(--control-height-md) + 32px);
   }
   .conversationTitle h2 {
-    font-size: 17px;
+    font-size: var(--font-size-h5);
   }
   .conversationTitle p {
-    font-size: 13px;
+    font-size: max(12px, calc(var(--font-size-caption) - 1px));
   }
   .history {
     gap: var(--space-4);
@@ -501,39 +508,70 @@
     padding: var(--space-3) 14px var(--space-2);
 
     p {
-      font-size: 16px;
+      font-size: var(--font-size-body-small);
       line-height: 1.55;
     }
   }
   .sender {
-    font-size: 13px;
+    font-size: max(12px, calc(var(--font-size-caption) - 1px));
   }
   .messageMeta,
   .dateDivider {
-    font-size: 12px;
+    font-size: max(11px, calc(var(--font-size-caption) - 2px));
   }
   .listEmpty p,
   .startConversation p {
-    font-size: 16px;
+    font-size: var(--font-size-body-small);
   }
   .listEmpty span,
   .startConversation span {
-    font-size: 14px;
+    font-size: var(--font-size-caption);
   }
   .modalHeader h2 {
-    font-size: 22px;
+    font-size: var(--font-size-h2);
   }
   .modalHeader p,
   .contactsEmpty {
-    font-size: 14px;
+    font-size: var(--font-size-caption);
   }
   .contact {
-    --tab-min-height: 84px;
+    --tab-min-height: calc(var(--control-height-md) + 32px);
   }
   .contactCopy strong {
-    font-size: 16px;
+    font-size: var(--font-size-body-small);
   }
   .contactCopy span {
-    font-size: 14px;
+    font-size: var(--font-size-caption);
+  }
+}
+
+@media (max-width: breakpoints.$screen-phone-regular-max) {
+  .page {
+    --messages-inset: 12px;
+  }
+  .avatar {
+    width: 44px;
+    height: 44px;
+  }
+  .conversationHeader {
+    min-height: 76px;
+  }
+}
+
+@media (max-width: breakpoints.$screen-phone-compact-max) {
+  .page {
+    --messages-inset: 10px;
+  }
+  .avatar {
+    width: 40px;
+    height: 40px;
+  }
+  .conversationHeader {
+    min-height: 72px;
+  }
+  .sidebarHeader .headerAction,
+  .conversationHeader .headerAction,
+  .modalHeader .headerAction {
+    --icon-size: 20px;
   }
 }

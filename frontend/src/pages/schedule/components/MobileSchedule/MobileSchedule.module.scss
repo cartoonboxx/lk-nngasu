@@ -10,3 +10,9 @@
     gap: var(--space-4);
   }
 }
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .mobileSchedule {
+    gap: var(--mobile-gap);
+  }
+}

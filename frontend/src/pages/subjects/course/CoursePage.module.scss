@@ -1,3 +1,5 @@
+@use '@/styles/breakpoints';
+
 @use '@/styles/mixins';
 
 .coursePage {
@@ -16,5 +18,11 @@
     .courseContent {
       grid-template-columns: minmax(0, 1fr);
     }
+  }
+}
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .coursePage .courseContent {
+    gap: var(--mobile-gap);
   }
 }

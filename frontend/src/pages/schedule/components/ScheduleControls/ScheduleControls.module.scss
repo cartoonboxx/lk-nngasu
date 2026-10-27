@@ -100,3 +100,10 @@
     }
   }
 }
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .filterBlock {
+    gap: var(--mobile-gap);
+    margin-bottom: var(--mobile-gap);
+  }
+}

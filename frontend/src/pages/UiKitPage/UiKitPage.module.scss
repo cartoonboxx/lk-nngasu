@@ -162,3 +162,12 @@
 .errorToggle {
   margin-top: var(--space-4);
 }
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .page {
+    padding: var(--mobile-gutter);
+  }
+  .page .group {
+    padding: var(--mobile-card-padding);
+  }
+}

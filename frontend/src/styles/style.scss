@@ -109,6 +109,11 @@
 
 @media screen and (max-width: breakpoints.$screen-phone-max) {
   :root {
+    --mobile-gutter: 20px;
+    --mobile-gap: 20px;
+    --mobile-card-padding: 20px;
+    --mobile-row-height: 96px;
+
     --control-height-sm: 44px;
     --control-height-md: 52px;
     --control-height-lg: 60px;
@@ -126,6 +131,50 @@
     --font-size-action: 16px;
     --font-size-caption: 14px;
     --font-size-display: 36px;
+  }
+}
+
+@media screen and (max-width: breakpoints.$screen-phone-regular-max) {
+  :root {
+    --mobile-gutter: 16px;
+    --mobile-gap: 16px;
+    --mobile-card-padding: 16px;
+    --mobile-row-height: 88px;
+    --control-height-md: 48px;
+    --control-height-lg: 56px;
+    --font-size-h1: 26px;
+    --font-size-h2: 22px;
+    --font-size-h3: 19px;
+    --font-size-h4: 17px;
+    --font-size-h5: 16px;
+    --font-size-h6: 15px;
+    --font-size-body: 16px;
+    --font-size-body-small: 15px;
+    --font-size-label: 15px;
+    --font-size-action: 15px;
+    --font-size-caption: 13px;
+    --font-size-display: 34px;
+  }
+}
+
+@media screen and (max-width: breakpoints.$screen-phone-compact-max) {
+  :root {
+    --mobile-gutter: 12px;
+    --mobile-gap: 12px;
+    --mobile-card-padding: 12px;
+    --mobile-row-height: 80px;
+    --control-height-md: 46px;
+    --control-height-lg: 52px;
+    --font-size-h1: 24px;
+    --font-size-h2: 20px;
+    --font-size-h3: 18px;
+    --font-size-h4: 16px;
+    --font-size-h6: 14px;
+    --font-size-body-small: 14px;
+    --font-size-label: 14px;
+    --font-size-action: 14px;
+    --font-size-caption: 12px;
+    --font-size-display: 32px;
   }
 }
 

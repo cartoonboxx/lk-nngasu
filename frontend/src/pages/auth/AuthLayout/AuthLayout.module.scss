@@ -1,3 +1,5 @@
+@use '@/styles/breakpoints';
+
 .page {
   --auth-line: color-mix(in srgb, var(--color-content-interactive) 22%, transparent);
   --auth-soft-line: color-mix(in srgb, var(--color-content-interactive) 9%, transparent);
@@ -338,5 +340,21 @@
     .panelTop {
       right: var(--space-6);
     }
+  }
+}
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .page .hero,
+  .page .panel {
+    padding-inline: var(--mobile-gutter);
+  }
+  .page .panelTop {
+    right: var(--mobile-gutter);
+  }
+  .page .formArea {
+    padding-block: var(--mobile-gap);
+  }
+  .page .panelFooter {
+    font-size: var(--font-size-caption);
   }
 }

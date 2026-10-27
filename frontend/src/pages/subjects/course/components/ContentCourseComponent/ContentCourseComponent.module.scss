@@ -1,3 +1,5 @@
+@use '@/styles/breakpoints';
+
 .content {
   min-width: 0;
   border: 1px solid var(--color-border-level-1);
@@ -124,6 +126,24 @@
     .footer {
       flex-direction: column;
       gap: var(--space-3);
+    }
+  }
+}
+
+@media (max-width: breakpoints.$screen-phone-max) {
+  .content {
+    padding: var(--mobile-card-padding);
+    .topicHeader {
+      margin-bottom: var(--mobile-gap);
+      h2 {
+        font-size: var(--font-size-h2);
+      }
+    }
+    .assignmentSection .assignment {
+      padding: var(--mobile-card-padding);
+    }
+    .materials .materialList {
+      gap: var(--mobile-gap);
     }
   }
 }

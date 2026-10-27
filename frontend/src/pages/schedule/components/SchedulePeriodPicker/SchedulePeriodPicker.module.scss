@@ -185,20 +185,20 @@
 
 @media (max-width: breakpoints.$screen-phone-max) {
   .header h2 {
-    font-size: 22px;
+    font-size: var(--font-size-h2);
   }
   .selectionHeader {
-    font-size: 14px;
+    font-size: var(--font-size-caption);
   }
   .monthNavigation {
-    font-size: 16px;
+    font-size: var(--font-size-body-small);
   }
   .calendar th {
-    font-size: 13px;
+    font-size: var(--font-size-caption);
   }
   .day {
     width: 44px;
     height: 44px;
-    font-size: 16px;
+    font-size: var(--font-size-body-small);
   }
 }

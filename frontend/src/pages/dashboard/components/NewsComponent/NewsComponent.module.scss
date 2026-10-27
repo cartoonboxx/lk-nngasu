@@ -110,24 +110,24 @@
 
 @media (max-width: breakpoints.$screen-phone-max) {
   .heading {
-    font-size: 20px;
+    font-size: var(--font-size-h3);
   }
   .allLink {
-    font-size: 16px;
+    font-size: var(--font-size-body-small);
     min-height: 44px;
   }
   .date {
-    font-size: 14px;
+    font-size: var(--font-size-caption);
   }
   .title {
-    font-size: 18px;
+    font-size: var(--font-size-h4);
   }
   .description {
-    font-size: 16px;
+    font-size: var(--font-size-body-small);
     line-height: 1.6;
   }
   .readMore {
-    font-size: 16px;
+    font-size: var(--font-size-body-small);
     min-height: 44px;
   }
 }
