@@ -5,10 +5,15 @@ test('modal manages focus, background scrolling and closing', async ({ page }) =
   const trigger = page.getByRole('button', { name: 'Открыть модальное окно', exact: true })
   const dialog = page.locator('dialog')
   await expect(dialog).toBeHidden()
-  await trigger.click()
+  await trigger.focus()
+  await page.keyboard.press('Enter')
   await expect(dialog).toBeVisible()
-  await expect(dialog.locator('button').first()).toBeFocused()
+  await expect(dialog.locator(':scope > div')).toBeFocused()
   await expect(page.locator('body')).toHaveCSS('overflow', 'hidden')
+
+  await page.keyboard.press('Tab')
+  await expect(dialog.locator('button').first()).toBeFocused()
+  await expect(dialog.locator('button').first()).toHaveCSS('outline-style', 'solid')
 
   await page.keyboard.press('Tab')
   await expect(dialog.locator('textarea')).toBeFocused()

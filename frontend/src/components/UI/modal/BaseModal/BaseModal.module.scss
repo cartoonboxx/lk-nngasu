@@ -28,6 +28,9 @@
 }
 
 .modal {
+  // Initial focus belongs to the panel, rather than an arbitrary action button.
+  // Interactive controls retain their own keyboard focus indicators.
+  outline: none;
   display: flex;
   flex-direction: column;
   width: var(--modal-width, 540px);

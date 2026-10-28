@@ -8,9 +8,9 @@
             : 'Не удалось сохранить черновик. Он доступен до перезагрузки страницы.'
         }}
       </span>
-      <Button v-if="storageError" variant="ghost" size="sm" @click="$emit('retry')"
-        >Повторить</Button
-      >
+      <Button v-if="storageError" variant="ghost" size="sm" @click="$emit('retry')">
+        Повторить
+      </Button>
     </div>
     <div :class="style.composerRow">
       <TextInput
@@ -123,7 +123,12 @@ export default defineComponent({
       this.sendMessage()
     },
     onComposerKeydown(event: KeyboardEvent) {
-      if (event.key === 'Enter' && !event.shiftKey && !event.isComposing) {
+      if (
+        event.key === 'Enter' &&
+        !event.shiftKey &&
+        !event.isComposing &&
+        !this.$utilityStore.isMobileVersion()
+      ) {
         event.preventDefault()
         this.sendMessage()
       }

@@ -6,7 +6,7 @@
         variant="ghost"
         round
         :size="location === 'header' ? 'lg' : 'md'"
-        @click="opened ? close() : open()"
+        @click="opened ? close() : open($event)"
       >
         <PhCalendar />
       </IconButton>
@@ -159,13 +159,15 @@ export default defineComponent({
       ).find((button) => button.getClientRects().length)
       return trigger?.closest<HTMLElement>(`.${style.anchor}`) ?? null
     },
-    async open() {
+    async open(event: MouseEvent) {
+      const focusDate =
+        event.detail === 0 || window.matchMedia('(hover: hover) and (pointer: fine)').matches
       this.selectedWeek = new Date(this.activeWeek)
       this.displayedMonth = new Date(this.activeWeek.getFullYear(), this.activeWeek.getMonth(), 1)
       this.focusedDate = dateKey(this.selectedWeek)
       this.opened = true
       await this.$nextTick()
-      this.focusDay()
+      if (focusDate) this.focusDay()
     },
     close() {
       this.opened = false

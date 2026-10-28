@@ -18,7 +18,7 @@
       @pointerdown="backdropPressed = $event.target === $event.currentTarget"
       @click="onBackdropClick"
     >
-      <div ref="panel" :class="style.modal">
+      <div ref="panel" :class="style.modal" tabindex="-1" autofocus>
         <div
           v-if="handle"
           ref="handle"
@@ -278,15 +278,19 @@ export default defineComponent({
           !element.closest('[inert]') &&
           element.getClientRects().length,
       )
-      const first = controls[0]
-      const last = controls[controls.length - 1]
-      if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault()
-        last?.focus()
-      } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault()
-        first?.focus()
+      event.preventDefault()
+      if (!controls.length) {
+        panel.focus({ preventScroll: true })
+        return
       }
+      // Explicit navigation also includes buttons WebKit may skip with native Tab behavior.
+      const index = controls.indexOf(document.activeElement as HTMLElement)
+      const next = event.shiftKey
+        ? index <= 0
+          ? controls.length - 1
+          : index - 1
+        : (index + 1) % controls.length
+      controls[next]?.focus({ preventScroll: true })
     },
     presentDialog() {
       const dialog = this.$refs.dialog as HTMLDialogElement

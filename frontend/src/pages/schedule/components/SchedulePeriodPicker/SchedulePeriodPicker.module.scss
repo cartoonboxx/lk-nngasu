@@ -85,8 +85,10 @@
   font-weight: 500;
   cursor: pointer;
 
-  &:hover {
-    background: var(--color-surface-interactive);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: var(--color-surface-interactive);
+    }
   }
 
   &:focus-visible {
@@ -119,8 +121,10 @@
   background: var(--color-accent-default);
   color: var(--color-text-primary);
 
-  &:hover {
-    background: var(--color-accent-hover);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      background: var(--color-accent-hover);
+    }
   }
 }
 

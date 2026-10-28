@@ -1,11 +1,14 @@
 import type { Plugin } from 'vue'
 import { createPinia, disposePinia } from 'pinia'
 import { useMessageStore, messagesStoragePrefix } from './messages'
+import { useUtilityStore } from './utility'
 
 const stores: Plugin = {
   install(app) {
     const pinia = createPinia()
     app.use(pinia)
+
+    app.config.globalProperties.$utilityStore = useUtilityStore(pinia)
 
     const messageStore = useMessageStore(pinia)
     messageStore.initialize()

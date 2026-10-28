@@ -12,7 +12,7 @@ test('mobile menu supports navigation, focus, and dismissal', async ({ page }) =
 
   await menu.click()
   const close = navigation.locator('button').first()
-  await expect(close).toBeFocused()
+  await expect(page.getByRole('dialog').locator(':scope > div')).toBeFocused()
   await expect(page.locator('body')).toHaveCSS('overflow', 'hidden')
   await page.keyboard.press('Shift+Tab')
   await expect(navigation.locator('button').last()).toBeFocused()

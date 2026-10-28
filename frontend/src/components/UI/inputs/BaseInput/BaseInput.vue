@@ -15,7 +15,6 @@
     :style="{
       minHeight: normalizedBaseHeight,
       maxHeight: maxHeight ? `${maxHeight}px` : undefined,
-      overflowY: maxHeight ? 'auto' : undefined,
     }"
     @input="handleInput"
     @change="handleInput"
@@ -152,9 +151,13 @@ export default defineComponent({
         return
       }
 
+      // Measure without a scrollbar so its width cannot change text wrapping while growing.
+      field.style.overflowY = 'hidden'
       field.style.height = this.normalizedBaseHeight
-      const height = Math.max(field.scrollHeight, field.clientHeight)
+      const borderHeight = field.offsetHeight - field.clientHeight
+      const height = Math.max(field.scrollHeight + borderHeight, field.offsetHeight)
       field.style.height = `${this.maxHeight ? Math.min(height, this.maxHeight) : height}px`
+      field.style.overflowY = this.maxHeight && height > this.maxHeight ? 'auto' : 'hidden'
     },
   },
 })

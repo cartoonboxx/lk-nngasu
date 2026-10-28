@@ -53,6 +53,49 @@ test('touch does not leave hover or tooltips and fields show focus', async ({
   await context.close()
 })
 
+test('touch opens modals without focusing actions and keeps keyboard navigation available', async ({
+  browser,
+  browserName,
+}) => {
+  // eslint-disable-next-line playwright/no-skipped-test -- Firefox has no touch context support.
+  test.skip(browserName === 'firefox', 'Touch emulation requires Chromium or WebKit')
+  const context = await browser.newContext({
+    viewport: { width: 375, height: 812 },
+    hasTouch: true,
+    isMobile: true,
+  })
+  const page = await context.newPage()
+  await page.goto('/ui-kit')
+  const trigger = page.getByRole('button', { name: 'Открыть модальное окно', exact: true })
+  const dialog = page.getByRole('dialog')
+  await trigger.tap()
+  await expect(dialog.locator(':scope > div')).toBeFocused()
+  await expect(dialog.locator('button:focus')).toHaveCount(0)
+  await page.keyboard.press('Shift+Tab')
+  await expect(dialog.locator('textarea')).toBeFocused()
+  await page.keyboard.press('Tab')
+  await expect(dialog.locator('button').first()).toBeFocused()
+  await expect(dialog.locator('button').first()).toHaveCSS('outline-style', 'solid')
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+  await trigger.tap()
+  await expect(dialog.locator(':scope > div')).toBeFocused()
+
+  await page.goto('/schedule')
+  const calendarTrigger = page.locator('main button[class*=trigger]:visible')
+  await calendarTrigger.tap()
+  await expect(dialog.locator(':scope > div')).toBeFocused()
+  await expect(dialog.locator('button:focus')).toHaveCount(0)
+  const day = dialog.locator('tbody button').first()
+  await day.tap()
+  await expect(day).toHaveCSS('outline-style', 'none')
+  await page.keyboard.press('Escape')
+  await expect(calendarTrigger).toBeFocused()
+  await page.keyboard.press('Enter')
+  await expect(dialog.locator('tbody button:focus')).toHaveCount(1)
+  await context.close()
+})
+
 test('touch press releases on lift, cancellation and scrolling and respects reduced motion', async ({
   browser,
   browserName,

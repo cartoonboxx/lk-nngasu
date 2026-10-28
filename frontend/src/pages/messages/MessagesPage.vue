@@ -1,12 +1,5 @@
 <template>
-  <section
-    ref="page"
-    :class="style.page"
-    :style="viewportStyle"
-    aria-label="Сообщения"
-    @focusin="updateViewport"
-    @focusout="onFocusOut"
-  >
+  <section ref="page" :class="style.page" :style="viewportStyle" aria-label="Сообщения">
     <div :class="[style.messenger, selectedChat && style.conversationOpen]">
       <ChatSidebar
         ref="sidebar"
@@ -37,7 +30,6 @@ import MessagesWelcome from './components/MessagesWelcome/MessagesWelcome.vue'
 import NewChatModal from './components/NewChatModal/NewChatModal.vue'
 import { contacts } from './messages.data'
 import type { Chat } from './messages.types'
-import breakpoints from '@/styles/breakpoints.module.scss'
 import style from './MessagesPage.module.scss'
 export default defineComponent({
   name: 'MessagesPage',
@@ -80,6 +72,9 @@ export default defineComponent({
     },
   },
   mounted() {
+    // Search in NewChatModal is teleported outside the page element.
+    document.addEventListener('focusin', this.updateViewport)
+    document.addEventListener('focusout', this.onFocusOut)
     window.visualViewport?.addEventListener('resize', this.updateViewport)
     window.visualViewport?.addEventListener('scroll', this.updateViewport)
     window.addEventListener('resize', this.updateViewport)
@@ -88,6 +83,8 @@ export default defineComponent({
     this.updateViewport()
   },
   beforeUnmount() {
+    document.removeEventListener('focusin', this.updateViewport)
+    document.removeEventListener('focusout', this.onFocusOut)
     window.visualViewport?.removeEventListener('resize', this.updateViewport)
     window.visualViewport?.removeEventListener('scroll', this.updateViewport)
     window.removeEventListener('resize', this.updateViewport)
@@ -117,20 +114,25 @@ export default defineComponent({
       void this.$nextTick(this.updateViewport)
     },
     updateViewport() {
-      const mobile = window.matchMedia(`(max-width: ${breakpoints.phoneMax})`).matches
+      const mobile = this.$utilityStore.isMobileVersion()
       const viewport = window.visualViewport
       const height = viewport?.height ?? window.innerHeight
       const width = viewport?.width ?? window.innerWidth
+      const active = document.activeElement
       const focused =
-        (
-          this.$refs.conversation as InstanceType<typeof ChatConversation> | undefined
-        )?.isComposerFocused() ?? false
-      if (!focused || Math.abs(width - this.viewportWidth) > 10) this.unfocusedHeight = height
+        active instanceof HTMLElement && active.matches('input, textarea, [contenteditable="true"]')
+      if (!this.viewportWidth || Math.abs(width - this.viewportWidth) > 10) {
+        this.unfocusedHeight = height
+      } else if (!focused && !this.keyboardOpen) {
+        this.unfocusedHeight = Math.max(this.unfocusedHeight, height)
+      }
       this.viewportWidth = width
       this.viewportHeight = mobile ? height : 0
       this.viewportTop = mobile ? (viewport?.offsetTop ?? 0) : 0
       this.keyboardOpen =
-        mobile && focused && Math.max(this.unfocusedHeight, window.innerHeight) - height > 100
+        mobile &&
+        (focused || this.keyboardOpen) &&
+        Math.max(this.unfocusedHeight, window.innerHeight) - height > 100
       if (this.keyboardOpen) document.body.dataset.messageKeyboard = 'true'
       else delete document.body.dataset.messageKeyboard
       void this.$nextTick(this.updateComposerLimit)

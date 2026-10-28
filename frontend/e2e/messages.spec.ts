@@ -48,6 +48,62 @@ test('sends multiline messages, preserves drafts per chat and saves sent message
   )
 })
 
+test('mobile Enter inserts a newline and desktop Enter sends after resizing', async ({ page }) => {
+  await page.setViewportSize({ width: 767, height: 900 })
+  await page.goto('/messages?chat=curator')
+  const field = page.getByRole('textbox', { name: 'Сообщение', exact: true })
+  const messages = page.getByRole('log').getByRole('article')
+  const initialCount = await messages.count()
+  await field.fill('Мобильная строка')
+  await field.press('Enter')
+  await expect(field).toHaveValue('Мобильная строка\n')
+  await expect(messages).toHaveCount(initialCount)
+  await field.pressSequentially('Вторая строка')
+  await page.getByRole('button', { name: 'Отправить сообщение' }).click()
+  await expect(messages.last()).toContainText('Мобильная строка\nВторая строка')
+  await expect(field).toHaveValue('')
+
+  await page.setViewportSize({ width: 768, height: 900 })
+  await field.fill('Отправка с компьютера')
+  await field.press('Enter')
+  await expect(messages.last()).toContainText('Отправка с компьютера')
+  await expect(field).toHaveValue('')
+
+  await page.setViewportSize({ width: 390, height: 844 })
+  await field.fill('Снова мобильная версия')
+  await field.press('Enter')
+  await expect(field).toHaveValue('Снова мобильная версия\n')
+  await expect(messages).toHaveCount(initialCount + 2)
+})
+
+test('textarea grows without scrolling until its maximum height and shrinks after clearing', async ({
+  page,
+}) => {
+  await page.goto('/messages?chat=curator')
+  const field = page.getByRole('textbox', { name: 'Сообщение', exact: true })
+  const initialHeight = (await field.boundingBox())!.height
+  await expect(field).toHaveCSS('overflow-y', 'hidden')
+  await field.fill('Первая строка\nВторая строка\nТретья строка')
+  await expect.poll(async () => (await field.boundingBox())!.height).toBeGreaterThan(initialHeight)
+  await expect.poll(async () => (await field.boundingBox())!.height).toBeLessThan(144)
+  await expect(field).toHaveCSS('overflow-y', 'hidden')
+  expect(await field.evaluate((element) => element.scrollHeight <= element.clientHeight)).toBe(true)
+
+  await field.fill('Длинное сообщение\n'.repeat(30))
+  await expect(field).toHaveCSS('height', '144px')
+  await expect(field).toHaveCSS('overflow-y', 'auto')
+  expect(await field.evaluate((element) => element.scrollHeight > element.clientHeight)).toBe(true)
+  await field.evaluate((element) => {
+    element.scrollTop = element.scrollHeight
+  })
+  expect(await field.evaluate((element) => element.scrollTop)).toBeGreaterThan(0)
+
+  await field.fill('')
+  await expect.poll(async () => (await field.boundingBox())!.height).toBe(initialHeight)
+  await expect(field).toHaveCSS('overflow-y', 'hidden')
+  expect(await field.evaluate((element) => element.scrollTop)).toBe(0)
+})
+
 test('opens compose links and starts a new conversation without duplicates', async ({ page }) => {
   await page.goto('/messages?compose=1')
   const dialog = page.getByRole('dialog', { name: 'Новый диалог' })
@@ -208,10 +264,10 @@ test('sends without the secure-context randomUUID API', async ({ page }) => {
   await expect(page.getByRole('log')).toContainText('Отправка по локальной сети')
 })
 
-test.describe('touch message composer', () => {
+test.describe('touch messages', () => {
   test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true })
 
-  test('keeps sending accessible with the keyboard open and a long draft', async ({ page }) => {
+  test.beforeEach(async ({ page }) => {
     await page.addInitScript(() => {
       let height: number | undefined
       let top = 0
@@ -235,6 +291,74 @@ test.describe('touch message composer', () => {
         viewport.dispatchEvent(new Event('resize'))
       })
     })
+  })
+
+  test('chat search fills the visible viewport without reserving space above the keyboard', async ({
+    page,
+  }) => {
+    await page.goto('/messages')
+    const search = page.getByRole('searchbox', { name: 'Поиск чатов' })
+    const messenger = page.getByRole('region', { name: 'Сообщения', exact: true })
+    const navigation = page.locator('nav').last()
+    await search.tap()
+    await search.fill('Групп')
+    await page.evaluate(() => window.dispatchEvent(new Event('test-keyboard-open')))
+    await expect(page.locator('body')).toHaveAttribute('data-message-keyboard', 'true')
+    await expect(navigation).toBeHidden()
+    await expect
+      .poll(async () => {
+        const bounds = (await messenger.boundingBox())!
+        return bounds.y + bounds.height
+      })
+      .toBe(324)
+    await expect(
+      page.getByRole('list', { name: 'Список диалогов' }).getByRole('button'),
+    ).toHaveCount(2)
+    await search.fill('Нет такого пользователя')
+    await expect(page.getByText('Чаты не найдены', { exact: true })).toBeVisible()
+
+    // A blur can precede the keyboard closing animation; keep the full available height.
+    await search.evaluate((element) => (element as HTMLInputElement).blur())
+    await expect(navigation).toBeHidden()
+    await page.evaluate(() => window.dispatchEvent(new Event('test-keyboard-close')))
+    await expect(navigation).toBeVisible()
+    await expect(page.locator('body')).not.toHaveAttribute('data-message-keyboard')
+    await expect
+      .poll(async () => {
+        const bounds = (await messenger.boundingBox())!
+        return bounds.y + bounds.height
+      })
+      .toBe((await navigation.boundingBox())!.y)
+  })
+
+  test('contact search in a teleported modal uses the keyboard viewport and restores navigation', async ({
+    page,
+  }) => {
+    await page.goto('/messages?compose=1')
+    const dialog = page.getByRole('dialog', { name: 'Новый диалог' })
+    const search = dialog.getByRole('searchbox', { name: 'Поиск собеседника' })
+    const navigation = page.locator('nav').last()
+    await search.tap()
+    await search.fill('Мария')
+    await page.evaluate(() => window.dispatchEvent(new Event('test-keyboard-open')))
+    await expect(page.locator('body')).toHaveAttribute('data-message-keyboard', 'true')
+    await expect(navigation).toBeHidden()
+    await expect(dialog.getByRole('list', { name: 'Собеседники' }).getByRole('button')).toHaveCount(
+      1,
+    )
+    await expect
+      .poll(async () => {
+        const bounds = (await dialog.boundingBox())!
+        return bounds.y + bounds.height
+      })
+      .toBe(324)
+    await dialog.getByRole('button', { name: 'Закрыть', exact: true }).tap()
+    await expect(dialog).toBeHidden()
+    await page.evaluate(() => window.dispatchEvent(new Event('test-keyboard-close')))
+    await expect(navigation).toBeVisible()
+  })
+
+  test('keeps sending accessible with the keyboard open and a long draft', async ({ page }) => {
     await page.goto('/messages?chat=curator')
     const field = page.getByRole('textbox', { name: 'Сообщение', exact: true })
     await field.tap()
