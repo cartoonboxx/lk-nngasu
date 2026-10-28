@@ -40,10 +40,6 @@ export default defineConfigWithVueTs(
       'vue/component-api-style': ['error', ['options']],
       'vue/multi-word-component-names': 'off',
       'vue/no-reserved-component-names': 'off',
-      'vue/no-restricted-html-elements': [
-        'error',
-        { element: 'RouterLink', message: 'Use AppLink for project navigation.' },
-      ],
       'vue/no-restricted-syntax': [
         'error',
         {

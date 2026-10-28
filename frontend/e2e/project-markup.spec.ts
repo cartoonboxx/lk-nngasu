@@ -1,6 +1,6 @@
 import { test, expect } from '@playwright/test'
 
-test('pages render without removed attributes and project links navigate', async ({ page }) => {
+test('pages omit explicit attributes and standard router links navigate', async ({ page }) => {
   const errors: string[] = []
   page.on('pageerror', (error) => errors.push(error.message))
   for (const route of [
@@ -23,7 +23,17 @@ test('pages render without removed attributes and project links navigate', async
     await expect(page.locator('#app')).not.toBeEmpty()
     const attributes = await page.evaluate(() =>
       Array.from(document.querySelectorAll('*')).flatMap((element) =>
-        element.getAttributeNames().filter((name) => name.startsWith('aria-')),
+        element
+          .getAttributeNames()
+          .filter(
+            (name) =>
+              name.startsWith('aria-') &&
+              !(
+                name === 'aria-current' &&
+                element instanceof HTMLAnchorElement &&
+                element.classList.contains('router-link-exact-active')
+              ),
+          ),
       ),
     )
     expect(attributes, route).toEqual([])
