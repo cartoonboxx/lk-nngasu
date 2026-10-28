@@ -10,7 +10,6 @@
         size="sm"
         round
         :class="style.headerAction"
-        aria-label="Новый диалог"
         title="Новый диалог"
         @click="$emit('compose')"
       >
@@ -18,13 +17,7 @@
       </IconButton>
     </header>
     <div :class="style.search">
-      <Input
-        v-model="search"
-        type="search"
-        aria-label="Поиск чатов"
-        placeholder="Поиск по чатам"
-        full-width
-      >
+      <Input v-model="search" placeholder="Поиск по чатам" full-width>
         <template #prefix><PhMagnifyingGlass :size="18" aria-hidden="true" /></template>
       </Input>
     </div>

@@ -23,6 +23,12 @@
     color: var(--color-text-muted);
   }
 
+  &[type='search']::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+    appearance: none;
+    display: none;
+  }
+
   @media (hover: hover) and (pointer: fine) {
     &:hover:not(:disabled) {
       border-color: var(--input-border-emphasis);

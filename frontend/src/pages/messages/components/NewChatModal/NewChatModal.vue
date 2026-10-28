@@ -3,36 +3,28 @@
     :model-value="modelValue"
     @update:model-value="$emit('update:modelValue', $event)"
     :width="440"
-    aria-labelledby="new-chat-title"
   >
     <header :class="style.modalHeader">
       <div>
-        <h2 id="new-chat-title">Новый диалог</h2>
+        <h2>Новый диалог</h2>
         <p>Кому хотите написать?</p>
       </div>
       <IconButton
         variant="ghost"
         size="sm"
         :class="style.headerAction"
-        aria-label="Закрыть"
         round
         @click="$emit('update:modelValue', false)"
       >
         <PhX :size="20" />
       </IconButton>
     </header>
-    <Input
-      v-model="contactSearch"
-      type="search"
-      aria-label="Поиск собеседника"
-      placeholder="Имя или фамилия"
-      full-width
-    >
+    <Input v-model="contactSearch" placeholder="Имя или фамилия" full-width>
       <template #prefix>
         <PhMagnifyingGlass :size="18" aria-hidden="true" />
       </template>
     </Input>
-    <ul :class="style.contacts" aria-label="Собеседники">
+    <ul :class="style.contacts">
       <li v-for="contact in filteredContacts" :key="contact.id">
         <StyleTab :class="style.contact" @select="$emit('select', contact.id)">
           <span :class="style.contactContent">
