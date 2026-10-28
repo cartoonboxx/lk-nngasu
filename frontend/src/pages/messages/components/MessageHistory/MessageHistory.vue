@@ -4,6 +4,7 @@
     :class="style.history"
     role="log"
     :aria-label="`История сообщений: ${chat.name}`"
+    @scroll.passive="onScroll"
   >
     <div v-if="!chat.messages.length" :class="style.startConversation">
       <PhChatCircleText :size="32" aria-hidden="true" />
@@ -59,22 +60,51 @@ export default defineComponent({
   },
   emits: ['retry'],
   data() {
-    return { style }
+    return {
+      style,
+      followingLatest: true,
+      historyHeight: 0,
+      historyWidth: 0,
+      resizeObserver: null as ResizeObserver | null,
+    }
   },
   mounted() {
+    const history = this.$refs.history as HTMLElement
+    this.historyHeight = history.clientHeight
+    this.historyWidth = history.clientWidth
+    this.resizeObserver = new ResizeObserver(this.onResize)
+    this.resizeObserver.observe(history)
     void this.scrollToEnd()
+  },
+  beforeUnmount() {
+    this.resizeObserver?.disconnect()
   },
   watch: {
     'chat.id'() {
       void this.scrollToEnd()
     },
     'chat.messages.length'() {
-      void this.scrollToEnd()
+      const lastMessage = this.chat.messages[this.chat.messages.length - 1]
+      if (this.followingLatest || lastMessage?.own) void this.scrollToEnd()
     },
   },
   methods: {
     messageTime,
     dayLabel,
+    onScroll() {
+      const history = this.$refs.history as HTMLElement
+      // WebKit can emit scroll before ResizeObserver when the composer changes height.
+      if (history.clientHeight !== this.historyHeight || history.clientWidth !== this.historyWidth)
+        return
+      this.followingLatest = history.scrollHeight - history.clientHeight - history.scrollTop <= 48
+    },
+    onResize() {
+      const history = this.$refs.history as HTMLElement
+      this.historyHeight = history.clientHeight
+      this.historyWidth = history.clientWidth
+      // Keep the bottom anchored when the keyboard or the growing composer changes the viewport.
+      if (this.followingLatest) void this.scrollToEnd()
+    },
     isNewDay(index: number): boolean {
       const messages = this.chat.messages
       const current = messages?.[index]
@@ -86,6 +116,7 @@ export default defineComponent({
       )
     },
     async scrollToEnd() {
+      this.followingLatest = true
       await this.$nextTick()
       const history = this.$refs.history as HTMLElement | undefined
       if (history) history.scrollTop = history.scrollHeight
