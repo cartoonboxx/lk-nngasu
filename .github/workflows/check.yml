@@ -9,6 +9,10 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: production
+  cancel-in-progress: false
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -59,3 +63,33 @@ jobs:
             frontend
           
           docker push "$IMAGE"
+
+  deploy:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Configure SSH
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
+        run: |
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+
+      - name: Deploy to server
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          IMAGE: ghcr.io/cartoonboxx/lk-nngasu:${{ github.sha }}
+        run: |
+          scp -o BatchMode=yes compose.prod.yaml \
+            "$SSH_USER@$SSH_HOST:/var/www/lk-nngasu/compose.prod.yaml"
+          
+          ssh -o BatchMode=yes "$SSH_USER@$SSH_HOST" \
+            "bash /var/www/lk-nngasu/build-script.sh '$IMAGE'"
