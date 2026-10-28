@@ -2,9 +2,7 @@ name: lk-nngasu-prod
 
 services:
   frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile.prod
+    image: ${FRONTEND_IMAGE:?Нужно передать адрес Docker-образа}
     ports:
       - "127.0.0.1:8081:80"
     restart: unless-stopped
