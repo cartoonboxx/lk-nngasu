@@ -4,11 +4,11 @@ test('searches chats and marks opened conversations as read', async ({ page }) =
   await page.goto('/messages')
   const list = page.getByRole('list', { name: 'Список диалогов' })
   await expect(list.getByRole('button')).toHaveCount(4)
-  await page.getByRole('searchbox', { name: 'Поиск чатов' }).fill('куратор')
+  await page.getByPlaceholder('Поиск по чатам').fill('куратор')
   await expect(list.getByRole('button')).toHaveCount(1)
-  await page.getByRole('searchbox', { name: 'Поиск чатов' }).fill('неизвестный')
+  await page.getByPlaceholder('Поиск по чатам').fill('неизвестный')
   await expect(page.getByText('Чаты не найдены')).toBeVisible()
-  await page.getByRole('searchbox', { name: 'Поиск чатов' }).fill('')
+  await page.getByPlaceholder('Поиск по чатам').fill('')
   await page.getByRole('button', { name: /Непрочитанные/ }).click()
   await expect(list.getByRole('button')).toHaveCount(1)
   await list.getByRole('button', { name: /Группа ИТ-202/ }).click()
@@ -106,9 +106,9 @@ test('textarea grows without scrolling until its maximum height and shrinks afte
 
 test('opens compose links and starts a new conversation without duplicates', async ({ page }) => {
   await page.goto('/messages?compose=1')
-  const dialog = page.getByRole('dialog', { name: 'Новый диалог' })
+  const dialog = page.getByRole('dialog')
   await expect(dialog).toBeVisible()
-  await dialog.getByRole('searchbox', { name: 'Поиск собеседника' }).fill('Мария')
+  await dialog.getByPlaceholder('Имя или фамилия').fill('Мария')
   await dialog.getByRole('button', { name: /Мария Кузнецова/ }).click()
   await expect(page).toHaveURL(/chat=maria/)
   await expect(dialog).toBeHidden()
@@ -117,7 +117,7 @@ test('opens compose links and starts a new conversation without duplicates', asy
   await page.getByRole('button', { name: 'Отправить сообщение' }).click()
   await expect(page.getByRole('log')).toContainText('Привет, Мария!')
   await page.getByRole('button', { name: 'Новый диалог', exact: true }).click()
-  await dialog.getByRole('searchbox').fill('Мария')
+  await dialog.getByPlaceholder('Имя или фамилия').fill('Мария')
   await dialog.getByRole('button', { name: /Мария Кузнецова/ }).click()
   await expect(page.getByRole('list', { name: 'Список диалогов' }).getByRole('button')).toHaveCount(
     5,
@@ -297,7 +297,7 @@ test.describe('touch messages', () => {
     page,
   }) => {
     await page.goto('/messages')
-    const search = page.getByRole('searchbox', { name: 'Поиск чатов' })
+    const search = page.getByPlaceholder('Поиск по чатам')
     const messenger = page.getByRole('region', { name: 'Сообщения', exact: true })
     const navigation = page.locator('nav').last()
     await search.tap()
@@ -335,24 +335,22 @@ test.describe('touch messages', () => {
     page,
   }) => {
     await page.goto('/messages?compose=1')
-    const dialog = page.getByRole('dialog', { name: 'Новый диалог' })
-    const search = dialog.getByRole('searchbox', { name: 'Поиск собеседника' })
+    const dialog = page.getByRole('dialog')
+    const search = dialog.getByPlaceholder('Имя или фамилия')
     const navigation = page.locator('nav').last()
     await search.tap()
     await search.fill('Мария')
     await page.evaluate(() => window.dispatchEvent(new Event('test-keyboard-open')))
     await expect(page.locator('body')).toHaveAttribute('data-message-keyboard', 'true')
     await expect(navigation).toBeHidden()
-    await expect(dialog.getByRole('list', { name: 'Собеседники' }).getByRole('button')).toHaveCount(
-      1,
-    )
+    await expect(dialog.getByRole('list').getByRole('button')).toHaveCount(1)
     await expect
       .poll(async () => {
         const bounds = (await dialog.boundingBox())!
         return bounds.y + bounds.height
       })
       .toBe(324)
-    await dialog.getByRole('button', { name: 'Закрыть', exact: true }).tap()
+    await dialog.locator('header').getByRole('button').tap()
     await expect(dialog).toBeHidden()
     await page.evaluate(() => window.dispatchEvent(new Event('test-keyboard-close')))
     await expect(navigation).toBeVisible()

@@ -42,6 +42,7 @@ export default defineComponent({
       viewportWidth: 0,
       unfocusedHeight: 0,
       keyboardOpen: false,
+      viewportFrame: 0,
       viewportObserver: null as ResizeObserver | null,
       lastChatId: '',
     }
@@ -72,22 +73,25 @@ export default defineComponent({
     },
   },
   mounted() {
+    document.documentElement.dataset.messagesPage = 'true'
     // Search in NewChatModal is teleported outside the page element.
-    document.addEventListener('focusin', this.updateViewport)
+    document.addEventListener('focusin', this.scheduleViewportUpdate)
     document.addEventListener('focusout', this.onFocusOut)
-    window.visualViewport?.addEventListener('resize', this.updateViewport)
-    window.visualViewport?.addEventListener('scroll', this.updateViewport)
-    window.addEventListener('resize', this.updateViewport)
+    window.visualViewport?.addEventListener('resize', this.scheduleViewportUpdate)
+    window.visualViewport?.addEventListener('scroll', this.scheduleViewportUpdate)
+    window.addEventListener('resize', this.scheduleViewportUpdate)
     this.viewportObserver = new ResizeObserver(this.updateComposerLimit)
     this.viewportObserver.observe(this.$refs.page as HTMLElement)
     this.updateViewport()
   },
   beforeUnmount() {
-    document.removeEventListener('focusin', this.updateViewport)
+    cancelAnimationFrame(this.viewportFrame)
+    delete document.documentElement.dataset.messagesPage
+    document.removeEventListener('focusin', this.scheduleViewportUpdate)
     document.removeEventListener('focusout', this.onFocusOut)
-    window.visualViewport?.removeEventListener('resize', this.updateViewport)
-    window.visualViewport?.removeEventListener('scroll', this.updateViewport)
-    window.removeEventListener('resize', this.updateViewport)
+    window.visualViewport?.removeEventListener('resize', this.scheduleViewportUpdate)
+    window.visualViewport?.removeEventListener('scroll', this.scheduleViewportUpdate)
+    window.removeEventListener('resize', this.scheduleViewportUpdate)
     this.viewportObserver?.disconnect()
     delete document.body.dataset.messageKeyboard
   },
@@ -111,7 +115,14 @@ export default defineComponent({
   },
   methods: {
     onFocusOut() {
-      void this.$nextTick(this.updateViewport)
+      void this.$nextTick(this.scheduleViewportUpdate)
+    },
+    scheduleViewportUpdate() {
+      if (!this.$refs.page || this.viewportFrame) return
+      this.viewportFrame = requestAnimationFrame(() => {
+        this.viewportFrame = 0
+        this.updateViewport()
+      })
     },
     updateViewport() {
       const mobile = this.$utilityStore.isMobileVersion()
@@ -135,7 +146,6 @@ export default defineComponent({
         Math.max(this.unfocusedHeight, window.innerHeight) - height > 100
       if (this.keyboardOpen) document.body.dataset.messageKeyboard = 'true'
       else delete document.body.dataset.messageKeyboard
-      void this.$nextTick(this.updateComposerLimit)
     },
     updateComposerLimit() {
       ;(
