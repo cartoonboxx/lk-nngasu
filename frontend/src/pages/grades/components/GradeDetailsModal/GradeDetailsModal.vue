@@ -3,7 +3,6 @@
     :model-value="modelValue"
     @update:model-value="$emit('update:modelValue', $event)"
     :width="640"
-    aria-labelledby="grade-detail-heading"
   >
     <article v-if="assignment" :class="style.details">
       <header :class="style.detailsHeader">
@@ -12,12 +11,7 @@
           <h2 id="grade-detail-heading">{{ assignment.title }}</h2>
           <p :class="style.muted">{{ assignment.topic }}</p>
         </div>
-        <IconButton
-          variant="ghost"
-          size="md"
-          round
-          aria-label="Закрыть подробности"
-          @click="$emit('update:modelValue', false)"
+        <IconButton variant="ghost" size="md" round @click="$emit('update:modelValue', false)"
           ><PhX :size="20"
         /></IconButton>
       </header>

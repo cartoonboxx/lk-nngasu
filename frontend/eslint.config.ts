@@ -40,6 +40,25 @@ export default defineConfigWithVueTs(
       'vue/component-api-style': ['error', ['options']],
       'vue/multi-word-component-names': 'off',
       'vue/no-reserved-component-names': 'off',
+      'vue/no-restricted-html-elements': [
+        'error',
+        { element: 'RouterLink', message: 'Use AppLink for project navigation.' },
+      ],
+      'vue/no-restricted-syntax': [
+        'error',
+        {
+          selector: 'VAttribute[directive=false][key.name=/^aria-/]',
+          message: 'ARIA attributes are not used in this project.',
+        },
+        {
+          selector: 'VAttribute[directive=true][key.argument.name=/^aria-/]',
+          message: 'ARIA attribute bindings are not used in this project.',
+        },
+        {
+          selector: 'Property[key.value=/^aria-/]',
+          message: 'Do not pass ARIA attributes through attribute objects.',
+        },
+      ],
     },
   },
 

@@ -18,36 +18,36 @@
     </header>
     <div :class="style.search">
       <Input v-model="search" placeholder="Поиск по чатам" full-width>
-        <template #prefix><PhMagnifyingGlass :size="18" aria-hidden="true" /></template>
+        <template #prefix><PhMagnifyingGlass :size="18" /></template>
       </Input>
     </div>
-    <div :class="style.filters" role="group" aria-label="Фильтр чатов">
+    <div :class="style.filters" role="group">
       <Button
         size="sm"
         round
         variant="ghost"
-        :aria-pressed="!unreadOnly"
+        :data-selected="!unreadOnly"
         @click="unreadOnly = false"
       >
         Все
       </Button>
-      <Button size="sm" round variant="ghost" :aria-pressed="unreadOnly" @click="unreadOnly = true">
+      <Button
+        size="sm"
+        round
+        variant="ghost"
+        :data-selected="unreadOnly"
+        @click="unreadOnly = true"
+      >
         Непрочитанные
         <Badge v-if="unreadChats" :value="unreadChats" inline />
       </Button>
     </div>
-    <ul
-      v-if="filteredChats.length"
-      ref="chatList"
-      :class="style.chatList"
-      aria-label="Список диалогов"
-    >
+    <ul v-if="filteredChats.length" ref="chatList" :class="style.chatList">
       <li v-for="chat in filteredChats" :key="chat.id">
         <StyleTab
           :class="style.chatRow"
           :active="selectedId === chat.id"
           :trigger-attrs="{
-            'aria-current': selectedId === chat.id ? 'true' : undefined,
             'data-chat-id': chat.id,
           }"
           @select="$emit('select', chat.id)"
@@ -65,12 +65,7 @@
               </span>
               <span :class="style.chatLine">
                 <span :class="style.preview">{{ preview(chat) }}</span>
-                <Badge
-                  v-if="chat.unread"
-                  :value="chat.unread"
-                  :aria-label="`Непрочитанных сообщений: ${chat.unread}`"
-                  inline
-                />
+                <Badge v-if="chat.unread" :value="chat.unread" inline />
               </span>
             </span>
           </span>
@@ -78,7 +73,7 @@
       </li>
     </ul>
     <div v-else :class="style.listEmpty">
-      <PhMagnifyingGlass :size="25" aria-hidden="true" />
+      <PhMagnifyingGlass :size="25" />
       <p>{{ search ? 'Чаты не найдены' : 'Всё прочитано' }}</p>
       <span>
         {{ search ? 'Попробуйте другое имя или название' : 'Новые сообщения появятся здесь' }}

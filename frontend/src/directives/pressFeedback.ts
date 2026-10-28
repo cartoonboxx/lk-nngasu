@@ -23,7 +23,7 @@ export const pressFeedback: ObjectDirective<HTMLElement> = {
         !event.isPrimary ||
         event.button !== 0 ||
         !element.matches('button, a, label') ||
-        element.matches(':disabled, [aria-disabled="true"], [data-disabled="true"]') ||
+        element.matches(':disabled, [data-disabled="true"]') ||
         element.closest('[inert]') ||
         element.querySelector(':scope > input:disabled')
       )
@@ -54,7 +54,7 @@ export const pressFeedback: ObjectDirective<HTMLElement> = {
   },
   updated(element) {
     if (
-      element.matches(':disabled, [aria-disabled="true"], [data-disabled="true"]') ||
+      element.matches(':disabled, [data-disabled="true"]') ||
       element.querySelector(':scope > input:disabled')
     ) {
       delete element.dataset.pressed

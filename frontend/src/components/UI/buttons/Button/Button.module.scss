@@ -58,7 +58,7 @@
     color: var(--color-text-primary);
   }
 
-  &:is(:active, [data-pressed='true'], [aria-pressed='true']):not(:disabled),
+  &:is(:active, [data-pressed='true'], [data-selected='true']):not(:disabled),
   &.active {
     background: var(--color-surface-interactive);
     color: var(--color-text-primary);

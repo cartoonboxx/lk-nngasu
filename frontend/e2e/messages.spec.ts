@@ -2,7 +2,7 @@ import { test, expect } from '@playwright/test'
 
 test('searches chats and marks opened conversations as read', async ({ page }) => {
   await page.goto('/messages')
-  const list = page.getByRole('list', { name: 'Список диалогов' })
+  const list = page.getByRole('list')
   await expect(list.getByRole('button')).toHaveCount(4)
   await page.getByPlaceholder('Поиск по чатам').fill('куратор')
   await expect(list.getByRole('button')).toHaveCount(1)
@@ -13,16 +13,16 @@ test('searches chats and marks opened conversations as read', async ({ page }) =
   await expect(list.getByRole('button')).toHaveCount(1)
   await list.getByRole('button', { name: /Группа ИТ-202/ }).click()
   await expect(page.getByRole('log')).toContainText('Кто будет на практике сегодня?')
-  await expect(page.getByLabel('Непрочитанных сообщений: 2')).toHaveCount(0)
+  await expect(page.locator('[class*=badge]').filter({ hasText: /^2$/ })).toHaveCount(0)
   await page.reload()
-  await expect(page.getByLabel('Непрочитанных сообщений: 2')).toHaveCount(0)
+  await expect(page.locator('[class*=badge]').filter({ hasText: /^2$/ })).toHaveCount(0)
 })
 
 test('sends multiline messages, preserves drafts per chat and saves sent messages', async ({
   page,
 }) => {
   await page.goto('/messages?chat=group-it-202')
-  const field = page.getByRole('textbox', { name: 'Сообщение', exact: true })
+  const field = page.getByPlaceholder('Напишите сообщение…')
   const send = page.getByRole('button', { name: 'Отправить сообщение' })
   await expect(send).toBeDisabled()
   await field.fill('   ')
@@ -51,7 +51,7 @@ test('sends multiline messages, preserves drafts per chat and saves sent message
 test('mobile Enter inserts a newline and desktop Enter sends after resizing', async ({ page }) => {
   await page.setViewportSize({ width: 767, height: 900 })
   await page.goto('/messages?chat=curator')
-  const field = page.getByRole('textbox', { name: 'Сообщение', exact: true })
+  const field = page.getByPlaceholder('Напишите сообщение…')
   const messages = page.getByRole('log').getByRole('article')
   const initialCount = await messages.count()
   await field.fill('Мобильная строка')
@@ -80,7 +80,7 @@ test('textarea grows without scrolling until its maximum height and shrinks afte
   page,
 }) => {
   await page.goto('/messages?chat=curator')
-  const field = page.getByRole('textbox', { name: 'Сообщение', exact: true })
+  const field = page.getByPlaceholder('Напишите сообщение…')
   const initialHeight = (await field.boundingBox())!.height
   await expect(field).toHaveCSS('overflow-y', 'hidden')
   await field.fill('Первая строка\nВторая строка\nТретья строка')
@@ -113,24 +113,22 @@ test('opens compose links and starts a new conversation without duplicates', asy
   await expect(page).toHaveURL(/chat=maria/)
   await expect(dialog).toBeHidden()
   await expect(page.getByText('Начните разговор', { exact: true }).last()).toBeVisible()
-  await page.getByRole('textbox', { name: 'Сообщение', exact: true }).fill('Привет, Мария!')
+  await page.getByPlaceholder('Напишите сообщение…').fill('Привет, Мария!')
   await page.getByRole('button', { name: 'Отправить сообщение' }).click()
   await expect(page.getByRole('log')).toContainText('Привет, Мария!')
   await page.getByRole('button', { name: 'Новый диалог', exact: true }).click()
   await dialog.getByPlaceholder('Имя или фамилия').fill('Мария')
   await dialog.getByRole('button', { name: /Мария Кузнецова/ }).click()
-  await expect(page.getByRole('list', { name: 'Список диалогов' }).getByRole('button')).toHaveCount(
-    5,
-  )
+  await expect(page.getByRole('list').getByRole('button')).toHaveCount(5)
 })
 
 test('mobile conversation fits the screen and returns to the chat list', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/messages')
-  const list = page.getByRole('list', { name: 'Список диалогов' })
+  const list = page.getByRole('list')
   await list.getByRole('button', { name: /Группа ИТ-202/ }).click()
   await expect(list).toBeHidden()
-  const field = page.getByRole('textbox', { name: 'Сообщение', exact: true })
+  const field = page.getByPlaceholder('Напишите сообщение…')
   await expect(field).toBeVisible()
   await field.fill('Сообщение с телефона')
   await page.getByRole('button', { name: 'Отправить сообщение' }).click()
@@ -151,18 +149,12 @@ test('mobile conversation fits the screen and returns to the chat list', async (
 
 test('keeps drafts after leaving messages and reloading the page', async ({ page }) => {
   await page.goto('/messages?chat=curator')
-  await page
-    .getByRole('textbox', { name: 'Сообщение', exact: true })
-    .fill('Черновик после перехода')
+  await page.getByPlaceholder('Напишите сообщение…').fill('Черновик после перехода')
   await page.goto('/subjects')
   await page.goto('/messages?chat=curator')
-  await expect(page.getByRole('textbox', { name: 'Сообщение', exact: true })).toHaveValue(
-    'Черновик после перехода',
-  )
+  await expect(page.getByPlaceholder('Напишите сообщение…')).toHaveValue('Черновик после перехода')
   await page.reload()
-  await expect(page.getByRole('textbox', { name: 'Сообщение', exact: true })).toHaveValue(
-    'Черновик после перехода',
-  )
+  await expect(page.getByPlaceholder('Напишите сообщение…')).toHaveValue('Черновик после перехода')
 })
 
 test('synchronizes concurrent messages and read receipts across tabs', async ({
@@ -172,12 +164,8 @@ test('synchronizes concurrent messages and read receipts across tabs', async ({
   await page.goto('/messages?chat=curator')
   const second = await context.newPage()
   await second.goto('/messages?chat=curator')
-  await page
-    .getByRole('textbox', { name: 'Сообщение', exact: true })
-    .fill('Сообщение из первой вкладки')
-  await second
-    .getByRole('textbox', { name: 'Сообщение', exact: true })
-    .fill('Сообщение из второй вкладки')
+  await page.getByPlaceholder('Напишите сообщение…').fill('Сообщение из первой вкладки')
+  await second.getByPlaceholder('Напишите сообщение…').fill('Сообщение из второй вкладки')
   await Promise.all([
     page.getByRole('button', { name: 'Отправить сообщение' }).click(),
     second.getByRole('button', { name: 'Отправить сообщение' }).click(),
@@ -189,15 +177,19 @@ test('synchronizes concurrent messages and read receipts across tabs', async ({
   await expect(page.getByRole('log')).toContainText('Сообщение из второй вкладки')
   await second.getByRole('button', { name: /Группа ИТ-202/ }).click()
   await expect(
-    page.getByRole('list', { name: 'Список диалогов' }).getByLabel('Непрочитанных сообщений: 2'),
+    page.getByRole('list').locator('[class*=badge]').filter({ hasText: /^2$/ }),
   ).toHaveCount(0)
   await page.goto('/dashboard')
   await expect(
     page
-      .getByRole('region', { name: 'Чаты', exact: true })
-      .getByLabel('Непрочитанных сообщений: 2'),
+      .locator('section')
+      .filter({ has: page.getByRole('heading', { name: 'Чаты', exact: true }) })
+      .locator('[class*=badge]')
+      .filter({ hasText: /^2$/ }),
   ).toHaveCount(0)
-  await expect(page.locator('nav').first().getByLabel('Непрочитанных сообщений: 2')).toHaveCount(0)
+  await expect(
+    page.locator('nav').first().locator('[class*=badge]').filter({ hasText: /^2$/ }),
+  ).toHaveCount(0)
   await second.close()
 })
 
@@ -217,15 +209,15 @@ test('shows a failed message status and retries saving once storage recovers', a
       { once: true },
     )
   })
-  await page.getByRole('textbox', { name: 'Сообщение', exact: true }).fill('Сохранить после ошибки')
+  await page.getByPlaceholder('Напишите сообщение…').fill('Сохранить после ошибки')
   await page.getByRole('button', { name: 'Отправить сообщение' }).click()
   const message = page.getByRole('log').getByRole('article').last()
-  await expect(message.getByLabel('Сохранено')).toHaveCount(0)
+  await expect(message.getByTitle('Сохранено')).toHaveCount(0)
   await expect(message.getByRole('button', { name: 'Повторить сохранение' })).toBeVisible()
   await expect(page.getByRole('alert')).toBeVisible()
   await page.evaluate(() => window.dispatchEvent(new Event('test-enable-save')))
   await page.getByRole('alert').getByRole('button', { name: 'Повторить', exact: true }).click()
-  await expect(message.getByLabel('Сохранено')).toBeVisible()
+  await expect(message.getByTitle('Сохранено')).toBeVisible()
   await expect(page.getByRole('alert')).toHaveCount(0)
   await page.reload()
   await expect(
@@ -236,15 +228,13 @@ test('shows a failed message status and retries saving once storage recovers', a
 test('filters only unread chats and restores keyboard focus on mobile', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/messages')
-  const curator = page
-    .getByRole('list', { name: 'Список диалогов' })
-    .getByRole('button', { name: /Куратор группы/ })
+  const curator = page.getByRole('list').getByRole('button', { name: /Куратор группы/ })
   await curator.click()
   await expect(page.getByRole('heading', { name: 'Куратор группы', exact: true })).toBeFocused()
   await page.getByRole('button', { name: 'Назад к чатам' }).click()
   await expect(curator).toBeFocused()
   await page.getByRole('button', { name: /Непрочитанные/ }).click()
-  const list = page.getByRole('list', { name: 'Список диалогов' })
+  const list = page.getByRole('list')
   await expect(list.getByRole('button')).toHaveCount(1)
   await list.getByRole('button', { name: /Группа ИТ-202/ }).click()
   await page.getByRole('button', { name: 'Назад к чатам' }).click()
@@ -255,9 +245,7 @@ test('filters only unread chats and restores keyboard focus on mobile', async ({
 test('sends without the secure-context randomUUID API', async ({ page }) => {
   await page.addInitScript(() => Object.defineProperty(crypto, 'randomUUID', { value: undefined }))
   await page.goto('/messages?chat=curator')
-  await page
-    .getByRole('textbox', { name: 'Сообщение', exact: true })
-    .fill('Отправка по локальной сети')
+  await page.getByPlaceholder('Напишите сообщение…').fill('Отправка по локальной сети')
   await page.getByRole('button', { name: 'Отправить сообщение' }).click()
   await expect(page.getByRole('log')).toContainText('Отправка по локальной сети')
   await page.reload()
@@ -298,7 +286,7 @@ test.describe('touch messages', () => {
   }) => {
     await page.goto('/messages')
     const search = page.getByPlaceholder('Поиск по чатам')
-    const messenger = page.getByRole('region', { name: 'Сообщения', exact: true })
+    const messenger = page.locator('main > section')
     const navigation = page.locator('nav').last()
     await search.tap()
     await search.fill('Групп')
@@ -311,9 +299,7 @@ test.describe('touch messages', () => {
         return bounds.y + bounds.height
       })
       .toBe(324)
-    await expect(
-      page.getByRole('list', { name: 'Список диалогов' }).getByRole('button'),
-    ).toHaveCount(2)
+    await expect(page.getByRole('list').getByRole('button')).toHaveCount(2)
     await search.fill('Нет такого пользователя')
     await expect(page.getByText('Чаты не найдены', { exact: true })).toBeVisible()
 
@@ -358,7 +344,7 @@ test.describe('touch messages', () => {
 
   test('keeps sending accessible with the keyboard open and a long draft', async ({ page }) => {
     await page.goto('/messages?chat=curator')
-    const field = page.getByRole('textbox', { name: 'Сообщение', exact: true })
+    const field = page.getByPlaceholder('Напишите сообщение…')
     await field.tap()
     await field.fill('Длинное сообщение с телефона\n'.repeat(16))
     await page.evaluate(() => window.dispatchEvent(new Event('test-keyboard-open')))
@@ -382,7 +368,7 @@ test.describe('touch messages', () => {
   test('sends by touch in a short viewport without overlapping navigation', async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 300 })
     await page.goto('/messages?chat=curator')
-    const field = page.getByRole('textbox', { name: 'Сообщение', exact: true })
+    const field = page.getByPlaceholder('Напишите сообщение…')
     await field.tap()
     await field.fill('Короткое окно\n'.repeat(16))
     const send = page.getByRole('button', { name: 'Отправить сообщение' })

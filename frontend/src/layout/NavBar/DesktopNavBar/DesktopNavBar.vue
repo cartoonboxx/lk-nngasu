@@ -61,12 +61,7 @@
             @select="navigate('messages')"
           >
             <template v-if="!collapsed && unreadMessages" #actions>
-              <span
-                v-if="unreadMessages"
-                :class="style.tabBadge"
-                :aria-label="`Непрочитанных сообщений: ${unreadMessages}`"
-                >{{ unreadMessages }}</span
-              >
+              <span v-if="unreadMessages" :class="style.tabBadge">{{ unreadMessages }}</span>
             </template>
           </NavTab>
         </Tooltip>

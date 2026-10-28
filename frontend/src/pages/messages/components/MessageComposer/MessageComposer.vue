@@ -20,7 +20,6 @@
         :maxlength="4000"
         base-height="var(--control-height-md)"
         :max-height="maxHeight"
-        aria-label="Сообщение"
         placeholder="Напишите сообщение…"
         multiline
         full-width
@@ -35,7 +34,6 @@
         @pointerup="onSendPointerUp"
         @pointercancel="sendPointer = null"
         @pointerleave="sendPointer = null"
-        aria-label="Отправить сообщение"
         title="Отправить сообщение"
       >
         <PhPaperPlaneRight :size="21" weight="bold" />

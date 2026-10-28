@@ -5,7 +5,6 @@
     </div>
     <BaseInput
       ref="field"
-      :aria-label="ariaLabel"
       :max-height="maxHeight"
       :id="id"
       :class="[
@@ -13,8 +12,6 @@
         $slots.prefix ? style.withPrefix : null,
         $slots.actions ? style.withActions : null,
       ]"
-      :aria-invalid="ariaInvalid"
-      :aria-describedby="ariaDescribedby"
       :name="name"
       :autocomplete="autocomplete"
       :required="required"
@@ -51,20 +48,8 @@ export default defineComponent({
       type: String,
       default: undefined,
     },
-    ariaLabel: {
-      type: String,
-      default: undefined,
-    },
     maxHeight: {
       type: Number,
-      default: undefined,
-    },
-    ariaInvalid: {
-      type: Boolean,
-      default: undefined,
-    },
-    ariaDescribedby: {
-      type: String,
       default: undefined,
     },
     name: {

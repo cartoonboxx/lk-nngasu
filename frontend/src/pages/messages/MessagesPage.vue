@@ -1,5 +1,5 @@
 <template>
-  <section ref="page" :class="style.page" :style="viewportStyle" aria-label="Сообщения">
+  <section ref="page" :class="style.page" :style="viewportStyle">
     <div :class="[style.messenger, selectedChat && style.conversationOpen]">
       <ChatSidebar
         ref="sidebar"
