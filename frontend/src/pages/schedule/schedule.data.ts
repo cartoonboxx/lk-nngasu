@@ -1,11 +1,4 @@
-export type LessonType = 'lecture' | 'practice' | 'lab'
-
-export interface ScheduleLesson {
-  subject: string
-  type: LessonType
-  location: string
-  teacher: string
-}
+import type { LessonType, ScheduleLesson } from './schedule.types'
 
 export const lessonTypes: { type: LessonType; label: string }[] = [
   { type: 'lecture', label: 'Лекция' },

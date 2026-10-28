@@ -26,6 +26,7 @@
 </template>
 
 <script lang="ts">
+import type { Subject } from './subjects.types'
 import { defineComponent } from 'vue'
 import style from './SubjectPage.module.scss'
 import { PhMagnifyingGlass } from '@phosphor-icons/vue'
@@ -34,13 +35,6 @@ import StyleInput from '@/components/UI/inputs/Input/Input.vue'
 import StyleSelect from '@/components/UI/inputs/Select/Select.vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
 import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
-
-interface Subject {
-  id: number
-  label: string
-  value: string
-  semester: string
-}
 
 export default defineComponent({
   name: 'SubjectsPage',

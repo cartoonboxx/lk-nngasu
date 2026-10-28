@@ -30,8 +30,6 @@
 import { defineComponent, type PropType } from 'vue'
 import style from './Tooltip.module.scss'
 
-export type TooltipPosition = 'top' | 'bottom' | 'left' | 'right'
-
 export default defineComponent({
   name: 'Tooltip',
   props: {

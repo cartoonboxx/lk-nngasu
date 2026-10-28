@@ -29,7 +29,8 @@ import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import GradesFilters from './components/GradesFilters/GradesFilters.vue'
 import GradesTable from './components/GradesTable/GradesTable.vue'
 import GradeDetailsModal from './components/GradeDetailsModal/GradeDetailsModal.vue'
-import { gradeAssignments, type GradeAssignment } from './grades.data'
+import { gradeAssignments } from './grades.data'
+import type { GradeAssignment } from './grades.types'
 import style from './GradesPage.module.scss'
 
 export default defineComponent({

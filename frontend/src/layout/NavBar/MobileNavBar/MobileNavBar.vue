@@ -8,6 +8,7 @@
       :icon="tab.icon"
       :active="tab.active"
       variant="bottom"
+      @click="scrollToStart"
     />
     <NavigationItem
       ref="menuButton"
@@ -131,6 +132,11 @@ export default defineComponent({
       if (this.$route.name !== routeName) {
         void this.$router.push({ name: routeName })
       }
+
+      this.scrollToStart()
+    },
+    scrollToStart() {
+      window.scroll({ top: 0, left: 0, behavior: 'smooth' })
     },
   },
   computed: {

@@ -1,20 +1,4 @@
-export interface Message {
-  id: string
-  text: string
-  sender: string
-  own: boolean
-  sentAt: string
-}
-
-export interface Chat {
-  id: string
-  name: string
-  initials: string
-  group: boolean
-  description: string
-  unread: number
-  messages: Message[]
-}
+import type { Message, Chat } from './messages.types'
 
 export const contacts = [
   { id: 'curator', name: 'Куратор группы', initials: 'КГ', description: 'Куратор · ИТ-202' },

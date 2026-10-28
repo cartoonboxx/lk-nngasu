@@ -46,6 +46,7 @@
 </template>
 
 <script lang="ts">
+import type { SendPointer } from '../../messages.types'
 import { defineComponent } from 'vue'
 import { PhPaperPlaneRight } from '@phosphor-icons/vue'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
@@ -67,7 +68,7 @@ export default defineComponent({
     retry: () => true,
   },
   data() {
-    return { style, sendPointer: null as { id: number; x: number; y: number } | null }
+    return { style, sendPointer: null as SendPointer | null }
   },
   computed: {
     draft: {

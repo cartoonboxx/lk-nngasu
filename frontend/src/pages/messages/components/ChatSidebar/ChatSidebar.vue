@@ -105,7 +105,7 @@ import Input from '@/components/UI/inputs/Input/Input.vue'
 import StyleTab from '@/components/UI/tabs/StyleTab/StyleTab.vue'
 import Badge from '@/components/UI/Badge/Badge.vue'
 import ChatAvatar from '../ChatAvatar/ChatAvatar.vue'
-import type { Chat } from '../../messages.data'
+import type { Chat } from '../../messages.types'
 import { lastMessage, messageTime, dayLabel } from '../../messages.format'
 export default defineComponent({
   name: 'ChatSidebar',

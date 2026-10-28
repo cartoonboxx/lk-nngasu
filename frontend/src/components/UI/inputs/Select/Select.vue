@@ -41,9 +41,7 @@
 import { defineComponent, type PropType } from 'vue'
 import { PhCaretDown } from '@phosphor-icons/vue'
 import StyleTab from '@/components/UI/tabs/StyleTab/StyleTab.vue'
-import FloatingPopup, {
-  type FloatingPopupItem,
-} from '@/components/UI/popup/FloatingPopup/FloatingPopup.vue'
+import FloatingPopup from '@/components/UI/popup/FloatingPopup/FloatingPopup.vue'
 import style from './Select.module.scss'
 
 export default defineComponent({
@@ -68,11 +66,11 @@ export default defineComponent({
       default: undefined,
     },
     size: {
-      type: String as PropType<'sm' | 'md' | 'lg'>,
+      type: String as PropType<SelectSize>,
       default: 'md',
     },
     variant: {
-      type: String as PropType<'default' | 'filled' | 'disabled'>,
+      type: String as PropType<SelectVariant>,
       default: 'default',
     },
     disabled: Boolean,

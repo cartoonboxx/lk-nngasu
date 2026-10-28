@@ -80,6 +80,7 @@
 </template>
 
 <script lang="ts">
+import type { SchedulePeriodPickerLocation } from '../../schedule.types'
 import { defineComponent, type PropType } from 'vue'
 import { PhCalendar, PhCaretLeft, PhCaretRight, PhX } from '@phosphor-icons/vue'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
@@ -102,7 +103,9 @@ function weekStart(date: Date) {
 
 export default defineComponent({
   name: 'SchedulePeriodPicker',
-  props: { location: { type: String as PropType<'header' | 'controls'>, default: 'controls' } },
+  props: {
+    location: { type: String as PropType<SchedulePeriodPickerLocation>, default: 'controls' },
+  },
   components: { Modal, IconButton, Button, Tooltip, PhCalendar, PhCaretLeft, PhCaretRight, PhX },
   data() {
     const { weekStart: activeWeek, selectWeek } = useSchedule()

@@ -4,7 +4,8 @@
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
-import { gradeStatuses, type GradeStatus } from '../../grades.data'
+import { gradeStatuses } from '../../grades.data'
+import type { GradeStatus } from '../../grades.types'
 import style from './GradeStatus.module.scss'
 
 export default defineComponent({

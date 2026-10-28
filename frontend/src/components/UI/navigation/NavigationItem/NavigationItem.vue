@@ -35,7 +35,7 @@ export default defineComponent({
     text: { type: String, required: true },
     icon: { type: [Object, Function] as PropType<Component>, required: true },
     to: { type: [String, Object] as PropType<RouteLocationRaw>, default: undefined },
-    variant: { type: String as PropType<'bottom' | 'list'>, default: 'list' },
+    variant: { type: String as PropType<NavigationItemVariant>, default: 'list' },
     active: Boolean,
     notification: Boolean,
     badge: { type: Number, default: undefined },

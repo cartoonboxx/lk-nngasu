@@ -59,7 +59,7 @@ import { defineComponent, type PropType } from 'vue'
 import { PhMagnifyingGlass } from '@phosphor-icons/vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
 import GradeStatus from '../GradeStatus/GradeStatus.vue'
-import type { GradeAssignment } from '../../grades.data'
+import type { GradeAssignment } from '../../grades.types'
 import { formatGradeDate } from '../../grades.format'
 import style from './GradesTable.module.scss'
 

@@ -47,8 +47,8 @@
 </template>
 
 <script lang="ts">
+import type { Service, Contact } from './resources.types'
 import { defineComponent } from 'vue'
-import type { Component } from 'vue'
 
 import style from './ResourcesPage.module.scss'
 
@@ -65,23 +65,6 @@ import {
   PhFileText,
   PhHeadset,
 } from '@phosphor-icons/vue'
-
-type Service = {
-  label: string
-  description: string
-  domain: string
-  url: string
-  linkText: string
-  icon: string | Component
-}
-
-type Contact = {
-  label: string
-  description: string
-  url: string
-  linkText: string
-  icon: Component
-}
 
 export default defineComponent({
   name: 'ResourcesPage',

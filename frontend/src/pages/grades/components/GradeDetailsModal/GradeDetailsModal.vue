@@ -55,7 +55,7 @@ import { PhX } from '@phosphor-icons/vue'
 import Modal from '@/components/UI/modal/BaseModal/Modal.vue'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 import GradeStatus from '../GradeStatus/GradeStatus.vue'
-import type { GradeAssignment } from '../../grades.data'
+import type { GradeAssignment } from '../../grades.types'
 import { formatGradeDate } from '../../grades.format'
 import style from './GradeDetailsModal.module.scss'
 

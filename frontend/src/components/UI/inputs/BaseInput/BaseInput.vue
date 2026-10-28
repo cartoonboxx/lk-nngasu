@@ -124,10 +124,10 @@ export default defineComponent({
   },
   methods: {
     focus() {
-      ;(this.$refs.field as HTMLInputElement | HTMLTextAreaElement | undefined)?.focus()
+      ;(this.$refs.field as InputElement | undefined)?.focus()
     },
     syncValue() {
-      const field = this.$refs.field as HTMLInputElement | HTMLTextAreaElement | undefined
+      const field = this.$refs.field as InputElement | undefined
       if (field && field.value !== this.modelValue) {
         this.$emit('update:modelValue', field.value)
       }
@@ -136,7 +136,7 @@ export default defineComponent({
       this.syncValue()
     },
     handleInput(event: Event) {
-      const value = (event.target as HTMLInputElement | HTMLTextAreaElement).value
+      const value = (event.target as InputElement).value
       if (value === this.modelValue) return
       this.$emit('update:modelValue', value)
       this.$nextTick(() => this.resizeTextarea())

@@ -38,7 +38,7 @@ import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 import ChatAvatar from '../ChatAvatar/ChatAvatar.vue'
 import MessageHistory from '../MessageHistory/MessageHistory.vue'
 import MessageComposer from '../MessageComposer/MessageComposer.vue'
-import type { Chat } from '../../messages.data'
+import type { Chat } from '../../messages.types'
 export default defineComponent({
   name: 'ChatConversation',
   components: {

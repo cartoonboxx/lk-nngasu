@@ -200,12 +200,12 @@ import Button from '@/components/UI/buttons/Button/Button.vue'
 import MediaButton from '@/components/UI/buttons/MediaButton/MediaButton.vue'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 import Input from '@/components/UI/inputs/Input/Input.vue'
-import type { CourseTopic } from '../../course.types'
 import type {
   AssignmentAnswer,
   AssignmentAnswerDraft,
   AssignmentAttachment,
-} from './assignment.types'
+  CourseTopic,
+} from '../../course.types'
 import style from './AssignmentModal.module.scss'
 
 export default defineComponent({

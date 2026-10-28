@@ -44,6 +44,7 @@
 </template>
 
 <script lang="ts">
+import type { NewsItem } from './news.types'
 import { defineComponent } from 'vue'
 import { PhMagnifyingGlass } from '@phosphor-icons/vue'
 
@@ -57,15 +58,6 @@ import Nngasu from '$images/photoNews/Nngasu.png'
 import ImageNews2 from '$images/photoNews/news2.png'
 import ImageNews3 from '$images/photoNews/news3.png'
 import ImageNews4 from '$images/photoNews/news4.png'
-
-interface NewsItem {
-  id: number
-  title: string
-  description: string
-  date: string
-  url: string
-  image?: string
-}
 
 const PAGE_SIZE = 6
 

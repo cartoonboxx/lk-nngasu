@@ -602,6 +602,7 @@
 </template>
 
 <script lang="ts">
+import type { UiKitOption } from './ui-kit.types'
 import {
   PhAirplaneTaxiing,
   PhHouse,
@@ -614,7 +615,7 @@ import {
 } from '@phosphor-icons/vue'
 import { defineComponent, markRaw } from 'vue'
 
-import Tooltip, { type TooltipPosition } from '@/components/UI/Tooltip/Tooltip.vue'
+import Tooltip from '@/components/UI/Tooltip/Tooltip.vue'
 import Badge from '@/components/UI/Badge/Badge.vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
 import MediaButton from '@/components/UI/buttons/MediaButton/MediaButton.vue'
@@ -632,71 +633,71 @@ import NavTab from '@/components/UI/tabs/NavTab/NavTab.vue'
 import logoImage from '$images/logo.svg'
 import style from './UiKitPage.module.scss'
 
-const variants: Array<{ value: ButtonVariant; label: string }> = [
+const variants: UiKitOption<ButtonVariant>[] = [
   { value: 'primary', label: 'Primary' },
   { value: 'secondary', label: 'Secondary' },
   { value: 'ghost', label: 'Ghost' },
   { value: 'danger', label: 'Danger' },
 ]
 
-const sizes: Array<{ value: ButtonSize; label: string }> = [
+const sizes: UiKitOption<ButtonSize>[] = [
   { value: 'sm', label: 'Small' },
   { value: 'md', label: 'Medium' },
   { value: 'lg', label: 'Large' },
 ]
 
-const states: Array<{ value: ButtonState; label: string }> = [
+const states: UiKitOption<ButtonState>[] = [
   { value: 'default', label: 'Default' },
   { value: 'hover', label: 'Hover' },
   { value: 'active', label: 'Active' },
   { value: 'disabled', label: 'Disabled' },
 ]
 
-const inputVariants: Array<{ value: InputVariant; label: string }> = [
+const inputVariants: UiKitOption<InputVariant>[] = [
   { value: 'default', label: 'Default' },
   { value: 'filled', label: 'Filled' },
   { value: 'error', label: 'Error' },
   { value: 'disabled', label: 'Disabled' },
 ]
 
-const inputSizes: Array<{ value: InputSize; label: string }> = [
+const inputSizes: UiKitOption<InputSize>[] = [
   { value: 'sm', label: 'Small' },
   { value: 'md', label: 'Medium' },
   { value: 'lg', label: 'Large' },
 ]
 
-const iconButtonVariants: Array<{ value: IconButtonVariant; label: string }> = [
+const iconButtonVariants: UiKitOption<IconButtonVariant>[] = [
   { value: 'primary', label: 'Primary' },
   { value: 'secondary', label: 'Secondary' },
   { value: 'ghost', label: 'Ghost' },
   { value: 'danger', label: 'Danger' },
 ]
 
-const iconButtonSizes: Array<{ value: IconButtonSize; label: string }> = [
+const iconButtonSizes: UiKitOption<IconButtonSize>[] = [
   { value: 'sm', label: 'Small' },
   { value: 'md', label: 'Medium' },
   { value: 'lg', label: 'Large' },
 ]
 
-const iconButtonStates: Array<{ value: IconButtonState; label: string }> = [
+const iconButtonStates: UiKitOption<IconButtonState>[] = [
   { value: 'default', label: 'Default' },
   { value: 'hover', label: 'Hover' },
   { value: 'active', label: 'Active' },
   { value: 'disabled', label: 'Disabled' },
 ]
 
-const iconTabVariants: Array<{ value: IconTabVariant; label: string }> = [
+const iconTabVariants: UiKitOption<IconTabVariant>[] = [
   { value: 'default', label: 'Default' },
   { value: 'selected', label: 'Selected' },
 ]
 
-const iconTabSizes: Array<{ value: IconTabSize; label: string }> = [
+const iconTabSizes: UiKitOption<IconTabSize>[] = [
   { value: 'sm', label: 'Small' },
   { value: 'md', label: 'Medium' },
   { value: 'lg', label: 'Large' },
 ]
 
-const iconTabStates: Array<{ value: IconTabState; label: string }> = [
+const iconTabStates: UiKitOption<IconTabState>[] = [
   { value: 'default', label: 'Default' },
   { value: 'hover', label: 'Hover' },
   { value: 'active', label: 'Active' },

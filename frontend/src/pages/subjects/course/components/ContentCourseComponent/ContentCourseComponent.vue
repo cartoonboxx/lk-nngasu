@@ -53,7 +53,7 @@
 </template>
 
 <script lang="ts">
-import { defineComponent, markRaw, type Component, type PropType } from 'vue'
+import { defineComponent, markRaw, type PropType } from 'vue'
 import {
   PhCalendarBlank,
   PhCaretLeft,
@@ -64,15 +64,8 @@ import {
 } from '@phosphor-icons/vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
 import MediaButton from '@/components/UI/buttons/MediaButton/MediaButton.vue'
-import type { CourseTopic } from '../../course.types.ts'
+import type { CourseTopic, CourseMaterial } from '../../course.types.ts'
 import style from './ContentCourseComponent.module.scss'
-
-interface CourseMaterial {
-  kind: 'lecture' | 'presentation' | 'practice'
-  title: string
-  meta: string
-  icon: Component
-}
 
 export default defineComponent({
   name: 'ContentCourseComponent',

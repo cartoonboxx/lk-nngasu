@@ -1,4 +1,4 @@
-import type { Chat } from './messages.data'
+import type { Chat } from './messages.types'
 
 export function lastMessage(chat: Chat) {
   return chat.messages[chat.messages.length - 1]

@@ -20,14 +20,6 @@
       </Input>
     </div>
   </div>
-  <IconButton
-    variant="primary"
-    round
-    :class="[style.buttonUp, isScrolledPage ? style.isVisible : null]"
-    @click="scrollToStart"
-  >
-    <PhCaretUp />
-  </IconButton>
 </template>
 
 <script lang="ts">
@@ -35,14 +27,13 @@ import { defineComponent } from 'vue'
 import style from './ScheduleControls.module.scss'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 import Input from '@/components/UI/inputs/Input/Input.vue'
-import { PhCaretLeft, PhCaretRight, PhCaretUp, PhMagnifyingGlass } from '@phosphor-icons/vue'
+import { PhCaretLeft, PhCaretRight, PhMagnifyingGlass } from '@phosphor-icons/vue'
 import { useSchedule } from '../../useSchedule'
 import SchedulePeriodPicker from '../SchedulePeriodPicker/SchedulePeriodPicker.vue'
 
 export default defineComponent({
   name: 'ScheduleControls',
   components: {
-    PhCaretUp,
     SchedulePeriodPicker,
     IconButton,
     Input,
@@ -73,9 +64,6 @@ export default defineComponent({
         return
       }
       this.isScrolledPage = false
-    },
-    scrollToStart() {
-      window.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
     },
   },
 })

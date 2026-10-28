@@ -1,8 +1,8 @@
-import { type ButtonHTMLAttributes, type Component, type PropType } from 'vue'
+import { type Component, type PropType } from 'vue'
 
 export const baseTabProps = {
   triggerAttrs: {
-    type: Object as PropType<ButtonHTMLAttributes & Record<string, unknown>>,
+    type: Object as PropType<TabTriggerAttrs>,
     default: () => ({}),
   },
   text: {

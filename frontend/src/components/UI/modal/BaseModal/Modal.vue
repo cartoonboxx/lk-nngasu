@@ -107,7 +107,7 @@ export default defineComponent({
       default: 1,
     },
     anchor: {
-      type: [Object, Function] as PropType<HTMLElement | (() => HTMLElement | null) | null>,
+      type: [Object, Function] as PropType<ModalAnchor>,
       default: null,
     },
   },
@@ -131,7 +131,7 @@ export default defineComponent({
       dragStartOffset: 0,
       dragStartTime: 0,
       pointerId: null as number | null,
-      contentTouch: null as { id: number; x: number; y: number; time: number } | null,
+      contentTouch: null as ModalContentTouch | null,
       viewportHeight: 0,
       viewportTop: 0,
       popupX: 0,

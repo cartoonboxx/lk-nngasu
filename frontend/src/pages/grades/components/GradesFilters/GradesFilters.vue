@@ -49,7 +49,7 @@ export default defineComponent({
     subject: { type: String, required: true },
     status: { type: String, required: true },
     semester: { type: String, required: true },
-    subjectOptions: { type: Array as PropType<{ label: string; value: string }[]>, required: true },
+    subjectOptions: { type: Array as PropType<FloatingPopupItem[]>, required: true },
   },
   emits: ['update:search', 'update:subject', 'update:status', 'update:semester'],
   data() {

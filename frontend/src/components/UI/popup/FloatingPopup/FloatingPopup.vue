@@ -56,12 +56,6 @@ import NavTab from '@/components/UI/tabs/NavTab/NavTab.vue'
 import StyleTab from '@/components/UI/tabs/StyleTab/StyleTab.vue'
 import style from './FloatingPopup.module.scss'
 
-export interface FloatingPopupItem {
-  value: string
-  label: string
-  disabled?: boolean
-}
-
 export default defineComponent({
   name: 'FloatingPopup',
   components: { NavTab, StyleTab },
@@ -71,7 +65,7 @@ export default defineComponent({
     triggerText: { type: String, default: 'Вкладки' },
     disabled: Boolean,
     closeOnSelect: Boolean,
-    mode: { type: String as PropType<'tabs' | 'select'>, default: 'tabs' },
+    mode: { type: String as PropType<FloatingPopupMode>, default: 'tabs' },
   },
   emits: { 'update:modelValue': (value: string) => typeof value === 'string' },
   data() {

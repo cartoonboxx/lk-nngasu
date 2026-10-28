@@ -1,5 +1,6 @@
 import { defineStore, acceptHMRUpdate } from 'pinia'
-import { createChats, isChat, type Chat, type Message } from '@/pages/messages/messages.data'
+import { createChats, isChat } from '@/pages/messages/messages.data'
+import type { Chat, Message } from '@/pages/messages/messages.types'
 
 export const messagesStoragePrefix = 'lk-nngasu-messages-v2:'
 const baseKey = `${messagesStoragePrefix}base`

@@ -37,12 +37,8 @@ import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import AsideCoursePanel from './components/AsideCoursePanel/AsideCoursePanel.vue'
 import ContentCourseComponent from './components/ContentCourseComponent/ContentCourseComponent.vue'
 import AssignmentModal from './components/AssignmentModal/AssignmentModal.vue'
-import type {
-  AssignmentAnswer,
-  AssignmentAnswerDraft,
-} from './components/AssignmentModal/assignment.types'
+import type { AssignmentAnswer, AssignmentAnswerDraft, CourseTopic } from './course.types'
 import { assignmentAnswers } from './assignmentAnswers'
-import type { CourseTopic } from './course.types'
 import style from './CoursePage.module.scss'
 
 export default defineComponent({

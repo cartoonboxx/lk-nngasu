@@ -45,7 +45,7 @@ import { defineComponent, type PropType } from 'vue'
 import style from './MessageHistory.module.scss'
 import { PhChatCircleText, PhCheck } from '@phosphor-icons/vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
-import type { Chat, Message } from '../../messages.data'
+import type { Chat, MessageSavedChecker } from '../../messages.types'
 import { messageTime, dayLabel } from '../../messages.format'
 export default defineComponent({
   name: 'MessageHistory',
@@ -53,7 +53,7 @@ export default defineComponent({
   props: {
     chat: { type: Object as PropType<Chat>, required: true },
     isSaved: {
-      type: Function as PropType<(chatId: string, message: Message) => boolean>,
+      type: Function as PropType<MessageSavedChecker>,
       required: true,
     },
   },
