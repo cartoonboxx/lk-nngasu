@@ -5,7 +5,7 @@
         <div :class="style.search">
           <StyleInput v-model="searchQuery" placeholder="Поиск новостей" :full-width="true">
             <template #prefix>
-              <PhMagnifyingGlass :size="20" aria-hidden="true" />
+              <PhMagnifyingGlass :size="20" />
             </template>
           </StyleInput>
         </div>

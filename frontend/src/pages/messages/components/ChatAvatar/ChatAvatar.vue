@@ -1,5 +1,5 @@
 <template>
-  <span :class="style.avatar" aria-hidden="true">
+  <span :class="style.avatar">
     <PhUsersThree v-if="group" :size="22" />
     <template v-else>{{ initials }}</template>
   </span>

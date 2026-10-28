@@ -21,7 +21,7 @@
     </header>
     <Input v-model="contactSearch" placeholder="Имя или фамилия" full-width>
       <template #prefix>
-        <PhMagnifyingGlass :size="18" aria-hidden="true" />
+        <PhMagnifyingGlass :size="18" />
       </template>
     </Input>
     <ul :class="style.contacts">
@@ -35,7 +35,7 @@
             </span>
           </span>
           <template #trailing>
-            <PhArrowUpRight :size="17" aria-hidden="true" />
+            <PhArrowUpRight :size="17" />
           </template>
         </StyleTab>
       </li>

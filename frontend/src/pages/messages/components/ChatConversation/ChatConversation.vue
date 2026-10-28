@@ -5,7 +5,7 @@
         :class="[style.backButton, style.headerAction]"
         variant="ghost"
         size="sm"
-        aria-label="Назад к чатам"
+        title="Назад к чатам"
         round
         @click="$emit('back')"
       >

@@ -76,12 +76,12 @@
 
         <article :class="style.group">
           <h3>Ghost — выбор фильтра</h3>
-          <div :class="style.row" role="group" aria-label="Пример фильтров">
+          <div :class="style.row" role="group">
             <Button
               variant="ghost"
               size="sm"
               round
-              :aria-pressed="ghostFilter === 'all'"
+              :data-selected="ghostFilter === 'all'"
               @click="ghostFilter = 'all'"
               >Все</Button
             >
@@ -89,7 +89,7 @@
               variant="ghost"
               size="sm"
               round
-              :aria-pressed="ghostFilter === 'unread'"
+              :data-selected="ghostFilter === 'unread'"
               @click="ghostFilter = 'unread'"
               >Непрочитанные</Button
             >
@@ -435,7 +435,7 @@
             <Button variant="secondary" size="sm" round>
               Непрочитанные <Badge :value="2" inline />
             </Button>
-            <Badge :value="12" inline aria-label="12 непрочитанных сообщений" />
+            <Badge :value="12" inline />
           </div>
         </article>
       </div>

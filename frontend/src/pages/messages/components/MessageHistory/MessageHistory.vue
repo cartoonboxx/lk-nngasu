@@ -1,13 +1,7 @@
 <template>
-  <div
-    ref="history"
-    :class="style.history"
-    role="log"
-    :aria-label="`История сообщений: ${chat.name}`"
-    @scroll.passive="onScroll"
-  >
+  <div ref="history" :class="style.history" role="log" @scroll.passive="onScroll">
     <div v-if="!chat.messages.length" :class="style.startConversation">
-      <PhChatCircleText :size="32" aria-hidden="true" />
+      <PhChatCircleText :size="32" />
       <p>Начните разговор</p>
       <span>Ваше первое сообщение появится здесь</span>
     </div>
@@ -15,10 +9,7 @@
       <div v-if="isNewDay(index)" :class="style.dateDivider">
         <span>{{ dayLabel(message.sentAt) }}</span>
       </div>
-      <article
-        :class="[style.message, message.own && style.ownMessage]"
-        :aria-label="`${message.sender}, ${messageTime(message.sentAt)}`"
-      >
+      <article :class="[style.message, message.own && style.ownMessage]">
         <span v-if="chat.group && !message.own" :class="style.sender">
           {{ message.sender }}
         </span>
@@ -27,11 +18,7 @@
           <time :datetime="message.sentAt">
             {{ messageTime(message.sentAt) }}
           </time>
-          <PhCheck
-            v-if="message.own && isSaved(chat.id, message)"
-            :size="14"
-            aria-label="Сохранено"
-          />
+          <PhCheck v-if="message.own && isSaved(chat.id, message)" :size="14" title="Сохранено" />
           <Button v-else-if="message.own" variant="ghost" size="sm" @click="$emit('retry')"
             >Повторить сохранение</Button
           >

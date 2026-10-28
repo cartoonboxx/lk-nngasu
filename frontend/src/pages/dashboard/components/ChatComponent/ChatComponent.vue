@@ -1,19 +1,19 @@
 <template>
-  <section :class="style.chatBlock" aria-labelledby="dashboard-chat-title">
+  <section :class="style.chatBlock">
     <header :class="style.header">
       <h2 id="dashboard-chat-title" :class="style.heading">Чаты</h2>
-      <RouterLink v-press :class="style.allLink" to="/messages">
-        Все <PhArrowUpRight :size="15" aria-hidden="true" />
-      </RouterLink>
+      <AppLink v-press :class="style.allLink" to="/messages">
+        Все <PhArrowUpRight :size="15" />
+      </AppLink>
     </header>
-    <ul v-if="chats.length" :class="style.list" aria-label="Последние диалоги">
+    <ul v-if="chats.length" :class="style.list">
       <li v-for="chat in chats" :key="chat.id">
-        <RouterLink
+        <AppLink
           v-press
           :class="[style.chatItem, chat.unread && style.hasUnread]"
           :to="{ path: '/messages', query: { chat: chat.id } }"
         >
-          <span :class="style.avatar" aria-hidden="true">
+          <span :class="style.avatar">
             <PhUsersThree v-if="chat.group" :size="21" />
             <template v-else>{{ chat.initials }}</template>
           </span>
@@ -27,46 +27,38 @@
                 <span v-if="chat.sender" :class="style.sender">{{ chat.sender }}: </span>
                 {{ chat.preview }}
               </span>
-              <span
-                v-if="chat.unread"
-                :class="style.unread"
-                :aria-label="`Непрочитанных сообщений: ${chat.unread}`"
-              >
+              <span v-if="chat.unread" :class="style.unread">
                 {{ chat.unread }}
               </span>
             </span>
           </span>
-        </RouterLink>
+        </AppLink>
       </li>
     </ul>
     <div v-else :class="style.empty">
-      <PhChatsCircle :size="32" aria-hidden="true" />
+      <PhChatsCircle :size="32" />
       <p>Пока нет диалогов</p>
       <span>Напишите одногруппнику или куратору</span>
     </div>
     <footer :class="style.footer">
-      <RouterLink
-        v-press
-        :class="style.compose"
-        :to="{ path: '/messages', query: { compose: '1' } }"
-      >
-        <PhNotePencil :size="18" aria-hidden="true" />
+      <AppLink v-press :class="style.compose" :to="{ path: '/messages', query: { compose: '1' } }">
+        <PhNotePencil :size="18" />
         Написать сообщение
-      </RouterLink>
+      </AppLink>
     </footer>
   </section>
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue'
-import { RouterLink } from 'vue-router'
+import AppLink from '@/components/navigation/AppLink/AppLink.vue'
 import { PhChatsCircle, PhNotePencil, PhArrowUpRight, PhUsersThree } from '@phosphor-icons/vue'
 import { pressFeedback } from '@/directives/pressFeedback'
 import style from './ChatComponent.module.scss'
 
 export default defineComponent({
   name: 'ChatComponent',
-  components: { RouterLink, PhChatsCircle, PhNotePencil, PhArrowUpRight, PhUsersThree },
+  components: { AppLink, PhChatsCircle, PhNotePencil, PhArrowUpRight, PhUsersThree },
   directives: { press: pressFeedback },
   data() {
     return {

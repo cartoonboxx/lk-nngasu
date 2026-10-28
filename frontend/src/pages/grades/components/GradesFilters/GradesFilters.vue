@@ -3,7 +3,6 @@
     <StyleInput
       :model-value="search"
       @update:model-value="$emit('update:search', $event)"
-      aria-label="Поиск задания"
       placeholder="Поиск задания"
       full-width
     >
@@ -13,21 +12,18 @@
       :model-value="subject"
       @update:model-value="$emit('update:subject', $event)"
       :options="subjectOptions"
-      aria-label="Дисциплина"
       full-width
     />
     <StyleSelect
       :model-value="status"
       @update:model-value="$emit('update:status', $event)"
       :options="statusOptions"
-      aria-label="Статус"
       full-width
     />
     <StyleSelect
       :model-value="semester"
       @update:model-value="$emit('update:semester', $event)"
       :options="semesterOptions"
-      aria-label="Семестр"
       full-width
     />
   </div>

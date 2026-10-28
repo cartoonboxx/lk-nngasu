@@ -74,13 +74,14 @@
         <span>Создать аккаунт</span>
       </Button>
       <p :class="style.footer">
-        Уже есть аккаунт? <RouterLink :class="style.link" to="/authorization">Войти</RouterLink>
+        Уже есть аккаунт? <AppLink :class="style.link" to="/authorization">Войти</AppLink>
       </p>
     </form>
   </AuthLayout>
 </template>
 
 <script lang="ts">
+import AppLink from '@/components/navigation/AppLink/AppLink.vue'
 import { defineComponent } from 'vue'
 import { PhEye, PhEyeSlash } from '@phosphor-icons/vue'
 import AuthLayout from '../AuthLayout/AuthLayout.vue'
@@ -93,6 +94,7 @@ import style from '../AuthForm.module.scss'
 export default defineComponent({
   name: 'RegistrationComponent',
   components: {
+    AppLink,
     AuthLayout,
     Button,
     Checkbox,

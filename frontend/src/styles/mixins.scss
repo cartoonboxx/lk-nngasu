@@ -19,11 +19,7 @@
     scale 180ms cubic-bezier(0.2, 0.8, 0.2, 1);
 
   @media (pointer: coarse) and (prefers-reduced-motion: no-preference) {
-    &:is(:active, [data-pressed='true']):not(
-        :disabled,
-        [aria-disabled='true'],
-        [data-disabled='true']
-      ) {
+    &:is(:active, [data-pressed='true']):not(:disabled, [data-disabled='true']) {
       scale: $scale;
       transition-duration: 60ms;
     }
