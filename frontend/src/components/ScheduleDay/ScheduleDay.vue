@@ -29,11 +29,11 @@
           <h3>{{ lesson.subject }}</h3>
           <p :class="style.lessonMeta">
             <span v-if="lesson.typeLabel">{{ lesson.typeLabel }}</span>
-            <span v-if="lesson.typeLabel && lesson.location" aria-hidden="true">·</span>
+            <span v-if="lesson.typeLabel && lesson.location">·</span>
             <span v-if="lesson.location">{{ lesson.location }}</span>
           </p>
           <p v-if="lesson.teacher" :class="style.lessonTeacher">
-            <PhUser :size="13" weight="fill" aria-hidden="true" />{{ lesson.teacher }}
+            <PhUser :size="13" weight="fill" />{{ lesson.teacher }}
           </p>
         </div>
         <div v-if="$slots['lesson-trailing']" :class="style.lessonTrailing">

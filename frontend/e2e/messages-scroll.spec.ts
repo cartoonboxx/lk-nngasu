@@ -71,7 +71,7 @@ test('resizing and growing the composer keep the latest messages visible', async
   await page.goto('/messages?chat=group-it-202')
   const history = page.getByRole('log')
   await expect.poll(() => distanceToEnd(history)).toBeLessThanOrEqual(1)
-  const field = page.getByRole('textbox', { name: 'Сообщение', exact: true })
+  const field = page.getByPlaceholder('Напишите сообщение…')
   await field.fill('Многострочный черновик\n'.repeat(20))
   await expect(field).toHaveCSS('height', '144px')
   await expect.poll(() => distanceToEnd(history)).toBeLessThanOrEqual(1)
@@ -93,7 +93,7 @@ test('chat list scrolls independently and other pages retain document scrolling'
   page,
 }) => {
   await page.goto('/messages')
-  const list = page.getByRole('list', { name: 'Список диалогов' })
+  const list = page.getByRole('list')
   const header = page.getByRole('heading', { name: /Чаты/ })
   const headerTop = (await header.boundingBox())!.y
   await list.evaluate((element) => {

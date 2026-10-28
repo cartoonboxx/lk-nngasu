@@ -1,8 +1,8 @@
 <template>
-  <section :class="style.results" aria-labelledby="grades-heading">
+  <section :class="style.results">
     <div :class="style.resultsHeader">
       <h2 id="grades-heading">Оценки за задания</h2>
-      <span aria-live="polite">Показано {{ assignments.length }} из {{ total }}</span>
+      <span>Показано {{ assignments.length }} из {{ total }}</span>
     </div>
     <table v-if="assignments.length" :class="style.table">
       <caption :class="style.srOnly">
@@ -34,7 +34,7 @@
               :class="[style.grade, assignment.grade >= 5 ? style.excellent : style.good]"
               >{{ assignment.grade }}</span
             >
-            <span v-else :class="style.muted" aria-label="Оценка пока не выставлена">—</span>
+            <span v-else :class="style.muted">—</span>
           </td>
           <td data-label="Статус">
             <GradeStatus :status="assignment.status" />

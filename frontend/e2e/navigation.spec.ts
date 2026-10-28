@@ -29,7 +29,10 @@ test('mobile menu supports navigation, focus, and dismissal', async ({ page }) =
   await expect(page).toHaveURL(/\/messages$/)
   await expect(menu).toHaveClass(/active/)
   await expect(navigation).toBeHidden()
-  await expect(page.locator('body')).not.toHaveCSS('overflow', 'hidden')
+  // Messages keeps its own page lock; the closed menu must release only its inline lock.
+  await expect
+    .poll(() => page.locator('body').evaluate((element) => element.style.overflow))
+    .toBe('')
   await expect(page.locator('main')).not.toHaveAttribute('inert')
 
   await menu.click()

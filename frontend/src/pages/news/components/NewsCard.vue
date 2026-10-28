@@ -3,7 +3,6 @@
     :class="[style.card, featured ? style.featured : '']"
     :role="canOpen ? 'link' : undefined"
     :tabindex="canOpen ? 0 : undefined"
-    :aria-label="title"
     @click="openNews"
     @keydown.enter.prevent="openNews"
   >
@@ -11,7 +10,6 @@
       v-if="image"
       :class="style.image"
       :style="{ backgroundImage: `url(${JSON.stringify(image)})` }"
-      aria-hidden="true"
     />
 
     <div :class="style.content">
@@ -35,9 +33,8 @@
 
       <div v-if="canOpen" :class="style.readHint">
         Читать далее
-        <PhArrowRight :size="14" aria-hidden="true" />
+        <PhArrowRight :size="14" />
       </div>
-
     </div>
   </article>
 </template>

@@ -5,7 +5,6 @@
     </label>
     <Input
       ref="field"
-      :aria-label="ariaLabel"
       :maxlength="maxlength"
       :max-height="maxHeight"
       :id="fieldId"
@@ -15,8 +14,6 @@
       :model-value="modelValue"
       :placeholder="placeholder"
       :variant="error && variant !== 'disabled' ? 'error' : variant"
-      :aria-invalid="error || variant === 'error' ? true : undefined"
-      :aria-describedby="error ? `${fieldId}-error` : undefined"
       :size="size"
       :type="type"
       :disabled="disabled"
@@ -53,10 +50,6 @@ export default defineComponent({
   },
   props: {
     id: {
-      type: String,
-      default: undefined,
-    },
-    ariaLabel: {
       type: String,
       default: undefined,
     },

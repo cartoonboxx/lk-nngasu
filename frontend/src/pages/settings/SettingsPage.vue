@@ -57,7 +57,6 @@
       <Modal
         v-model="isPasswordModalOpen"
         :width="460"
-        aria-labelledby="password-modal-title"
         @close="resetPasswordForm"
       >
         <template #default="{ close }">

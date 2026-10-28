@@ -1,12 +1,12 @@
 <template>
   <div :class="style.welcome">
     <span :class="style.welcomeIcon">
-      <PhChatsCircle :size="36" weight="light" aria-hidden="true" />
+      <PhChatsCircle :size="36" weight="light" />
     </span>
     <h2>Хороший разговор начинается здесь</h2>
     <p>Выберите чат слева или напишите<br />кому-нибудь первым.</p>
     <Button variant="secondary" @click="$emit('compose')">
-      <PhNotePencil :size="18" aria-hidden="true" />
+      <PhNotePencil :size="18" />
       Новый диалог
     </Button>
   </div>
