@@ -21,7 +21,12 @@
           >Оценка: <strong>{{ assignment.grade }}</strong></span
         >
         <span v-if="assignment.submittedAt" :class="style.muted"
-          >Сдано {{ formatDate(assignment.submittedAt) }}</span
+          >Сдано
+          {{
+            assignment.submittedAt
+              ? gradeDateFormatter.format(new Date(`${assignment.submittedAt}T12:00:00`))
+              : '—'
+          }}</span
         >
       </div>
       <section :class="style.detailSection">
@@ -50,7 +55,7 @@ import Modal from '@/components/UI/modal/BaseModal/Modal.vue'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 import GradeStatus from '../GradeStatus/GradeStatus.vue'
 import type { GradeAssignment } from '../../grades.types'
-import { formatGradeDate } from '../../grades.format'
+import { gradeDateFormatter } from '../../grades.format'
 import style from './GradeDetailsModal.module.scss'
 
 export default defineComponent({
@@ -62,8 +67,7 @@ export default defineComponent({
   },
   emits: { 'update:modelValue': (value: boolean) => typeof value === 'boolean' },
   data() {
-    return { style }
+    return { style, gradeDateFormatter }
   },
-  methods: { formatDate: formatGradeDate },
 })
 </script>

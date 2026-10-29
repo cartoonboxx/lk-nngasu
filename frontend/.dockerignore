@@ -2,9 +2,6 @@ node_modules
 dist
 .git
 .eslintcache
-test-results
-playwright-report
-coverage
 .env
 .env.*
 !.env.example

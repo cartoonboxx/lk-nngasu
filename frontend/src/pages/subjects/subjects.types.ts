@@ -4,3 +4,8 @@ export interface Subject {
   value: string
   semester: string
 }
+
+export interface SubjectDetails extends Subject {
+  topics: CourseTopic[]
+}
+import type { CourseTopic } from './course/course.types'

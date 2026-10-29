@@ -1,15 +1,11 @@
 import { computed, inject, readonly, ref, type InjectionKey } from 'vue'
 import { lessonTypes, periods } from './schedule.data'
 
-function monday(date: Date) {
-  const start = new Date(date)
-  start.setHours(0, 0, 0, 0)
-  start.setDate(start.getDate() - ((start.getDay() + 6) % 7))
-  return start
-}
-
 export function createSchedule() {
-  const weekStart = ref(monday(new Date()))
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  today.setDate(today.getDate() - ((today.getDay() + 6) % 7))
+  const weekStart = ref(today)
 
   const days = computed(() => {
     const today = new Date().toDateString()
@@ -63,12 +59,11 @@ export function createSchedule() {
     weekStart.value = date
   }
 
-  function resetWeek() {
-    weekStart.value = monday(new Date())
-  }
-
   function selectWeek(date: Date) {
-    weekStart.value = monday(date)
+    const start = new Date(date)
+    start.setHours(0, 0, 0, 0)
+    start.setDate(start.getDate() - ((start.getDay() + 6) % 7))
+    weekStart.value = start
   }
 
   return {
@@ -77,7 +72,6 @@ export function createSchedule() {
     weekStart: readonly(weekStart),
     weekLabel,
     shiftWeek,
-    resetWeek,
     selectWeek,
   }
 }

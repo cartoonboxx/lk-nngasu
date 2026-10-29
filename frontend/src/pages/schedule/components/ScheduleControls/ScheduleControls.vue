@@ -42,29 +42,12 @@ export default defineComponent({
     PhMagnifyingGlass,
   },
   data() {
-    const { weekLabel, shiftWeek, resetWeek } = useSchedule()
+    const { weekLabel, shiftWeek } = useSchedule()
     return {
       style,
       weekLabel,
       shiftWeek,
-      resetWeek,
-      isScrolledPage: false,
     }
-  },
-  mounted() {
-    document.addEventListener('scroll', this.isScrolling)
-  },
-  beforeUnmount() {
-    document.removeEventListener('scroll', this.isScrolling)
-  },
-  methods: {
-    isScrolling() {
-      if (window.scrollY > 300) {
-        this.isScrolledPage = true
-        return
-      }
-      this.isScrolledPage = false
-    },
   },
 })
 </script>

@@ -75,13 +75,13 @@ export default defineComponent({
     },
   },
   mounted() {
-    this.focusTitle()
+    ;(this.$refs.conversationTitle as HTMLElement | undefined)?.focus({ preventScroll: true })
     this.updateComposerLimit()
   },
   watch: {
     'chat.id'() {
       void this.$nextTick(() => {
-        this.focusTitle()
+        ;(this.$refs.conversationTitle as HTMLElement | undefined)?.focus({ preventScroll: true })
         this.updateComposerLimit()
       })
     },
@@ -93,15 +93,6 @@ export default defineComponent({
     },
   },
   methods: {
-    focusTitle() {
-      ;(this.$refs.conversationTitle as HTMLElement | undefined)?.focus({ preventScroll: true })
-    },
-    isComposerFocused(): boolean {
-      return (
-        (this.$refs.composer as InstanceType<typeof MessageComposer> | undefined)?.isFocused() ??
-        false
-      )
-    },
     updateComposerLimit() {
       const conversation = this.$el as HTMLElement
       const composer = (this.$refs.composer as InstanceType<typeof MessageComposer> | undefined)

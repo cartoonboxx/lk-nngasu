@@ -7,7 +7,12 @@
           <IconButton
             :class="[style.toggle, collapsed && style.compactToggle]"
             variant="ghost"
-            @click="toggleCollapsed"
+            @click="
+              () => {
+                collapsed = !collapsed
+                $emit('collapse-change', collapsed)
+              }
+            "
           >
             <img v-if="collapsed" :class="style.toggleLogo" src="$images/logo.svg" alt="" />
             <PhSidebarSimple :class="style.toggleIcon" />
@@ -137,10 +142,6 @@ export default defineComponent({
     return { style, collapsed: false }
   },
   methods: {
-    toggleCollapsed() {
-      this.collapsed = !this.collapsed
-      this.$emit('collapse-change', this.collapsed)
-    },
     navigate(routeName: string) {
       if (this.$route.name !== routeName) {
         void this.$router.push({ name: routeName })

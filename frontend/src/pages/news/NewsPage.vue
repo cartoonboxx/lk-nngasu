@@ -35,7 +35,9 @@
       </div>
 
       <div v-if="hasMoreNews" :class="style.showMore">
-        <Button variant="secondary" @click="showMore"> Показать ещё новости </Button>
+        <Button variant="secondary" @click="visibleCount += pageSize">
+          Показать ещё новости
+        </Button>
       </div>
     </template>
 
@@ -77,6 +79,7 @@ export default defineComponent({
       style,
       searchQuery: '',
       visibleCount: PAGE_SIZE,
+      pageSize: PAGE_SIZE,
 
       news: [
         {
@@ -179,18 +182,6 @@ export default defineComponent({
     },
   },
 
-  methods: {
-    formatDate(date: string): string {
-      return new Intl.DateTimeFormat('ru-RU', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      }).format(new Date(`${date}T00:00:00`))
-    },
-
-    showMore() {
-      this.visibleCount += PAGE_SIZE
-    },
-  },
+  methods: {},
 })
 </script>

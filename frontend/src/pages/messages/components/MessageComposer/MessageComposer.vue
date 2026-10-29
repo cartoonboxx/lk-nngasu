@@ -82,13 +82,6 @@ export default defineComponent({
     focus() {
       ;(this.$refs.messageField as InstanceType<typeof TextInput> | undefined)?.focus()
     },
-    isFocused(): boolean {
-      return (
-        (this.$refs.messageField as InstanceType<typeof TextInput> | undefined)?.$el.contains(
-          document.activeElement,
-        ) ?? false
-      )
-    },
     sendMessage() {
       if (this.draft.trim()) this.$emit('send')
     },

@@ -50,15 +50,20 @@
         </div>
 
         <div>
-          <Button variant="secondary" @click="openPasswordModal">Изменить пароль</Button>
+          <Button
+            variant="secondary"
+            @click="
+              () => {
+                resetPasswordForm()
+                isPasswordModalOpen = true
+              }
+            "
+            >Изменить пароль</Button
+          >
         </div>
       </div>
 
-      <Modal
-        v-model="isPasswordModalOpen"
-        :width="460"
-        @close="resetPasswordForm"
-      >
+      <Modal v-model="isPasswordModalOpen" :width="460" @close="resetPasswordForm">
         <template #default="{ close }">
           <form :class="style.passwordForm" @submit.prevent="submitPasswordChange">
             <h2 id="password-modal-title">Изменить пароль</h2>
@@ -136,37 +141,31 @@ export default defineComponent({
         { value: 'dark', label: 'Тёмная' },
         { value: 'system', label: 'Системная' },
       ],
-      
     }
   },
   methods: {
-  openPasswordModal() {
-    this.resetPasswordForm()
-    this.isPasswordModalOpen = true
+    resetPasswordForm() {
+      this.currentPassword = ''
+      this.newPassword = ''
+      this.confirmPassword = ''
+      this.passwordError = ''
+    },
+
+    submitPasswordChange() {
+      this.passwordError = ''
+
+      if (this.newPassword !== this.confirmPassword) {
+        this.passwordError = 'Новые пароли не совпадают.'
+        return
+      }
+
+      if (this.newPassword === this.currentPassword) {
+        this.passwordError = 'Новый пароль должен отличаться от текущего.'
+        return
+      }
+
+      this.passwordError = 'Сервис смены пароля пока не подключён.'
+    },
   },
-
-  resetPasswordForm() {
-    this.currentPassword = ''
-    this.newPassword = ''
-    this.confirmPassword = ''
-    this.passwordError = ''
-  },
-
-  submitPasswordChange() {
-    this.passwordError = ''
-
-    if (this.newPassword !== this.confirmPassword) {
-      this.passwordError = 'Новые пароли не совпадают.'
-      return
-    }
-
-    if (this.newPassword === this.currentPassword) {
-      this.passwordError = 'Новый пароль должен отличаться от текущего.'
-      return
-    }
-
-    this.passwordError = 'Сервис смены пароля пока не подключён.'
-  },
-},
 })
 </script>

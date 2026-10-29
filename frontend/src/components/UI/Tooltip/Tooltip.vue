@@ -3,8 +3,18 @@
     ref="trigger"
     :class="style.root"
     @pointerenter="onPointerEnter"
-    @pointerleave="onMouseleave"
-    @pointerdown="onMouseleave"
+    @pointerleave="
+      () => {
+        hovered = false
+        dismissed = false
+      }
+    "
+    @pointerdown="
+      () => {
+        hovered = false
+        dismissed = false
+      }
+    "
   >
     <slot />
     <Teleport to="body">
@@ -76,7 +86,8 @@ export default defineComponent({
         this.trackPosition()
         document.addEventListener('keydown', this.onKeydown)
       } else {
-        this.removeListeners()
+        window.cancelAnimationFrame(this.animationFrame)
+        document.removeEventListener('keydown', this.onKeydown)
       }
     },
     position() {
@@ -84,7 +95,8 @@ export default defineComponent({
     },
   },
   beforeUnmount() {
-    this.removeListeners()
+    window.cancelAnimationFrame(this.animationFrame)
+    document.removeEventListener('keydown', this.onKeydown)
   },
   methods: {
     trackPosition() {
@@ -108,10 +120,6 @@ export default defineComponent({
             ? rect.bottom
             : rect.top + rect.height / 2
     },
-    onMouseleave() {
-      this.hovered = false
-      this.dismissed = false
-    },
     onPointerEnter(event: PointerEvent) {
       if (
         this.isShow &&
@@ -123,10 +131,6 @@ export default defineComponent({
     },
     onKeydown(event: KeyboardEvent) {
       if (event.key === 'Escape') this.dismissed = true
-    },
-    removeListeners() {
-      window.cancelAnimationFrame(this.animationFrame)
-      document.removeEventListener('keydown', this.onKeydown)
     },
   },
 })

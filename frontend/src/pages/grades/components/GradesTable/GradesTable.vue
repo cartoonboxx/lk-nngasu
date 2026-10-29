@@ -27,7 +27,13 @@
             </button>
           </td>
           <td data-label="Дисциплина">{{ assignment.subject }}</td>
-          <td data-label="Сдано" :class="style.date">{{ formatDate(assignment.submittedAt) }}</td>
+          <td data-label="Сдано" :class="style.date">
+            {{
+              assignment.submittedAt
+                ? gradeDateFormatter.format(new Date(`${assignment.submittedAt}T12:00:00`))
+                : '—'
+            }}
+          </td>
           <td data-label="Оценка">
             <span
               v-if="assignment.grade !== null"
@@ -60,7 +66,7 @@ import { PhMagnifyingGlass } from '@phosphor-icons/vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
 import GradeStatus from '../GradeStatus/GradeStatus.vue'
 import type { GradeAssignment } from '../../grades.types'
-import { formatGradeDate } from '../../grades.format'
+import { gradeDateFormatter } from '../../grades.format'
 import style from './GradesTable.module.scss'
 
 export default defineComponent({
@@ -72,8 +78,7 @@ export default defineComponent({
   },
   emits: { select: (assignment: GradeAssignment) => Boolean(assignment), reset: () => true },
   data() {
-    return { style }
+    return { style, gradeDateFormatter }
   },
-  methods: { formatDate: formatGradeDate },
 })
 </script>

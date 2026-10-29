@@ -12,144 +12,76 @@
       <StyleSelect v-model="selectedSemester" :options="semesterOptions" />
     </section>
 
-    <section :class="style.pageSubjectSemester">
-      <Button
+    <p v-if="!filteredSubjects.length">Предметы не найдены</p>
+    <section v-else :class="style.pageSubjectSemester">
+      <RouterLink
+        v-press
         v-for="subject in filteredSubjects"
         :key="subject.id"
-        variant="secondary"
-        @click="openSubject(subject.id)"
+        :class="[baseButtonStyle.base, baseButtonStyle.md, buttonStyle.secondary]"
+        :to="{ name: 'course', params: { id: subject.id } }"
       >
         {{ subject.label }}
-      </Button>
+      </RouterLink>
     </section>
   </section>
 </template>
 
 <script lang="ts">
 import type { Subject } from './subjects.types'
+import { RouterLink } from 'vue-router'
 import { defineComponent } from 'vue'
+import { pressFeedback } from '@/directives/pressFeedback'
 import style from './SubjectPage.module.scss'
 import { PhMagnifyingGlass } from '@phosphor-icons/vue'
 
 import StyleInput from '@/components/UI/inputs/Input/Input.vue'
 import StyleSelect from '@/components/UI/inputs/Select/Select.vue'
-import Button from '@/components/UI/buttons/Button/Button.vue'
+import buttonStyle from '@/components/UI/buttons/Button/Button.module.scss'
+import baseButtonStyle from '@/components/UI/buttons/BaseButton/BaseButton.module.scss'
 import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 
 export default defineComponent({
   name: 'SubjectsPage',
+  directives: { press: pressFeedback },
 
   components: {
     SectionHeader,
     StyleInput,
     StyleSelect,
     PhMagnifyingGlass,
-    Button,
+    RouterLink,
   },
 
   data() {
     return {
       style,
+      buttonStyle,
+      baseButtonStyle,
 
       searchQuery: '',
       selectedSemester: '1',
-      selectedSubject: 'programming',
 
       semesterOptions: [
         { label: '1 семестр', value: '1' },
         { label: '2 семестр', value: '2' },
       ],
-
-      subjects: [
-        {
-          id: 1,
-          label: 'Программирование',
-          value: 'programming',
-          semester: '1',
-        },
-        {
-          id: 2,
-          label: 'Математика',
-          value: 'math',
-          semester: '1',
-        },
-        {
-          id: 3,
-          label: 'Базы данных',
-          value: 'database',
-          semester: '1',
-        },
-        {
-          id: 4,
-          label: 'Веб-разработка',
-          value: 'web',
-          semester: '2',
-        },
-        {
-          id: 5,
-          label: 'Компьютерные сети',
-          value: 'cet',
-          semester: '2',
-        },
-        {
-          id: 6,
-          label: 'ОС',
-          value: 'oc',
-          semester: '1',
-        },
-        {
-          id: 7,
-          label: 'Тестирование',
-          value: 'test',
-          semester: '1',
-        },
-        {
-          id: 8,
-          label: 'Качество ПО',
-          value: 'po',
-          semester: '1',
-        },
-        {
-          id: 9,
-          label: 'Логическое программирование',
-          value: 'log',
-          semester: '2',
-        },
-        {
-          id: 10,
-          label: 'Веб',
-          value: 'web2',
-          semester: '2',
-        },
-      ] as Subject[],
     }
   },
-  methods: {
-    openSubject(idSubject: number) {
-      this.$router.push(`/subjects/${idSubject}`)
-    },
+  created() {
+    this.$subjectsStore.fetchSubjects()
   },
   computed: {
     filteredSubjects(): Subject[] {
       const query = this.searchQuery.trim().toLowerCase()
 
-      return this.subjects.filter((subject) => {
+      return this.$subjectsStore.subjects.filter((subject) => {
         const matchesSemester = subject.semester === this.selectedSemester
 
         const matchesSearch = subject.label.toLowerCase().includes(query)
 
         return matchesSemester && matchesSearch
       })
-    },
-  },
-
-  watch: {
-    filteredSubjects(subjects: Subject[]) {
-      const selectedExists = subjects.some((subject) => subject.value === this.selectedSubject)
-
-      if (!selectedExists) {
-        this.selectedSubject = subjects[0]?.value ?? ''
-      }
     },
   },
 })

@@ -24,7 +24,12 @@
       :full-width="fullWidth"
       :multiline="multiline"
       :base-height="baseHeight"
-      @update:model-value="handleUpdate"
+      @update:model-value="
+        (value) => {
+          currentValue = value
+          $emit('update:modelValue', value)
+        }
+      "
     />
     <div v-if="$slots.actions" :class="style.actions">
       <slot name="actions" />
@@ -125,10 +130,6 @@ export default defineComponent({
   methods: {
     focus() {
       ;(this.$refs.field as InstanceType<typeof BaseInput> | undefined)?.focus()
-    },
-    handleUpdate(value: string) {
-      this.currentValue = value
-      this.$emit('update:modelValue', value)
     },
   },
 })

@@ -88,18 +88,27 @@
           </div>
           <p :class="style.muted">До 10 файлов, не более 20 МБ каждый</p>
           <ul v-if="attachments.length" :class="style.files">
-            <li v-for="attachment in attachments" :key="attachment.id">
-              <MediaButton :title="attachment.name" :meta="formatSize(attachment.size)" readonly>
+            <li v-for="attachment in attachmentItems" :key="attachment.id">
+              <MediaButton :title="attachment.name" :meta="attachment.meta" readonly>
                 <template #icon>
                   <component
-                    :is="fileIcon(attachment.name)"
+                    :is="attachment.icon"
                     :class="attachment.name.toLowerCase().endsWith('.pdf') ? style.pdf : null"
                     :size="34"
                     weight="duotone"
                   />
                 </template>
                 <template #actions>
-                  <IconButton variant="ghost" size="sm" @click="removeFile(attachment.id)">
+                  <IconButton
+                    variant="ghost"
+                    size="sm"
+                    @click="
+                      () => {
+                        attachments = attachments.filter((item) => item.id !== attachment.id)
+                        error = ''
+                      }
+                    "
+                  >
                     <PhX :size="20" />
                   </IconButton>
                 </template>
@@ -114,7 +123,7 @@
         <footer :class="style.actions">
           <Button
             variant="secondary"
-            @click="answer ? cancelEditing() : $emit('update:modelValue', false)"
+            @click="answer ? reset() : $emit('update:modelValue', false)"
             >{{ answer ? 'Отменить' : 'Отмена' }}</Button
           >
           <Button
@@ -129,20 +138,28 @@
       <section v-else-if="answer" :class="style.form">
         <div :class="style.answerHeading">
           <h3>Ваш ответ</h3>
-          <p :class="style.muted">Отправлен {{ formatDate(answer.submittedAt) }}</p>
+          <p :class="style.muted">
+            Отправлен
+            {{
+              new Date(answer.submittedAt).toLocaleString('ru-RU', {
+                dateStyle: 'short',
+                timeStyle: 'short',
+              })
+            }}
+          </p>
         </div>
         <p v-if="answer.comment" :class="style.comment">{{ answer.comment }}</p>
         <ul v-if="answer.attachments.length" :class="style.files">
-          <li v-for="attachment in answer.attachments" :key="attachment.id">
+          <li v-for="attachment in attachmentItems" :key="attachment.id">
             <MediaButton
               :title="attachment.name"
-              :meta="formatSize(attachment.size)"
+              :meta="attachment.meta"
               :readonly="!attachment.file && !attachment.url"
               @click="download(attachment)"
             >
               <template #icon>
                 <component
-                  :is="fileIcon(attachment.name)"
+                  :is="attachment.icon"
                   :class="attachment.name.toLowerCase().endsWith('.pdf') ? style.pdf : null"
                   :size="34"
                   weight="duotone"
@@ -168,13 +185,24 @@
         </p>
         <footer v-if="!reviewed && !confirmDelete" :class="style.actions">
           <Button variant="danger" @click="confirmDelete = true">Удалить ответ</Button>
-          <Button variant="secondary" @click="startEditing">Редактировать ответ</Button>
+          <Button
+            variant="secondary"
+            @click="
+              () => {
+                reset()
+                isEditing = true
+              }
+            "
+            >Редактировать ответ</Button
+          >
         </footer>
         <div v-if="confirmDelete && !reviewed" :class="style.confirm">
           <p>Удалить ответ вместе с файлами и комментарием?</p>
           <div :class="style.confirmActions">
             <Button variant="secondary" @click="confirmDelete = false">Отмена</Button>
-            <Button variant="danger" @click="deleteAnswer">Подтвердить удаление</Button>
+            <Button variant="danger" @click="!reviewed && $emit('delete')"
+              >Подтвердить удаление</Button
+            >
           </div>
         </div>
         <footer v-if="reviewed" :class="style.actions">
@@ -260,6 +288,24 @@ export default defineComponent({
     }
   },
   computed: {
+    attachmentItems() {
+      return (this.isEditing ? this.attachments : (this.answer?.attachments ?? [])).map(
+        (attachment) => ({
+          ...attachment,
+          meta:
+            attachment.size < 1024
+              ? `${attachment.size} Б`
+              : attachment.size < 1024 * 1024
+                ? `${(attachment.size / 1024).toFixed(1)} КБ`
+                : `${(attachment.size / (1024 * 1024)).toFixed(1)} МБ`,
+          icon: attachment.name.toLowerCase().endsWith('.pdf')
+            ? 'PhFilePdf'
+            : /\.(pl|py|js|ts|html|css|cpp|c|java|json)$/i.test(attachment.name)
+              ? 'PhFileCode'
+              : 'PhFileText',
+        }),
+      )
+    },
     reviewed(): boolean {
       return !!this.answer?.review
     },
@@ -286,13 +332,6 @@ export default defineComponent({
       this.confirmDelete = false
       this.error = ''
       this.dragging = false
-    },
-    startEditing() {
-      this.reset()
-      this.isEditing = true
-    },
-    cancelEditing() {
-      this.reset()
     },
     addFiles(event: Event) {
       const input = event.target as HTMLInputElement
@@ -328,10 +367,6 @@ export default defineComponent({
       }
       this.error = errors.join(' ')
     },
-    removeFile(id: string) {
-      this.attachments = this.attachments.filter((item) => item.id !== id)
-      this.error = ''
-    },
     submit() {
       if (this.reviewed) return
       if (this.comment.length > 2000) {
@@ -343,22 +378,6 @@ export default defineComponent({
         return
       }
       this.$emit('submit', { attachments: [...this.attachments], comment: this.comment.trim() })
-    },
-    deleteAnswer() {
-      if (!this.reviewed) this.$emit('delete')
-    },
-    fileIcon(name: string): string {
-      if (name.toLowerCase().endsWith('.pdf')) return 'PhFilePdf'
-      if (/\.(pl|py|js|ts|html|css|cpp|c|java|json)$/i.test(name)) return 'PhFileCode'
-      return 'PhFileText'
-    },
-    formatSize(size: number): string {
-      if (size < 1024) return `${size} Б`
-      if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} КБ`
-      return `${(size / (1024 * 1024)).toFixed(1)} МБ`
-    },
-    formatDate(date: string): string {
-      return new Date(date).toLocaleString('ru-RU', { dateStyle: 'short', timeStyle: 'short' })
     },
     download(attachment: AssignmentAttachment) {
       const url = attachment.file ? URL.createObjectURL(attachment.file) : attachment.url

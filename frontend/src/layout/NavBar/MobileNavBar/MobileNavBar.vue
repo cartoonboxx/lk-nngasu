@@ -2,7 +2,7 @@
   <nav
     :class="[style.bottomNavigation, conversationOpen ? style.hidden : null]"
     :inert="mobileOpen"
-    @pointerdown="trackPointer"
+    @pointerdown="returnFocusOnClose = $event.pointerType === 'mouse'"
     @keydown="returnFocusOnClose = true"
   >
     <NavigationItem
@@ -22,14 +22,14 @@
       :active="isMoreActive || mobileOpen"
       variant="bottom"
       :notification="unreadMessages > 0"
-      @click="openMobileMenu"
+      @click="isMobile && (mobileOpen = true)"
     />
   </nav>
   <Modal
     v-if="isMobile"
     v-model="mobileOpen"
     :style="{ '--modal-content-padding': '0px' }"
-    @pointerdown="trackPointer"
+    @pointerdown="returnFocusOnClose = $event.pointerType === 'mouse'"
     @keydown="returnFocusOnClose = true"
     @close="restoreMenuFocus"
   >
@@ -110,13 +110,6 @@ export default defineComponent({
     syncViewport() {
       this.isMobile = this.mediaQuery?.matches ?? false
       if (!this.isMobile) this.closeMobileMenu(false)
-    },
-    openMobileMenu() {
-      if (!this.isMobile || this.mobileOpen) return
-      this.mobileOpen = true
-    },
-    trackPointer(event: PointerEvent) {
-      this.returnFocusOnClose = event.pointerType === 'mouse'
     },
     closeMobileMenu(restoreFocus?: boolean) {
       if (!this.mobileOpen) return

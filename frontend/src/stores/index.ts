@@ -2,6 +2,7 @@ import type { Plugin } from 'vue'
 import { createPinia, disposePinia } from 'pinia'
 import { useMessageStore, messagesStoragePrefix } from './messages'
 import { useUtilityStore } from './utility'
+import { useSubjectsStore } from './subjects'
 
 const stores: Plugin = {
   install(app) {
@@ -9,6 +10,7 @@ const stores: Plugin = {
     app.use(pinia)
 
     app.config.globalProperties.$utilityStore = useUtilityStore(pinia)
+    app.config.globalProperties.$subjectsStore = useSubjectsStore(pinia)
 
     const messageStore = useMessageStore(pinia)
     messageStore.initialize()

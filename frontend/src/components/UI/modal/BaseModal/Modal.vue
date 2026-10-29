@@ -58,10 +58,6 @@ function unlockScroll(dialog: HTMLDialogElement) {
   }
 }
 
-function cssSize(value: number | string) {
-  return typeof value === 'number' ? `${value}px` : value
-}
-
 export default defineComponent({
   name: 'Modal',
   inheritAttrs: false,
@@ -157,10 +153,12 @@ export default defineComponent({
         ? this.dragOffset
         : this.panelHeight * (1 - this.currentBreakpoint)
       return {
-        '--modal-width': cssSize(this.width),
-        '--modal-height': cssSize(this.height),
-        '--modal-max-width': cssSize(this.maxWidth),
-        '--modal-max-height': cssSize(this.maxHeight),
+        '--modal-width': typeof this.width === 'number' ? `${this.width}px` : this.width,
+        '--modal-height': typeof this.height === 'number' ? `${this.height}px` : this.height,
+        '--modal-max-width':
+          typeof this.maxWidth === 'number' ? `${this.maxWidth}px` : this.maxWidth,
+        '--modal-max-height':
+          typeof this.maxHeight === 'number' ? `${this.maxHeight}px` : this.maxHeight,
         '--sheet-offset': `${offset}px`,
         '--modal-x': `${this.popupX}px`,
         '--modal-y': `${this.popupY}px`,

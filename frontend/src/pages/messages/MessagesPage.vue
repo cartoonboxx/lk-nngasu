@@ -6,17 +6,17 @@
         :class="style.sidebar"
         :chats="chats"
         :selected-id="selectedChat?.id"
-        @select="openChat"
-        @compose="openCompose"
+        @select="$router.push({ path: '/messages', query: { chat: $event } })"
+        @compose="composeOpen = true"
       />
       <ChatConversation
         v-if="selectedChat"
         ref="conversation"
         :class="style.conversation"
         :chat="selectedChat"
-        @back="backToChats"
+        @back="$router.push({ path: '/messages' })"
       />
-      <MessagesWelcome v-else :class="style.welcome" @compose="openCompose" />
+      <MessagesWelcome v-else :class="style.welcome" @compose="composeOpen = true" />
     </div>
     <NewChatModal v-model="composeOpen" @select="startChat" />
   </section>
@@ -76,7 +76,7 @@ export default defineComponent({
     document.documentElement.dataset.messagesPage = 'true'
     // Search in NewChatModal is teleported outside the page element.
     document.addEventListener('focusin', this.scheduleViewportUpdate)
-    document.addEventListener('focusout', this.onFocusOut)
+    document.addEventListener('focusout', this.scheduleViewportUpdate)
     window.visualViewport?.addEventListener('resize', this.scheduleViewportUpdate)
     window.visualViewport?.addEventListener('scroll', this.scheduleViewportUpdate)
     window.addEventListener('resize', this.scheduleViewportUpdate)
@@ -88,7 +88,7 @@ export default defineComponent({
     cancelAnimationFrame(this.viewportFrame)
     delete document.documentElement.dataset.messagesPage
     document.removeEventListener('focusin', this.scheduleViewportUpdate)
-    document.removeEventListener('focusout', this.onFocusOut)
+    document.removeEventListener('focusout', this.scheduleViewportUpdate)
     window.visualViewport?.removeEventListener('resize', this.scheduleViewportUpdate)
     window.visualViewport?.removeEventListener('scroll', this.scheduleViewportUpdate)
     window.removeEventListener('resize', this.scheduleViewportUpdate)
@@ -114,9 +114,6 @@ export default defineComponent({
     },
   },
   methods: {
-    onFocusOut() {
-      void this.$nextTick(this.scheduleViewportUpdate)
-    },
     scheduleViewportUpdate() {
       if (!this.$refs.page || this.viewportFrame) return
       this.viewportFrame = requestAnimationFrame(() => {
@@ -152,22 +149,13 @@ export default defineComponent({
         this.$refs.conversation as InstanceType<typeof ChatConversation> | undefined
       )?.updateComposerLimit()
     },
-    openCompose() {
-      this.composeOpen = true
-    },
-    backToChats() {
-      void this.$router.push({ path: '/messages' })
-    },
-    openChat(id: string) {
-      void this.$router.push({ path: '/messages', query: { chat: id } })
-    },
     startChat(id: string) {
       const contact = contacts.find((item) => item.id === id)
       if (!contact) return
       if (!this.chats.some((chat) => chat.id === id)) {
         this.$messageStore.ensureChat({ ...contact, group: false })
       }
-      this.openChat(id)
+      void this.$router.push({ path: '/messages', query: { chat: id } })
     },
   },
 })

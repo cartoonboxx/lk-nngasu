@@ -3,7 +3,7 @@
     <header :class="style.topicHeader">
       <p :class="style.eyebrow">Тема {{ topicIndex + 1 }}</p>
       <h2>{{ topic.title }}</h2>
-      <p :class="style.description">{{ topic.description }}</p>
+      <p :class="style.description" v-html="topic.description" />
     </header>
 
     <section :class="style.materials">

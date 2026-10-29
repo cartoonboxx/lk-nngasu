@@ -20,7 +20,7 @@
       :full-width="fullWidth"
       :multiline="multiline"
       :base-height="baseHeight"
-      @update:model-value="handleUpdate"
+      @update:model-value="$emit('update:modelValue', $event)"
     >
       <template v-if="$slots.prefix" #prefix>
         <slot name="prefix" />
@@ -133,9 +133,6 @@ export default defineComponent({
   methods: {
     focus() {
       ;(this.$refs.field as InstanceType<typeof Input> | undefined)?.focus()
-    },
-    handleUpdate(value: string) {
-      this.$emit('update:modelValue', value)
     },
   },
 })

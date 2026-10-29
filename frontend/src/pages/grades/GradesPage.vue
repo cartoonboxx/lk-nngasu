@@ -11,8 +11,20 @@
     <GradesTable
       :assignments="filteredAssignments"
       :total="semesterAssignments.length"
-      @select="openAssignment"
-      @reset="resetFilters"
+      @select="
+        ($event) => {
+          selectedAssignment = $event
+          detailsOpen = true
+        }
+      "
+      @reset="
+        () => {
+          search = ''
+          subject = 'all'
+          status = 'all'
+          semester = '7'
+        }
+      "
     />
     <p :class="style.footnote">
       <PhInfo :size="18" /> Нажмите на название задания, чтобы посмотреть ответ и комментарий
@@ -75,18 +87,6 @@ export default defineComponent({
             .toLocaleLowerCase('ru')
             .includes(query),
       )
-    },
-  },
-  methods: {
-    openAssignment(assignment: GradeAssignment) {
-      this.selectedAssignment = assignment
-      this.detailsOpen = true
-    },
-    resetFilters() {
-      this.search = ''
-      this.subject = 'all'
-      this.status = 'all'
-      this.semester = '7'
     },
   },
 })

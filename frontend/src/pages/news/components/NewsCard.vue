@@ -1,10 +1,8 @@
 <template>
-  <article
+  <component
+    :is="canOpen ? 'a' : 'article'"
+    :href="canOpen ? url : undefined"
     :class="[style.card, featured ? style.featured : '']"
-    :role="canOpen ? 'link' : undefined"
-    :tabindex="canOpen ? 0 : undefined"
-    @click="openNews"
-    @keydown.enter.prevent="openNews"
   >
     <div
       v-if="image"
@@ -36,21 +34,19 @@
         <PhArrowRight :size="14" />
       </div>
     </div>
-  </article>
+  </component>
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue'
 import { PhArrowRight } from '@phosphor-icons/vue'
 import style from './NewsCard.module.scss'
-import Button from '@/components/UI/buttons/Button/Button.vue'
 
 export default defineComponent({
   name: 'NewsCard',
 
   components: {
     PhArrowRight,
-    Button,
   },
 
   props: {
@@ -122,12 +118,6 @@ export default defineComponent({
       if (!Number.isFinite(lineHeight) || lineHeight <= 0) return
 
       this.descriptionLines = Math.max(1, Math.floor(box.clientHeight / lineHeight))
-    },
-
-    openNews() {
-      if (this.canOpen) {
-        window.location.assign(this.url)
-      }
     },
   },
 })

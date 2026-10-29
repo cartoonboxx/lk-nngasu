@@ -8,7 +8,7 @@
       :class="style.main"
       :type="readonly ? undefined : type"
       :disabled="!readonly && disabled ? true : undefined"
-      @click="handleClick"
+      @click="!readonly && !disabled && $emit('click', $event)"
     >
       <span :class="style.leftPart">
         <span v-if="$slots.icon" :class="style.icon"><slot name="icon" /></span>
@@ -62,11 +62,6 @@ export default defineComponent({
   emits: { click: (event: MouseEvent) => event instanceof MouseEvent },
   data() {
     return { style }
-  },
-  methods: {
-    handleClick(event: MouseEvent) {
-      if (!this.readonly && !this.disabled) this.$emit('click', event)
-    },
   },
 })
 </script>

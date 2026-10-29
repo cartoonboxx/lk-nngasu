@@ -6,7 +6,7 @@
         variant="ghost"
         round
         :size="location === 'header' ? 'lg' : 'md'"
-        @click="opened ? close() : open($event)"
+        @click="opened ? (opened = false) : open($event)"
       >
         <PhCalendar />
       </IconButton>
@@ -21,7 +21,7 @@
       <div ref="calendar" :class="style.content">
         <header :class="style.header">
           <h2>Выбор даты</h2>
-          <IconButton size="sm" variant="ghost" round @click="close()"><PhX /></IconButton>
+          <IconButton size="sm" variant="ghost" round @click="opened = false"><PhX /></IconButton>
         </header>
         <div :class="style.selectionHeader">
           <span>Выберите неделю</span>
@@ -71,8 +71,18 @@
           </tbody>
         </table>
         <div :class="style.actions">
-          <Button variant="primary" fullWidth @click="apply">Применить</Button>
-          <Button variant="secondary" fullWidth @click="close()">Отменить</Button>
+          <Button
+            variant="primary"
+            fullWidth
+            @click="
+              () => {
+                selectWeek(selectedWeek)
+                opened = false
+              }
+            "
+            >Применить</Button
+          >
+          <Button variant="secondary" fullWidth @click="opened = false">Отменить</Button>
         </div>
       </div>
     </Modal>
@@ -89,17 +99,6 @@ import Tooltip from '@/components/UI/Tooltip/Tooltip.vue'
 import Modal from '@/components/UI/modal/BaseModal/Modal.vue'
 import { useSchedule } from '../../useSchedule'
 import style from './SchedulePeriodPicker.module.scss'
-
-function dateKey(date: Date) {
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
-}
-
-function weekStart(date: Date) {
-  const start = new Date(date)
-  start.setHours(0, 0, 0, 0)
-  start.setDate(start.getDate() - ((start.getDay() + 6) % 7))
-  return start
-}
 
 export default defineComponent({
   name: 'SchedulePeriodPicker',
@@ -128,25 +127,26 @@ export default defineComponent({
     },
     calendarWeeks() {
       const first = new Date(this.displayedMonth.getFullYear(), this.displayedMonth.getMonth(), 1)
-      const start = weekStart(first)
+      const start = new Date(first)
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7))
       const last = new Date(first.getFullYear(), first.getMonth() + 1, 0)
       const rowCount = Math.ceil((((first.getDay() + 6) % 7) + last.getDate()) / 7)
       const end = new Date(this.selectedWeek)
       end.setDate(end.getDate() + 6)
-      const today = dateKey(new Date())
+      const today = new Date().toDateString()
       return Array.from({ length: rowCount }, (_, row) =>
         Array.from({ length: 7 }, (_, column) => {
           const date = new Date(start)
           date.setDate(date.getDate() + row * 7 + column)
-          const key = dateKey(date)
+          const key = date.toDateString()
           return {
             date,
             key,
             inMonth: date.getMonth() === this.displayedMonth.getMonth(),
             today: key === today,
             selected: date >= this.selectedWeek && date <= end,
-            rangeStart: key === dateKey(this.selectedWeek),
-            rangeEnd: key === dateKey(end),
+            rangeStart: key === this.selectedWeek.toDateString(),
+            rangeEnd: key === end.toDateString(),
           }
         }),
       )
@@ -164,13 +164,10 @@ export default defineComponent({
         event.detail === 0 || window.matchMedia('(hover: hover) and (pointer: fine)').matches
       this.selectedWeek = new Date(this.activeWeek)
       this.displayedMonth = new Date(this.activeWeek.getFullYear(), this.activeWeek.getMonth(), 1)
-      this.focusedDate = dateKey(this.selectedWeek)
+      this.focusedDate = this.selectedWeek.toDateString()
       this.opened = true
       await this.$nextTick()
       if (focusDate) this.focusDay()
-    },
-    close() {
-      this.opened = false
     },
     restoreTrigger() {
       const trigger = Array.from(
@@ -182,20 +179,19 @@ export default defineComponent({
       const date = new Date(this.displayedMonth)
       date.setMonth(date.getMonth() + direction, 1)
       this.displayedMonth = date
-      this.focusedDate = dateKey(date)
+      this.focusedDate = date.toDateString()
     },
     selectDate(date: Date) {
-      this.selectedWeek = weekStart(date)
-      this.focusedDate = dateKey(date)
+      const start = new Date(date)
+      start.setHours(0, 0, 0, 0)
+      start.setDate(start.getDate() - ((start.getDay() + 6) % 7))
+      this.selectedWeek = start
+      this.focusedDate = date.toDateString()
     },
     selectToday() {
       const today = new Date()
       this.selectDate(today)
       this.displayedMonth = new Date(today.getFullYear(), today.getMonth(), 1)
-    },
-    apply() {
-      this.selectWeek(this.selectedWeek)
-      this.close()
     },
     focusDay() {
       const index = this.calendarWeeks.flat().findIndex((day) => day.key === this.focusedDate)
@@ -239,7 +235,7 @@ export default defineComponent({
           return
       }
       event.preventDefault()
-      this.focusedDate = dateKey(date)
+      this.focusedDate = date.toDateString()
       this.displayedMonth = new Date(date.getFullYear(), date.getMonth(), 1)
       await this.$nextTick()
       this.focusDay()

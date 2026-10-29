@@ -34,7 +34,7 @@
     :disabled="disabled"
     @input="handleInput"
     @change="handleInput"
-    @animationstart="handleAutofill"
+    @animationstart="syncValue"
     @focus="syncValue"
   />
 </template>
@@ -130,9 +130,6 @@ export default defineComponent({
       if (field && field.value !== this.modelValue) {
         this.$emit('update:modelValue', field.value)
       }
-    },
-    handleAutofill() {
-      this.syncValue()
     },
     handleInput(event: Event) {
       const value = (event.target as InputElement).value

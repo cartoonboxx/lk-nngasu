@@ -59,12 +59,12 @@
                 <span :class="[style.chatName, chat.unread && style.unreadName]">
                   {{ chat.name }}
                 </span>
-                <time v-if="lastMessage(chat)" :class="style.chatTime">
-                  {{ listTime(lastMessage(chat)!.sentAt) }}
+                <time v-if="chat.lastMessage" :class="style.chatTime">
+                  {{ chat.time }}
                 </time>
               </span>
               <span :class="style.chatLine">
-                <span :class="style.preview">{{ preview(chat) }}</span>
+                <span :class="style.preview">{{ chat.preview }}</span>
                 <Badge v-if="chat.unread" :value="chat.unread" inline />
               </span>
             </span>
@@ -94,7 +94,7 @@ import StyleTab from '@/components/UI/tabs/StyleTab/StyleTab.vue'
 import Badge from '@/components/UI/Badge/Badge.vue'
 import ChatAvatar from '../ChatAvatar/ChatAvatar.vue'
 import type { Chat } from '../../messages.types'
-import { lastMessage, messageTime, dayLabel } from '../../messages.format'
+import { messageTimeFormatter, dayLabel } from '../../messages.format'
 export default defineComponent({
   name: 'ChatSidebar',
   components: {
@@ -116,32 +116,35 @@ export default defineComponent({
     unreadChats(): number {
       return this.chats.filter((chat) => chat.unread > 0).length
     },
-    filteredChats(): Chat[] {
+    filteredChats() {
+      const query = this.search.trim().toLocaleLowerCase('ru')
+      const today = new Date().toDateString()
       return this.chats
         .filter(
           (chat) =>
             (!this.unreadOnly || chat.unread > 0) &&
-            chat.name.toLocaleLowerCase('ru').includes(this.search.trim().toLocaleLowerCase('ru')),
+            chat.name.toLocaleLowerCase('ru').includes(query),
         )
-        .sort((a, b) => this.chatTimestamp(b) - this.chatTimestamp(a))
+        .map((chat) => {
+          const message = chat.messages[chat.messages.length - 1]
+          return {
+            ...chat,
+            lastMessage: message,
+            timestamp: message ? Date.parse(message.sentAt) : Number.MAX_SAFE_INTEGER,
+            preview: message
+              ? `${message.own ? 'Вы: ' : chat.group ? `${message.sender.split(' ')[0]}: ` : ''}${message.text}`
+              : 'Начните разговор',
+            time: !message
+              ? ''
+              : new Date(message.sentAt).toDateString() === today
+                ? messageTimeFormatter.format(new Date(message.sentAt))
+                : dayLabel(message.sentAt),
+          }
+        })
+        .sort((a, b) => b.timestamp - a.timestamp)
     },
   },
   methods: {
-    lastMessage,
-    chatTimestamp(chat: Chat): number {
-      const message = lastMessage(chat)
-      return message ? Date.parse(message.sentAt) : Number.MAX_SAFE_INTEGER
-    },
-    preview(chat: Chat): string {
-      const message = lastMessage(chat)
-      if (!message) return 'Начните разговор'
-      return `${message.own ? 'Вы: ' : chat.group ? `${message.sender.split(' ')[0]}: ` : ''}${message.text}`
-    },
-    listTime(date: string): string {
-      return new Date(date).toDateString() === new Date().toDateString()
-        ? messageTime(date)
-        : dayLabel(date)
-    },
     restoreFocus(id: string) {
       const list = this.$refs.chatList as HTMLElement | undefined
       const target = [...(list?.querySelectorAll<HTMLElement>('[data-chat-id]') ?? [])].find(

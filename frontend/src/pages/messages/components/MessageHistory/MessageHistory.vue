@@ -16,7 +16,7 @@
         <p>{{ message.text }}</p>
         <div :class="style.messageMeta">
           <time :datetime="message.sentAt">
-            {{ messageTime(message.sentAt) }}
+            {{ messageTimeFormatter.format(new Date(message.sentAt)) }}
           </time>
           <PhCheck v-if="message.own && isSaved(chat.id, message)" :size="14" title="Сохранено" />
           <Button v-else-if="message.own" variant="ghost" size="sm" @click="$emit('retry')"
@@ -34,7 +34,7 @@ import style from './MessageHistory.module.scss'
 import { PhChatCircleText, PhCheck } from '@phosphor-icons/vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
 import type { Chat, MessageSavedChecker } from '../../messages.types'
-import { messageTime, dayLabel } from '../../messages.format'
+import { messageTimeFormatter, dayLabel } from '../../messages.format'
 export default defineComponent({
   name: 'MessageHistory',
   components: { PhChatCircleText, PhCheck, Button },
@@ -49,6 +49,7 @@ export default defineComponent({
   data() {
     return {
       style,
+      messageTimeFormatter,
       followingLatest: true,
       historyHeight: 0,
       historyWidth: 0,
@@ -76,7 +77,6 @@ export default defineComponent({
     },
   },
   methods: {
-    messageTime,
     dayLabel,
     onScroll() {
       const history = this.$refs.history as HTMLElement

@@ -15,7 +15,7 @@
       type="checkbox"
       :checked="modelValue"
       :disabled="disabled || state === 'disabled'"
-      @change="handleChange"
+      @change="$emit('update:modelValue', ($event.target as HTMLInputElement).checked)"
     />
     <span :class="style.control" />
     <span v-if="label" :class="style.label">{{ label }}</span>
@@ -66,11 +66,6 @@ export default defineComponent({
     return {
       style,
     }
-  },
-  methods: {
-    handleChange(event: Event) {
-      this.$emit('update:modelValue', (event.target as HTMLInputElement).checked)
-    },
   },
 })
 </script>
