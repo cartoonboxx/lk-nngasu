@@ -126,7 +126,10 @@ test('mobile conversation fits the screen and returns to the chat list', async (
   await page.setViewportSize({ width: 390, height: 844 })
   await page.goto('/messages')
   const list = page.getByRole('list')
+  const navigation = page.locator('nav').last()
+  await expect(navigation).toBeVisible()
   await list.getByRole('button', { name: /Группа ИТ-202/ }).click()
+  await expect(navigation).toBeHidden()
   await expect(list).toBeHidden()
   const field = page.getByPlaceholder('Напишите сообщение…')
   await expect(field).toBeVisible()
@@ -139,11 +142,18 @@ test('mobile conversation fits the screen and returns to the chat list', async (
   const log = page.getByRole('log')
   await expect.poll(() => log.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true)
   const bounds = await field.boundingBox()
-  expect(bounds!.y + bounds!.height).toBeLessThan(772)
+  expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(844)
+  await expect
+    .poll(async () => {
+      const conversation = (await page.locator('section[class*=page]').boundingBox())!
+      return conversation.y + conversation.height
+    })
+    .toBe(844)
   await page.setViewportSize({ width: 320, height: 568 })
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   await page.getByRole('button', { name: 'Назад к чатам' }).click()
   await expect(list).toBeVisible()
+  await expect(navigation).toBeVisible()
   await expect(page.getByRole('log')).toHaveCount(0)
 })
 
@@ -362,6 +372,8 @@ test.describe('touch messages', () => {
     await expect(field).toBeFocused()
     await expect(page.getByRole('log')).toContainText('Длинное сообщение с телефона')
     await page.evaluate(() => window.dispatchEvent(new Event('test-keyboard-close')))
+    await expect(page.locator('nav').last()).toBeHidden()
+    await page.getByRole('button', { name: 'Назад к чатам' }).tap()
     await expect(page.locator('nav').last()).toBeVisible()
   })
 
@@ -375,8 +387,7 @@ test.describe('touch messages', () => {
     await expect
       .poll(async () => {
         const button = (await send.boundingBox())!
-        const navigation = (await page.locator('nav').last().boundingBox())!
-        return button.y + button.height <= navigation.y
+        return button.y + button.height <= 300
       })
       .toBe(true)
     await send.tap()

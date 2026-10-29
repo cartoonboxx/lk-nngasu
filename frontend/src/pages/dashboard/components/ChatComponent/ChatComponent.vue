@@ -2,13 +2,13 @@
   <section :class="style.chatBlock">
     <header :class="style.header">
       <h2 id="dashboard-chat-title" :class="style.heading">Чаты</h2>
-      <AppLink v-press :class="style.allLink" to="/messages">
+      <RouterLink v-press :class="style.allLink" to="/messages">
         Все <PhArrowUpRight :size="15" />
-      </AppLink>
+      </RouterLink>
     </header>
     <ul v-if="chats.length" :class="style.list">
       <li v-for="chat in chats" :key="chat.id">
-        <AppLink
+        <RouterLink
           v-press
           :class="[style.chatItem, chat.unread && style.hasUnread]"
           :to="{ path: '/messages', query: { chat: chat.id } }"
@@ -32,7 +32,7 @@
               </span>
             </span>
           </span>
-        </AppLink>
+        </RouterLink>
       </li>
     </ul>
     <div v-else :class="style.empty">
@@ -41,24 +41,28 @@
       <span>Напишите одногруппнику или куратору</span>
     </div>
     <footer :class="style.footer">
-      <AppLink v-press :class="style.compose" :to="{ path: '/messages', query: { compose: '1' } }">
+      <RouterLink
+        v-press
+        :class="style.compose"
+        :to="{ path: '/messages', query: { compose: '1' } }"
+      >
         <PhNotePencil :size="18" />
         Написать сообщение
-      </AppLink>
+      </RouterLink>
     </footer>
   </section>
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue'
-import AppLink from '@/components/navigation/AppLink/AppLink.vue'
+import { RouterLink } from 'vue-router'
 import { PhChatsCircle, PhNotePencil, PhArrowUpRight, PhUsersThree } from '@phosphor-icons/vue'
 import { pressFeedback } from '@/directives/pressFeedback'
 import style from './ChatComponent.module.scss'
 
 export default defineComponent({
   name: 'ChatComponent',
-  components: { AppLink, PhChatsCircle, PhNotePencil, PhArrowUpRight, PhUsersThree },
+  components: { RouterLink, PhChatsCircle, PhNotePencil, PhArrowUpRight, PhUsersThree },
   directives: { press: pressFeedback },
   data() {
     return {

@@ -12,9 +12,11 @@
   text-align: left;
   cursor: pointer;
 
-  &:hover {
-    border-color: var(--color-border-level-1);
-    background: var(--color-surface-navigation-hover);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      border-color: var(--color-border-level-1);
+      background: var(--color-surface-navigation-hover);
+    }
   }
 
   &:focus-visible {
@@ -83,9 +85,11 @@
     height: 40px;
   }
 
-  &:hover {
-    border-color: transparent;
-    background: var(--color-surface-navigation-hover);
+  @media (hover: hover) and (pointer: fine) {
+    &:hover {
+      border-color: transparent;
+      background: var(--color-surface-navigation-hover);
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {

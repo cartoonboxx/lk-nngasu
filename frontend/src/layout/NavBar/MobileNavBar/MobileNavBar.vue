@@ -1,5 +1,10 @@
 <template>
-  <nav :class="style.bottomNavigation" :inert="mobileOpen">
+  <nav
+    :class="[style.bottomNavigation, conversationOpen ? style.hidden : null]"
+    :inert="mobileOpen"
+    @pointerdown="trackPointer"
+    @keydown="returnFocusOnClose = true"
+  >
     <NavigationItem
       v-for="tab in mobileTabs"
       :key="tab.route"
@@ -24,6 +29,8 @@
     v-if="isMobile"
     v-model="mobileOpen"
     :style="{ '--modal-content-padding': '0px' }"
+    @pointerdown="trackPointer"
+    @keydown="returnFocusOnClose = true"
     @close="restoreMenuFocus"
   >
     <section :class="style.moreSheet">
@@ -99,14 +106,6 @@ export default defineComponent({
       this.$emit('mobile-menu-change', false)
     }
   },
-  watch: {
-    mobileOpen(value: boolean) {
-      this.$emit('mobile-menu-change', value)
-    },
-    '$route.fullPath'() {
-      this.closeMobileMenu()
-    },
-  },
   methods: {
     syncViewport() {
       this.isMobile = this.mediaQuery?.matches ?? false
@@ -114,17 +113,23 @@ export default defineComponent({
     },
     openMobileMenu() {
       if (!this.isMobile || this.mobileOpen) return
-      this.returnFocusOnClose = true
       this.mobileOpen = true
     },
-    closeMobileMenu(restoreFocus = true) {
+    trackPointer(event: PointerEvent) {
+      this.returnFocusOnClose = event.pointerType === 'mouse'
+    },
+    closeMobileMenu(restoreFocus?: boolean) {
       if (!this.mobileOpen) return
-      this.returnFocusOnClose = restoreFocus
+      this.returnFocusOnClose = restoreFocus ?? this.returnFocusOnClose
       this.mobileOpen = false
     },
     restoreMenuFocus() {
       if (this.isMobile && this.returnFocusOnClose) {
         ;(this.$refs.menuButton as InstanceType<typeof NavigationItem>)?.focus()
+      } else {
+        // Native dialog closing can also restore focus to the touch trigger.
+        const menu = (this.$refs.menuButton as InstanceType<typeof NavigationItem>)?.$el
+        if (menu === document.activeElement) menu.blur()
       }
     },
     navigate(routeName: string) {
@@ -140,6 +145,12 @@ export default defineComponent({
     },
   },
   computed: {
+    conversationOpen(): boolean {
+      return (
+        this.$route.name === 'messages' &&
+        this.$messageStore.chats.some((chat) => chat.id === this.$route.query.chat)
+      )
+    },
     unreadMessages(): number {
       return this.$messageStore.unreadMessages
     },
@@ -189,6 +200,17 @@ export default defineComponent({
     },
     isSubjectsActive() {
       return this.$route.name === 'subjects' || this.$route.name === 'course'
+    },
+  },
+  watch: {
+    mobileOpen(value: boolean) {
+      this.$emit('mobile-menu-change', value)
+    },
+    '$route.fullPath'() {
+      this.closeMobileMenu()
+    },
+    '$route.name'() {
+      window.scroll({ top: 0, left: 0 })
     },
   },
 })

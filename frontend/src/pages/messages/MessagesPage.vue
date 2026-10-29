@@ -55,7 +55,7 @@ export default defineComponent({
       return {
         '--messages-viewport-height': this.viewportHeight ? `${this.viewportHeight}px` : undefined,
         '--messages-viewport-top': `${this.viewportTop}px`,
-        '--messages-navigation-space': this.keyboardOpen ? '0px' : undefined,
+        '--messages-navigation-space': this.keyboardOpen || this.selectedChat ? '0px' : undefined,
       } as CSSProperties
     },
     selectedChat(): Chat | undefined {
