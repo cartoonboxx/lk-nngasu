@@ -44,32 +44,34 @@
     </div>
     <ul v-if="filteredChats.length" ref="chatList" :class="style.chatList">
       <li v-for="chat in filteredChats" :key="chat.id">
-        <StyleTab
-          :class="style.chatRow"
-          :active="selectedId === chat.id"
-          :trigger-attrs="{
-            'data-chat-id': chat.id,
-          }"
-          @select="$emit('select', chat.id)"
-        >
-          <span :class="style.chatContent">
-            <ChatAvatar :initials="chat.initials" :group="chat.group" />
-            <span :class="style.chatCopy">
-              <span :class="style.chatLine">
-                <span :class="[style.chatName, chat.unread && style.unreadName]">
-                  {{ chat.name }}
+        <div :class="style.chatWrapper">
+          <StyleTab
+            :class="style.chatRow"
+            :active="selectedId === chat.id"
+            :trigger-attrs="{
+              'data-chat-id': chat.id,
+            }"
+            @select="$emit('select', chat.id)"
+          >
+            <span :class="style.chatContent">
+              <ChatAvatar :initials="chat.initials" :group="chat.group" />
+              <span :class="style.chatCopy">
+                <span :class="style.chatLine">
+                  <span :class="[style.chatName, chat.unread && style.unreadName]">
+                    {{ chat.name }}
+                  </span>
+                  <time v-if="chat.lastMessage" :class="style.chatTime">
+                    {{ chat.time }}
+                  </time>
                 </span>
-                <time v-if="chat.lastMessage" :class="style.chatTime">
-                  {{ chat.time }}
-                </time>
-              </span>
-              <span :class="style.chatLine">
-                <span :class="style.preview">{{ chat.preview }}</span>
-                <Badge v-if="chat.unread" :value="chat.unread" inline />
+                <span :class="style.chatLine">
+                  <span :class="style.preview">{{ chat.preview }}</span>
+                  <Badge v-if="chat.unread" :value="chat.unread" inline />
+                </span>
               </span>
             </span>
-          </span>
-        </StyleTab>
+          </StyleTab>
+        </div>
       </li>
     </ul>
     <div v-else :class="style.listEmpty">

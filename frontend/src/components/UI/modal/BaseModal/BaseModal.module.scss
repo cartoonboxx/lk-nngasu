@@ -47,7 +47,7 @@
   border: 1px solid var(--color-border-level-1);
   border-radius: var(--radius-sheet);
   background: var(--color-surface-navigation);
-  box-shadow: 0 24px 64px var(--color-surface-overlay);
+  box-shadow: var(--shadow-modal);
   opacity: 0;
   transform: scale(0.97);
   transition:

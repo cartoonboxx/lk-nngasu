@@ -1,6 +1,7 @@
 .results {
   border: 1px solid var(--color-border-level-1);
-  border-radius: var(--radius-lg);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-panel);
   background: var(--color-surface-panel);
   overflow: hidden;
 }

@@ -3,7 +3,8 @@
 .tableScroll {
   overflow-x: auto;
   border: 1px solid var(--color-border-level-1);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-panel);
   background: var(--color-surface-navigation);
   scrollbar-color: var(--color-border-level-2) transparent;
   scrollbar-width: thin;

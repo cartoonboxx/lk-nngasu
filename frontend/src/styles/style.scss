@@ -22,12 +22,18 @@
 
   // radius
   --radius-none: 0;
-  --radius-xs: 4px;
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-sheet: 16px;
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-sheet: 28px;
   --radius-round: 9999px;
+
+  // shadows
+  --shadow-panel: 0 8px 28px #0000001a;
+  --shadow-floating: 0 14px 40px #00000033, 0 2px 8px #0000001a;
+  --shadow-modal: 0 24px 72px #00000047;
 
   // colors surface
   --color-surface-level-0: #06111b;
@@ -228,7 +234,8 @@ body {
 }
 
 h1 {
-  font-weight: 700;
+  font-weight: 650;
+  letter-spacing: -0.025em;
 }
 
 h2,

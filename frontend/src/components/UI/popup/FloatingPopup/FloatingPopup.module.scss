@@ -28,7 +28,7 @@
     border: 1px solid var(--color-border-level-1);
     border-radius: var(--radius-lg);
     background: var(--color-surface-panel);
-    box-shadow: 0 12px 32px var(--color-surface-overlay);
+    box-shadow: var(--shadow-floating);
   }
   .list {
     display: grid;

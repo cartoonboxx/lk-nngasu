@@ -12,9 +12,8 @@
   color: var(--color-text-secondary);
   font-size: 12px;
   font-weight: 500;
-}
-@media (max-width: breakpoints.$screen-phone-max) {
-  .avatar {
+
+  @media (max-width: breakpoints.$screen-phone-max) {
     width: 48px;
     height: 48px;
     font-size: var(--font-size-caption);
@@ -24,15 +23,13 @@
       height: 24px;
     }
   }
-}
-@media (max-width: breakpoints.$screen-phone-regular-max) {
-  .avatar {
+
+  @media (max-width: breakpoints.$screen-phone-regular-max) {
     width: 44px;
     height: 44px;
   }
-}
-@media (max-width: breakpoints.$screen-phone-compact-max) {
-  .avatar {
+
+  @media (max-width: breakpoints.$screen-phone-compact-max) {
     width: 40px;
     height: 40px;
   }

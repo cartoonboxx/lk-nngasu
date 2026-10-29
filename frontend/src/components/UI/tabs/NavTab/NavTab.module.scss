@@ -23,29 +23,33 @@
 
     &::before {
       position: absolute;
-      top: 0;
-      bottom: 0;
-      left: 0;
+      top: var(--space-3);
+      bottom: var(--space-3);
+      left: var(--space-1);
       width: 3px;
-      border-radius: 0 var(--radius-round) var(--radius-round) 0;
+      border-radius: var(--radius-round);
       background: var(--color-accent-default);
       content: '';
     }
   }
-}
 
-.tab.compact {
-  --tab-padding: 0;
-  --tab-trigger-gap: 0;
-  --tab-trigger-justify: center;
-  --tab-text-display: none;
-  width: var(--control-height-md);
-  height: var(--control-height-md);
-  flex-shrink: 0;
-  align-self: center;
-}
+  &.compact {
+    --tab-padding: 0;
+    --tab-trigger-gap: 0;
+    --tab-trigger-justify: center;
+    --tab-text-display: none;
+    width: var(--control-height-md);
+    height: var(--control-height-md);
+    flex-shrink: 0;
+    align-self: center;
 
-.tab:has(> button:is(:active, [data-pressed='true']):not(:disabled)) {
-  background: var(--color-surface-navigation-selected);
-  color: var(--color-content-accent);
+    &::before {
+      display: none;
+    }
+  }
+
+  &:has(> button:is(:active, [data-pressed='true']):not(:disabled)) {
+    background: var(--color-surface-navigation-selected);
+    color: var(--color-content-accent);
+  }
 }

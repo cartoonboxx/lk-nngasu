@@ -79,13 +79,13 @@
   &.md {
     min-height: var(--control-height-md);
     --checkbox-size: 20px;
-    --checkbox-radius: var(--radius-sm);
+    --checkbox-radius: var(--radius-xs);
   }
 
   &.lg {
     min-height: var(--control-height-lg);
     --checkbox-size: 24px;
-    --checkbox-radius: var(--radius-sm);
+    --checkbox-radius: var(--radius-xs);
   }
 
   @media (hover: hover) and (pointer: fine) {

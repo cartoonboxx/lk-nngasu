@@ -12,135 +12,151 @@
   overscroll-behavior: contain;
   scrollbar-width: thin;
   scrollbar-color: var(--color-border-level-1) transparent;
-}
-.dateDivider {
-  display: flex;
-  justify-content: center;
-  flex-shrink: 0;
-  padding: var(--space-2) 0;
-  color: var(--color-text-muted);
-  font-size: 11px;
-}
-.message {
-  flex-shrink: 0;
-  align-self: flex-start;
-  width: fit-content;
-  max-width: 82%;
-  padding: 10px 14px var(--space-2);
-  border: 1px solid var(--color-border-level-1);
-  border-radius: 14px 14px 14px 4px;
-  background: var(--color-surface-raised);
 
-  p {
-    color: var(--color-text-primary);
-    font-size: 13px;
-    line-height: 1.65;
-    overflow-wrap: anywhere;
-    white-space: pre-wrap;
-  }
-}
-.ownMessage {
-  align-self: flex-end;
-  border-color: transparent;
-  border-radius: 14px 14px 4px 14px;
-  background: var(--color-status-info-surface);
-}
-.sender {
-  display: block;
-  margin-bottom: var(--space-1);
-  color: var(--color-content-interactive);
-  font-size: 11px;
-  font-weight: 500;
-}
-.messageMeta {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-1);
-  margin-top: var(--space-1);
-  color: var(--color-text-muted);
-  font-size: 10px;
-  font-variant-numeric: tabular-nums;
-}
-.ownMessage .messageMeta {
-  color: var(--color-text-secondary);
-}
-.startConversation {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-direction: column;
-  gap: var(--space-3);
-  min-width: 0;
-  padding: var(--space-6);
-  color: var(--color-text-muted);
-  text-align: center;
+  .dateDivider {
+    display: flex;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: var(--space-2) 0;
+    color: var(--color-text-muted);
+    font-size: 11px;
 
-  h2 {
-    margin-top: var(--space-2);
-    font-size: 18px;
-    font-weight: 500;
-  }
-  p {
-    font-size: 13px;
-    line-height: 1.7;
-  }
-  button {
-    margin-top: var(--space-3);
-    gap: var(--space-2);
-  }
-}
-.startConversation {
-  flex: 1;
-  span {
-    font-size: 12px;
-  }
-}
-@container (max-width: 820px) {
-  .history {
-    padding-inline: var(--space-4);
-  }
-  .message {
-    max-width: 92%;
-  }
-}
-@container (max-width: 620px) {
-  .history {
-    padding: var(--space-3);
-  }
-  .message {
-    max-width: 90%;
-  }
-}
-@media (max-width: breakpoints.$screen-phone-max) {
-  .history {
-    padding: var(--messages-inset);
-  }
-  .history {
-    gap: var(--space-4);
-  }
-  .message {
-    padding: var(--space-3) 14px var(--space-2);
-
-    p {
-      font-size: var(--font-size-body-small);
-      line-height: 1.55;
+    @media (max-width: breakpoints.$screen-phone-max) {
+      font-size: max(11px, calc(var(--font-size-caption) - 2px));
     }
   }
-  .sender {
-    font-size: max(12px, calc(var(--font-size-caption) - 1px));
+
+  .message {
+    flex-shrink: 0;
+    align-self: flex-start;
+    width: fit-content;
+    max-width: 82%;
+    padding: 10px 14px var(--space-2);
+    border: 1px solid var(--color-border-level-1);
+    border-radius: var(--radius-lg) var(--radius-lg) var(--radius-lg) var(--radius-xs);
+    background: var(--color-surface-raised);
+
+    p {
+      color: var(--color-text-primary);
+      font-size: 13px;
+      line-height: 1.65;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    &.ownMessage {
+      align-self: flex-end;
+      border-color: transparent;
+      border-radius: var(--radius-lg) var(--radius-lg) var(--radius-xs) var(--radius-lg);
+      background: var(--color-status-info-surface);
+
+      .messageMeta {
+        color: var(--color-text-secondary);
+      }
+    }
+
+    .sender {
+      display: block;
+      margin-bottom: var(--space-1);
+      color: var(--color-content-interactive);
+      font-size: 11px;
+      font-weight: 500;
+
+      @media (max-width: breakpoints.$screen-phone-max) {
+        font-size: max(12px, calc(var(--font-size-caption) - 1px));
+      }
+    }
+
+    .messageMeta {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: var(--space-1);
+      margin-top: var(--space-1);
+      color: var(--color-text-muted);
+      font-size: 10px;
+      font-variant-numeric: tabular-nums;
+
+      button {
+        min-width: 0;
+      }
+
+      @media (max-width: breakpoints.$screen-phone-max) {
+        font-size: max(11px, calc(var(--font-size-caption) - 2px));
+      }
+    }
+
+    @container (max-width: 820px) {
+      max-width: 92%;
+    }
+
+    @container (max-width: 620px) {
+      max-width: 90%;
+    }
+
+    @media (max-width: breakpoints.$screen-phone-max) {
+      padding: var(--space-3) 14px var(--space-2);
+
+      p {
+        font-size: var(--font-size-body-small);
+        line-height: 1.55;
+      }
+    }
   }
-  .messageMeta,
-  .dateDivider {
-    font-size: max(11px, calc(var(--font-size-caption) - 2px));
+
+  .startConversation {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: var(--space-3);
+    min-width: 0;
+    padding: var(--space-6);
+    color: var(--color-text-muted);
+    text-align: center;
+    flex: 1;
+
+    h2 {
+      margin-top: var(--space-2);
+      font-size: 18px;
+      font-weight: 500;
+    }
+
+    p {
+      font-size: 13px;
+      line-height: 1.7;
+    }
+
+    button {
+      margin-top: var(--space-3);
+      gap: var(--space-2);
+    }
+
+    span {
+      font-size: 12px;
+    }
+
+    @media (max-width: breakpoints.$screen-phone-max) {
+      p {
+        font-size: var(--font-size-body-small);
+      }
+
+      span {
+        font-size: var(--font-size-caption);
+      }
+    }
   }
-  .startConversation p {
-    font-size: var(--font-size-body-small);
+
+  @container (max-width: 820px) {
+    padding-inline: var(--space-4);
   }
-  .startConversation span {
-    font-size: var(--font-size-caption);
+
+  @container (max-width: 620px) {
+    padding: var(--space-3);
   }
-}
-.messageMeta button {
-  min-width: 0;
+
+  @media (max-width: breakpoints.$screen-phone-max) {
+    padding: var(--messages-inset);
+    gap: var(--space-4);
+  }
 }

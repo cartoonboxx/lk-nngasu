@@ -14,22 +14,25 @@
     font-size: 18px;
     font-weight: 500;
   }
+
   p {
     font-size: 13px;
     line-height: 1.7;
   }
+
   button {
     margin-top: var(--space-3);
     gap: var(--space-2);
   }
-}
-.welcomeIcon {
-  display: grid;
-  place-items: center;
-  width: 80px;
-  height: 80px;
-  border: 1px solid var(--color-border-level-1);
-  border-radius: 28px;
-  background: var(--color-surface-raised);
-  color: var(--color-text-secondary);
+
+  .welcomeIcon {
+    display: grid;
+    place-items: center;
+    width: 80px;
+    height: 80px;
+    border: 1px solid var(--color-border-level-1);
+    border-radius: var(--radius-sheet);
+    background: var(--color-surface-raised);
+    color: var(--color-text-secondary);
+  }
 }

@@ -3,21 +3,24 @@
 .courses {
   min-width: 0;
   border: 1px solid var(--color-border-level-1);
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-panel);
   background: linear-gradient(135deg, var(--color-surface-level-2), var(--color-surface-level-1));
   overflow: hidden;
 
   .topicList {
     display: flex;
     flex-direction: column;
+    gap: var(--space-1);
+    padding: var(--space-2);
   }
 
   .topic {
     --tab-padding: var(--space-4) var(--space-5);
-    border-radius: 0;
+    border-radius: var(--radius-lg);
 
     & + .topic {
-      border-top-color: var(--color-border-level-1);
+      border-top-color: transparent;
     }
 
     .topicCopy {
