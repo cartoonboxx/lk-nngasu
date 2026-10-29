@@ -2,13 +2,13 @@
   <section :class="style.newsBlock">
     <header :class="style.header">
       <h2 id="dashboard-news-title" :class="style.heading"><PhNewspaper :size="22" />Новости</h2>
-      <AppLink v-press :class="style.allLink" to="/news">
+      <RouterLink v-press :class="style.allLink" to="/news">
         Все новости <PhArrowRight :size="14" />
-      </AppLink>
+      </RouterLink>
     </header>
     <ul :class="style.list">
       <li v-for="item in news" :key="item.id">
-        <AppLink v-press :class="style.newsItem" :to="`/news/${item.id}`">
+        <RouterLink v-press :class="style.newsItem" :to="`/news/${item.id}`">
           <img :class="style.image" :src="item.image" alt="" loading="lazy" />
           <div :class="style.copy">
             <div :class="style.meta">
@@ -18,7 +18,7 @@
             <p :class="style.description">{{ item.description }}</p>
             <span :class="style.readMore"> Читать новость <PhArrowRight :size="16" /> </span>
           </div>
-        </AppLink>
+        </RouterLink>
       </li>
     </ul>
   </section>
@@ -26,7 +26,7 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue'
-import AppLink from '@/components/navigation/AppLink/AppLink.vue'
+import { RouterLink } from 'vue-router'
 import { PhNewspaper, PhArrowRight } from '@phosphor-icons/vue'
 import { pressFeedback } from '@/directives/pressFeedback'
 import campus from '$images/photoNews/Nngasu.png'
@@ -36,7 +36,7 @@ import style from './NewsComponent.module.scss'
 
 export default defineComponent({
   name: 'NewsComponent',
-  components: { AppLink, PhNewspaper, PhArrowRight },
+  components: { RouterLink, PhNewspaper, PhArrowRight },
   directives: { press: pressFeedback },
   data() {
     return {

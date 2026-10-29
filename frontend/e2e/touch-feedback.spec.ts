@@ -151,3 +151,62 @@ test('touch press releases on lift, cancellation and scrolling and respects redu
   await session.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
   await context.close()
 })
+
+test('touch menu dismissal and repeated profile taps leave no highlight', async ({
+  browser,
+  browserName,
+}) => {
+  // eslint-disable-next-line playwright/no-skipped-test -- Firefox has no touch context support.
+  test.skip(browserName === 'firefox', 'Touch emulation requires Chromium or WebKit')
+  const context = await browser.newContext({
+    viewport: { width: 375, height: 812 },
+    hasTouch: true,
+    isMobile: true,
+  })
+  const page = await context.newPage()
+  await page.goto('/dashboard')
+  const menu = page.locator('nav').last().getByRole('button', { name: 'Ещё', exact: true })
+  const dialog = page.getByRole('dialog')
+  await menu.tap()
+  await expect(dialog.locator(':scope > div')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)')
+  await dialog.locator('button').first().tap()
+  await expect(dialog).toBeHidden()
+  await expect(menu).not.toBeFocused()
+  await expect(menu).toHaveCSS('outline-style', 'none')
+  await expect(menu).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  await expect(menu).not.toHaveClass(/active/)
+
+  await menu.tap()
+  await expect(dialog.locator(':scope > div')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)')
+  await page.touchscreen.tap(365, 40)
+  await expect(dialog).toBeHidden()
+  await expect(menu).not.toBeFocused()
+
+  await menu.tap()
+  await expect(dialog.locator(':scope > div')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)')
+  await page.keyboard.press('Escape')
+  await expect(dialog).toBeHidden()
+  await expect(menu).toBeFocused()
+
+  await page.goto('/settings')
+  for (let attempt = 0; attempt < 2; attempt++) {
+    await menu.tap()
+    await expect(dialog.locator(':scope > div')).toHaveCSS('transform', 'matrix(1, 0, 0, 1, 0, 0)')
+    await dialog.getByRole('button', { name: /Анна Иванова/ }).tap()
+    await expect(dialog).toBeHidden()
+    await expect(menu).not.toBeFocused()
+    await expect(menu).toHaveCSS('outline-style', 'none')
+  }
+
+  await page.setViewportSize({ width: 1024, height: 812 })
+  const profile = page
+    .locator('nav')
+    .first()
+    .getByRole('button', { name: /Анна Иванова/ })
+  const background = await profile.evaluate((element) => getComputedStyle(element).backgroundColor)
+  await profile.tap()
+  await profile.tap()
+  await expect(profile).toHaveCSS('background-color', background)
+  await expect(profile).toHaveCSS('outline-style', 'none')
+  await context.close()
+})
