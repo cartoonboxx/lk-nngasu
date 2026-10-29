@@ -24,9 +24,6 @@
 .settingsSection {
   padding: var(--space-4);
   border-bottom: 1px solid var(--color-border-level-2);
-  h2 {
-    margin-bottom: var(--space-5);
-  }
 }
 
 .settingsSectionRow {
@@ -35,11 +32,6 @@
   justify-content: space-between;
   padding: var(--space-5);
   border-bottom: 1px solid var(--color-border-level-2);
-
-  h2 {
-    margin: var(--space-0);
-  }
-
   p {
     color: var(--color-status-neutral-content);
     font-size: var(--font-size-body-small);
@@ -96,30 +88,7 @@
   min-width: 0;
 }
 
-.passwordField {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-2);
 
-  input {
-    width: 100%;
-    min-width: 0;
-    min-height: 44px;
-    box-sizing: border-box;
-    padding: var(--space-3);
-
-    border: 1px solid var(--color-border-level-1);
-    border-radius: var(--radius-md);
-    background: var(--color-surface-level-2);
-    color: var(--color-text-primary);
-    font: inherit;
-
-    &:focus-visible {
-      outline: 2px solid var(--color-accent, #ff7a00);
-      outline-offset: 2px;
-    }
-  }
-}
 
 .passwordError {
   margin: 0;
