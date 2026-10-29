@@ -41,6 +41,7 @@
   }
 }
 
+.bottomNavigation.hidden,
 :global(body[data-message-keyboard='true']) .bottomNavigation {
   visibility: hidden;
   pointer-events: none;
