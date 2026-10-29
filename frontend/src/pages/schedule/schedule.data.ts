@@ -1,4 +1,4 @@
-import type { LessonType, ScheduleLesson } from './schedule.types'
+import type { LessonType, ScheduleDay, ScheduleLesson } from './schedule.types'
 
 export const lessonTypes: { type: LessonType; label: string }[] = [
   { type: 'lecture', label: 'Лекция' },
@@ -92,19 +92,9 @@ const lessons = {
     location: 'Корпус Б · ауд. 407',
     teacher: 'Орлова К. В.',
   },
-} satisfies Record<string, ScheduleLesson>
+} satisfies Record<string, Omit<ScheduleLesson, 'id' | 'start' | 'end'>>
 
-type LessonKey = keyof typeof lessons
-const week: (LessonKey | null)[][] = [
-  ['mathLecture', 'mathLecture', 'physicsLecture', 'programmingLecture', null, 'englishLecture'],
-  ['programmingPractice', 'databasePractice', null, 'mathPractice', 'webPractice', null],
-  ['physicsLab', 'englishPractice', 'programmingLab', null, 'databaseLecture', 'physicsLab'],
-  ['webLecture', null, 'databaseLecture', 'englishLecture', null, 'programmingPractice'],
-  [null, 'webPractice', 'englishPractice', 'physicsLab', 'mathLecture', null],
-  [null, 'programmingLecture', null, 'webLab', 'englishPractice', null],
-  [null, 'programmingLecture', null, 'webLab', 'englishPractice', null],
-]
-
+// Шкала времени для таблицы; занятия хранятся внутри дней.
 export const periods = [
   { start: '08:00', end: '09:30' },
   { start: '09:45', end: '11:15' },
@@ -113,7 +103,71 @@ export const periods = [
   { start: '15:10', end: '16:40' },
   { start: '16:55', end: '18:25' },
   { start: '18:35', end: '19:55' },
-].map((period, index) => ({
-  ...period,
-  lessons: week[index]!.map((key) => (key ? lessons[key] : null)),
-}))
+]
+
+const monday = new Date()
+monday.setHours(0, 0, 0, 0)
+monday.setDate(monday.getDate() - ((monday.getDay() + 6) % 7))
+
+// Демо на текущую неделю. Ответ API будет иметь такую же структуру: date и lessons.
+export const scheduleDays: ScheduleDay[] = [
+  {
+    lessons: [
+      { id: '1-1', start: '08:00', end: '09:30', ...lessons.mathLecture },
+      { id: '1-2', start: '09:45', end: '11:15', ...lessons.programmingPractice },
+      { id: '1-3', start: '11:30', end: '13:00', ...lessons.physicsLab },
+      { id: '1-4', start: '13:20', end: '14:50', ...lessons.webLecture },
+    ],
+  },
+  {
+    lessons: [
+      { id: '2-1', start: '08:00', end: '09:30', ...lessons.mathLecture },
+      { id: '2-2', start: '09:45', end: '11:15', ...lessons.databasePractice },
+      { id: '2-3', start: '11:30', end: '13:00', ...lessons.englishPractice },
+      { id: '2-5', start: '15:10', end: '16:40', ...lessons.webPractice },
+      { id: '2-6', start: '16:55', end: '18:25', ...lessons.programmingLecture },
+      { id: '2-7', start: '18:35', end: '19:55', ...lessons.programmingLecture },
+    ],
+  },
+  {
+    lessons: [
+      { id: '3-1', start: '08:00', end: '09:30', ...lessons.physicsLecture },
+      { id: '3-3', start: '11:30', end: '13:00', ...lessons.programmingLab },
+      { id: '3-4', start: '13:20', end: '14:50', ...lessons.databaseLecture },
+      { id: '3-5', start: '15:10', end: '16:40', ...lessons.englishPractice },
+    ],
+  },
+  {
+    lessons: [
+      { id: '4-1', start: '08:00', end: '09:30', ...lessons.programmingLecture },
+      { id: '4-2', start: '09:45', end: '11:15', ...lessons.mathPractice },
+      { id: '4-4', start: '13:20', end: '14:50', ...lessons.englishLecture },
+      { id: '4-5', start: '15:10', end: '16:40', ...lessons.physicsLab },
+      { id: '4-6', start: '16:55', end: '18:25', ...lessons.webLab },
+      { id: '4-7', start: '18:35', end: '19:55', ...lessons.webLab },
+    ],
+  },
+  {
+    lessons: [
+      { id: '5-2', start: '09:45', end: '11:15', ...lessons.webPractice },
+      { id: '5-3', start: '11:30', end: '13:00', ...lessons.databaseLecture },
+      { id: '5-5', start: '15:10', end: '16:40', ...lessons.mathLecture },
+      { id: '5-6', start: '16:55', end: '18:25', ...lessons.englishPractice },
+      { id: '5-7', start: '18:35', end: '19:55', ...lessons.englishPractice },
+    ],
+  },
+  {
+    lessons: [
+      { id: '6-1', start: '08:00', end: '09:30', ...lessons.englishLecture },
+      { id: '6-3', start: '11:30', end: '13:00', ...lessons.physicsLab },
+      { id: '6-4', start: '13:20', end: '14:50', ...lessons.programmingPractice },
+    ],
+  },
+].map((day, index) => {
+  const date = new Date(monday)
+  date.setDate(date.getDate() + index)
+  return {
+    date: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
+    lessons: day.lessons,
+  }
+})

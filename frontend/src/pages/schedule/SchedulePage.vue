@@ -19,7 +19,6 @@ import ScheduleControls from './components/ScheduleControls/ScheduleControls.vue
 import MobileSchedule from './components/MobileSchedule/MobileSchedule.vue'
 import ScheduleTable from './components/ScheduleTable/ScheduleTable.vue'
 import ScheduleLegend from './components/ScheduleLegend/ScheduleLegend.vue'
-import { createSchedule, scheduleKey } from './useSchedule'
 import style from './SchedulePage.module.scss'
 import SchedulePeriodPicker from './components/SchedulePeriodPicker/SchedulePeriodPicker.vue'
 
@@ -35,9 +34,6 @@ export default defineComponent({
   },
   data() {
     return { style }
-  },
-  provide() {
-    return { [scheduleKey]: createSchedule() }
   },
 })
 </script>

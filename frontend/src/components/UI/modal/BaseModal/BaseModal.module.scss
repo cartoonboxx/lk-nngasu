@@ -23,7 +23,12 @@
 
   &::backdrop {
     background: transparent;
-    transition: background-color 220ms ease;
+    -webkit-backdrop-filter: blur(0px);
+    backdrop-filter: blur(0px);
+    transition:
+      background-color 140ms ease-out,
+      -webkit-backdrop-filter 140ms ease-out,
+      backdrop-filter 140ms ease-out;
   }
 }
 
@@ -46,8 +51,8 @@
   opacity: 0;
   transform: scale(0.97);
   transition:
-    transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1),
-    opacity 220ms ease;
+    transform 140ms ease-out,
+    opacity 140ms ease-out;
 }
 
 .overlay.popover {
@@ -75,6 +80,8 @@
 .entered {
   &::backdrop {
     background: var(--color-surface-overlay);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
   }
 
   .modal {
@@ -86,6 +93,8 @@
 .leaving {
   &::backdrop {
     background: transparent;
+    -webkit-backdrop-filter: blur(0px);
+    backdrop-filter: blur(0px);
   }
 
   .modal {

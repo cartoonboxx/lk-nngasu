@@ -76,7 +76,7 @@
             fullWidth
             @click="
               () => {
-                selectWeek(selectedWeek)
+                $scheduleStore.selectWeek(selectedWeek)
                 opened = false
               }
             "
@@ -97,7 +97,6 @@ import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
 import Tooltip from '@/components/UI/Tooltip/Tooltip.vue'
 import Modal from '@/components/UI/modal/BaseModal/Modal.vue'
-import { useSchedule } from '../../useSchedule'
 import style from './SchedulePeriodPicker.module.scss'
 
 export default defineComponent({
@@ -107,11 +106,8 @@ export default defineComponent({
   },
   components: { Modal, IconButton, Button, Tooltip, PhCalendar, PhCaretLeft, PhCaretRight, PhX },
   data() {
-    const { weekStart: activeWeek, selectWeek } = useSchedule()
     return {
       style,
-      activeWeek,
-      selectWeek,
       weekdays: ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'],
       opened: false,
       selectedWeek: new Date(),
@@ -162,8 +158,12 @@ export default defineComponent({
     async open(event: MouseEvent) {
       const focusDate =
         event.detail === 0 || window.matchMedia('(hover: hover) and (pointer: fine)').matches
-      this.selectedWeek = new Date(this.activeWeek)
-      this.displayedMonth = new Date(this.activeWeek.getFullYear(), this.activeWeek.getMonth(), 1)
+      this.selectedWeek = new Date(this.$scheduleStore.weekStart)
+      this.displayedMonth = new Date(
+        this.$scheduleStore.weekStart.getFullYear(),
+        this.$scheduleStore.weekStart.getMonth(),
+        1,
+      )
       this.focusedDate = this.selectedWeek.toDateString()
       this.opened = true
       await this.$nextTick()

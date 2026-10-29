@@ -1,10 +1,5 @@
-export interface ScheduleDayItem {
-  id: string | number
-  start: string
-  end: string
-  subject: string
-  type: 'lecture' | 'practice' | 'lab'
+import type { ScheduleLesson } from '@/pages/schedule/schedule.types'
+
+export interface ScheduleDayItem extends ScheduleLesson {
   typeLabel?: string
-  location: string
-  teacher: string
 }

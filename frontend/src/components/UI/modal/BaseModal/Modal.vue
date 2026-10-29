@@ -251,7 +251,7 @@ export default defineComponent({
         this.clearAnimation()
         this.cancelDrag()
         this.closing = true
-        const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 220
+        const duration = window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 140
         this.closeTimer = setTimeout(() => {
           this.closeTimer = undefined
           if (!this.modelValue && dialog.open) {

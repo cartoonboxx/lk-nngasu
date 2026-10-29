@@ -28,8 +28,10 @@
         <div :class="style.lessonDetails">
           <h3>{{ lesson.subject }}</h3>
           <p :class="style.lessonMeta">
-            <span v-if="lesson.typeLabel">{{ lesson.typeLabel }}</span>
-            <span v-if="lesson.typeLabel && lesson.location">·</span>
+            <span>{{
+              lesson.typeLabel || lessonTypes.find((item) => item.type === lesson.type)?.label
+            }}</span>
+            <span v-if="lesson.location">·</span>
             <span v-if="lesson.location">{{ lesson.location }}</span>
           </p>
           <p v-if="lesson.teacher" :class="style.lessonTeacher">
@@ -50,6 +52,7 @@
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
 import { PhUser } from '@phosphor-icons/vue'
+import { lessonTypes } from '@/pages/schedule/schedule.data'
 import type { ScheduleDayItem } from './schedule-day.types'
 import style from './ScheduleDay.module.scss'
 
@@ -79,7 +82,7 @@ export default defineComponent({
     },
   },
   data() {
-    return { style }
+    return { style, lessonTypes }
   },
 })
 </script>

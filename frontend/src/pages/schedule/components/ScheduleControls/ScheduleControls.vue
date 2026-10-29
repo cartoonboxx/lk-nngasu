@@ -2,11 +2,11 @@
   <div :class="style.filterBlock">
     <div :class="style.leftPart">
       <div :class="style.dailyPart">
-        <IconButton variant="ghost" round @click="shiftWeek(-1)">
+        <IconButton variant="ghost" round @click="$scheduleStore.shiftWeek(-1)">
           <PhCaretLeft />
         </IconButton>
         <span :class="style.weekLabel">{{ weekLabel }}</span>
-        <IconButton variant="ghost" round @click="shiftWeek(1)">
+        <IconButton variant="ghost" round @click="$scheduleStore.shiftWeek(1)">
           <PhCaretRight />
         </IconButton>
         <SchedulePeriodPicker />
@@ -28,7 +28,6 @@ import style from './ScheduleControls.module.scss'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 import Input from '@/components/UI/inputs/Input/Input.vue'
 import { PhCaretLeft, PhCaretRight, PhMagnifyingGlass } from '@phosphor-icons/vue'
-import { useSchedule } from '../../useSchedule'
 import SchedulePeriodPicker from '../SchedulePeriodPicker/SchedulePeriodPicker.vue'
 
 export default defineComponent({
@@ -41,12 +40,21 @@ export default defineComponent({
     PhCaretRight,
     PhMagnifyingGlass,
   },
+  computed: {
+    weekLabel() {
+      const start = this.$scheduleStore.weekStart
+      const end = new Date(start)
+      end.setDate(end.getDate() + 5)
+      return new Intl.DateTimeFormat('ru-RU', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric',
+      }).formatRange(start, end)
+    },
+  },
   data() {
-    const { weekLabel, shiftWeek } = useSchedule()
     return {
       style,
-      weekLabel,
-      shiftWeek,
     }
   },
 })

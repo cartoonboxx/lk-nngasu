@@ -3,6 +3,7 @@ import { createPinia, disposePinia } from 'pinia'
 import { useMessageStore, messagesStoragePrefix } from './messages'
 import { useUtilityStore } from './utility'
 import { useSubjectsStore } from './subjects'
+import { useScheduleStore } from './schedule'
 
 const stores: Plugin = {
   install(app) {
@@ -11,6 +12,7 @@ const stores: Plugin = {
 
     app.config.globalProperties.$utilityStore = useUtilityStore(pinia)
     app.config.globalProperties.$subjectsStore = useSubjectsStore(pinia)
+    app.config.globalProperties.$scheduleStore = useScheduleStore(pinia)
 
     const messageStore = useMessageStore(pinia)
     messageStore.initialize()
