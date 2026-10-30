@@ -39,7 +39,9 @@ func Run(ctx context.Context, cfg config.Config) error {
 
 	r := gin.New()
 	r.Use(gin.Recovery(), gin.Logger())
-	r.GET("/healthz", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok"}) })
+	for _, path := range []string{"/healthz", "/api/healthz"} {
+		r.GET(path, func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok"}) })
+	}
 
 	secret := []byte(cfg.JWTSecret)
 	v1 := r.Group("/api/v1")

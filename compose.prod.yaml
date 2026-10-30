@@ -3,12 +3,60 @@ name: lk-nngasu-prod
 services:
   frontend:
     image: ${FRONTEND_IMAGE:?Нужно передать адрес Docker-образа}
+    depends_on:
+      backend:
+        condition: service_healthy
     ports:
-      - "127.0.0.1:8081:80"
+      - "127.0.0.1:${FRONTEND_PORT:-8081}:80"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1/healthz"]
-      interval: 30s
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/healthz && wget -q -O /dev/null http://127.0.0.1/api/healthz"]
+      interval: 10s
       timeout: 5s
       start_period: 10s
       retries: 3
+
+  backend:
+    image: ${BACKEND_IMAGE:?Нужно передать адрес Docker-образа бэкенда}
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://nngasu@db:5432/nngasu?sslmode=disable
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Задайте POSTGRES_PASSWORD в серверном .env}
+      JWT_SECRET: ${JWT_SECRET:?Задайте JWT_SECRET длиной не менее 32 символов}
+      ACCESS_TTL: ${ACCESS_TTL:-12h}
+      TIMEZONE: Europe/Moscow
+      WEEK_ONE_DATE: ${WEEK_ONE_DATE:-2026-09-01}
+      LESSON_MINUTES: "90"
+      MAX_UPLOAD_MB: "15"
+    volumes:
+      - uploads:/data/uploads
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/healthz"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 6
+
+  db:
+    image: postgres:17
+    restart: unless-stopped
+    shm_size: 128mb
+    environment:
+      POSTGRES_USER: nngasu
+      POSTGRES_DB: nngasu
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Задайте POSTGRES_PASSWORD в серверном .env}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./backend/migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -U nngasu -d nngasu"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+volumes:
+  postgres-data:
+  uploads:
