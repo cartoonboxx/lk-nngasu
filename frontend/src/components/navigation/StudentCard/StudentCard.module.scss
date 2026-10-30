@@ -43,16 +43,16 @@
     flex-direction: column;
     gap: 2px;
 
-    strong,
+    h6,
     span {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
     }
 
-    strong {
+    h6 {
       font-size: var(--font-size-body-small);
-      font-weight: 600;
+      font-weight: 400;
     }
 
     span {

@@ -3,7 +3,7 @@
     <img v-if="imageSrc" :class="style.avatar" :src="imageSrc" :alt="imageAlt" />
     <span v-else :class="style.avatar">АИ</span>
     <span v-if="!compact" :class="style.copy">
-      <strong>{{ name }}</strong>
+      <h6>{{ name }}</h6>
       <span>{{ role }}</span>
     </span>
     <PhCaretRight v-if="!compact" :class="style.arrow" :size="18" />

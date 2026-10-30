@@ -1,6 +1,6 @@
 .primary {
   background: var(--color-accent-default);
-  color: var(--color-text-primary);
+  color: white;
 
   @media (hover: hover) and (pointer: fine) {
     &:hover:not(:disabled) {

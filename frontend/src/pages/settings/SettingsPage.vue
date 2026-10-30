@@ -37,8 +37,8 @@
             v-for="item in themeOptions"
             :key="item.value"
             :text="item.label"
-            :active="item.value === theme"
-            @select="theme = item.value"
+            :active="item.value === $utilityStore.themePreference"
+            @select="$utilityStore.themePreference = item.value"
           />
         </div>
       </div>
@@ -116,6 +116,7 @@ import StyleTab from '@/components/UI/tabs/StyleTab/StyleTab.vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
 import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import Modal from '@/components/UI/modal/BaseModal/Modal.vue'
+import type { ThemePreference } from '@/stores/utility'
 export default defineComponent({
   name: 'SettingsPage',
 
@@ -135,12 +136,11 @@ export default defineComponent({
       confirmPassword: '',
       passwordError: '',
       photoPreview: null as string | null,
-      theme: 'dark',
       themeOptions: [
+        { value: 'system', label: 'Системная' },
         { value: 'light', label: 'Светлая' },
         { value: 'dark', label: 'Тёмная' },
-        { value: 'system', label: 'Системная' },
-      ],
+      ] satisfies { value: ThemePreference; label: string }[],
     }
   },
   methods: {

@@ -2,6 +2,15 @@
 <html lang="">
   <head>
     <meta charset="UTF-8">
+    <script>
+      try {
+        const theme = localStorage.getItem('lk-nngasu-theme')
+        document.documentElement.dataset.theme =
+          theme === 'light' || theme === 'dark' ? theme : 'system'
+      } catch {
+        document.documentElement.dataset.theme = 'system'
+      }
+    </script>
     <link rel="icon" href="/favicon.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Vite App</title>

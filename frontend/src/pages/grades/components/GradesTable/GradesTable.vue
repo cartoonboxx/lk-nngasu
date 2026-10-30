@@ -1,7 +1,7 @@
 <template>
   <section :class="style.results">
     <div :class="style.resultsHeader">
-      <h2 id="grades-heading">Оценки за задания</h2>
+      <h2>Оценки за задания</h2>
       <span>Показано {{ assignments.length }} из {{ total }}</span>
     </div>
     <table v-if="assignments.length" :class="style.table">
@@ -35,11 +35,9 @@
             }}
           </td>
           <td data-label="Оценка">
-            <span
-              v-if="assignment.grade !== null"
-              :class="[style.grade, assignment.grade >= 5 ? style.excellent : style.good]"
-              >{{ assignment.grade }}</span
-            >
+            <span v-if="assignment.grade !== null" :class="[style.grade]">
+              {{ assignment.grade }}
+            </span>
             <span v-else :class="style.muted">—</span>
           </td>
           <td data-label="Статус">

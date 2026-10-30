@@ -1,0 +1,127 @@
+@mixin dark {
+  color-scheme: dark;
+
+  // shadows
+  --shadow-panel: 0 6px 24px #00000012;
+  --shadow-floating: 0 14px 40px #0000003d, 0 2px 8px #00000026;
+  --shadow-modal: 0 24px 72px #00000066;
+
+  // colors surface
+  --color-surface-level-0: #090b0f;
+  --color-surface-level-1: #0d1015;
+  --color-surface-level-2: #12161d;
+  --color-surface-level-3: #171c24;
+  --color-surface-level-4: #1e2530;
+  --color-surface-level-5: #28313e;
+
+  // semantic surfaces
+  --color-surface-page: var(--color-surface-level-0);
+  --color-surface-navigation: #0d1015;
+  --color-surface-navigation-hover: #171c24;
+  --color-surface-navigation-selected: #302010;
+  --color-surface-panel: var(--color-surface-level-2);
+  --color-surface-raised: var(--color-surface-level-3);
+  --color-surface-interactive: var(--color-surface-level-4);
+  --color-surface-active: #122947;
+
+  --color-surface-accent: #302010;
+  --color-surface-disabled: #171c24;
+  --color-surface-overlay: #030508cc;
+  --color-surface-brand: #10203a;
+  --color-brand-blue: #2870f0;
+  --color-logo-blue: #0d4f8f;
+  --color-surface-light: #ffffff;
+  --color-text-on-light: #10151c;
+
+  // colors font/icons
+  --color-text-primary: #f1f3f5;
+  --color-text-secondary: #bdc3cc;
+  --color-text-muted: #969eaa;
+  --color-content-disabled: #6d7580;
+  --color-content-accent: #ff921f;
+  --color-content-interactive: #4da3ff;
+  --color-content-on-accent: #241400;
+  --color-content-on-primary: #241400;
+  --color-content-on-brand: #ffffff;
+
+  // color borders
+  --color-border-level-1: #252c37;
+  --color-border-level-2: #374352;
+  --color-border-level-3: #536479;
+  --color-border-accent: var(--color-accent-default);
+  --color-border-focus: #4da3ff;
+  --color-border-error: #ff6275;
+
+  --color-accent-default: #ff8000;
+  --color-accent-hover: #ff951f;
+  --color-accent-pressed: #e66e00;
+
+  // color statuses
+  --color-status-success-content: #38d780;
+  --color-status-warning-content: #ffc438;
+  --color-status-error-content: #ff6275;
+  --color-status-info-content: #4da3ff;
+  --color-status-neutral-content: #bdc3cc;
+
+  --color-status-success-surface: #10281c;
+  --color-status-warning-surface: #2d240e;
+  --color-status-error-surface: #301721;
+  --color-status-info-surface: #12253e;
+  --color-status-neutral-surface: #1e2530;
+}
+
+@mixin light {
+  color-scheme: light;
+
+  --shadow-panel: 0 4px 20px #18202b06;
+  --shadow-floating: 0 12px 36px #18202b1a, 0 2px 6px #18202b0d;
+  --shadow-modal: 0 24px 72px #18202b33;
+
+  --color-surface-level-0: #e3e6ea;
+  --color-surface-level-1: #e9ecf0;
+  --color-surface-level-2: #f0f2f5;
+  --color-surface-level-3: #eaeef2;
+  --color-surface-level-4: #dce1e8;
+  --color-surface-level-5: #cfd6e0;
+
+  --color-surface-navigation: #e9ecf0;
+  --color-surface-navigation-hover: #dce1e8;
+  --color-surface-navigation-selected: #ffdfb5;
+  --color-surface-active: #d5e4ff;
+  --color-surface-accent: #ffdfb5;
+  --color-surface-disabled: #dce1e8;
+  --color-surface-overlay: #141b2659;
+  --color-surface-brand: #d5e1f5;
+  --color-brand-blue: #2563eb;
+
+  --color-text-primary: #20252d;
+  --color-text-secondary: #4b5563;
+  --color-text-muted: #606b7a;
+  --color-content-disabled: #7c8796;
+  --color-content-accent: #a84600;
+  --color-content-interactive: #1759cf;
+  --color-content-on-accent: #241400;
+  --color-content-on-primary: #241400;
+
+  --color-border-level-1: #ccd2db;
+  --color-border-level-2: #b2bdcb;
+  --color-border-level-3: #8593a6;
+  --color-border-focus: #2563eb;
+  --color-border-error: #ce2942;
+
+  --color-accent-default: #ff8000;
+  --color-accent-hover: #f57500;
+  --color-accent-pressed: #e66e00;
+
+  --color-status-success-content: #087b3d;
+  --color-status-warning-content: #926500;
+  --color-status-error-content: #ce2942;
+  --color-status-info-content: #1759cf;
+  --color-status-neutral-content: #4b5563;
+
+  --color-status-success-surface: #d5eadd;
+  --color-status-warning-surface: #f4e7be;
+  --color-status-error-surface: #f1d9df;
+  --color-status-info-surface: #d5e4fa;
+  --color-status-neutral-surface: #dce1e8;
+}

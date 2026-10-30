@@ -39,7 +39,10 @@
     cursor: pointer;
 
     &:is(:active, [data-pressed='true']):not(:disabled) {
-      background: color-mix(in srgb, currentColor 8%, transparent);
+      background: var(
+        --tab-trigger-pressed-background,
+        color-mix(in srgb, currentColor 8%, transparent)
+      );
     }
 
     &:focus-visible {

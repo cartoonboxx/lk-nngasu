@@ -1,6 +1,7 @@
 .tab {
   --tab-padding: 0 var(--space-4);
   --tab-min-height: var(--control-height-md);
+  --tab-trigger-pressed-background: transparent;
   border-color: transparent;
   background: transparent;
   color: var(--color-text-secondary);

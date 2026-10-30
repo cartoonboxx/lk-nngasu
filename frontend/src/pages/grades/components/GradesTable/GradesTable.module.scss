@@ -97,31 +97,15 @@
 }
 
 .grade {
-  display: inline-grid;
-  place-items: center;
-  width: 32px;
-  height: 32px;
+  display: inline-flex;
+  justify-content: flex-start;
+  align-items: center;
+  width: 100%;
   border-radius: var(--radius-sm);
-  font-size: var(--font-size-h4);
-  font-weight: 700;
-}
-
-.excellent {
-  color: var(--color-status-success-content);
-  background: var(--color-status-success-surface);
-}
-
-.good {
-  color: var(--color-status-info-content);
-  background: var(--color-status-info-surface);
 }
 
 .comment {
   width: 24%;
-}
-
-.muted {
-  color: var(--color-text-muted);
 }
 
 .empty {
