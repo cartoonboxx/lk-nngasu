@@ -6,10 +6,10 @@
           size="sm"
           variant="ghost"
           type="button"
-          aria-label="Назад к новостям"
+          title="Назад к новостям"
           @click="$router.push('/news')"
         >
-          <PhArrowLeft aria-hidden="true" />
+          <PhArrowLeft  />
         </IconButton>
 
         <span>Новости</span>
@@ -21,10 +21,10 @@
         size="sm"
         variant="ghost"
         type="button"
-        aria-label="Поделиться новостью"
+        title="Поделиться новостью"
         @click="shareNews"
       >
-        <PhShareNetwork aria-hidden="true" />
+        <PhShareNetwork />
       </IconButton>
     </div>
 
@@ -47,7 +47,6 @@
         :style="{
           backgroundImage: `url(${JSON.stringify(currentNews.image)})`,
         }"
-        aria-hidden="true"
       />
 
       <div :class="style.body">
