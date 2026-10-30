@@ -31,7 +31,7 @@
           </th>
           <td v-for="(lesson, dayIndex) in period.lessons" :key="dayIndex">
             <LessonCard v-if="lesson" :lesson="lesson" />
-            <span v-else :class="style.empty">—</span>
+            <span v-else :class="style.empty"></span>
           </td>
         </tr>
       </tbody>
