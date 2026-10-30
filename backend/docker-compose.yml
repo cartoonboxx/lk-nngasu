@@ -1,0 +1,40 @@
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: uni
+      POSTGRES_PASSWORD: uni
+      POSTGRES_DB: university_cabinet
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+      # SQL из этой папки выполняется один раз при создании пустой БД (в алфавитном порядке)
+      - ./migrations:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U uni -d university_cabinet"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://uni:uni@db:5432/university_cabinet?sslmode=disable
+      JWT_SECRET: ${JWT_SECRET:?задайте JWT_SECRET (минимум 32 символа), например: export JWT_SECRET=$(openssl rand -hex 32)}
+      ACCESS_TTL: 12h
+      TIMEZONE: Europe/Moscow
+      # WEEK_ONE_DATE: "2026-09-01"   # понедельник первой (верхней) недели; без него чётность по ISO-неделе
+      LESSON_MINUTES: "90"
+      MAX_UPLOAD_MB: "15"
+    volumes:
+      - uploads:/data/uploads
+    ports:
+      - "8080:8080"
+
+volumes:
+  dbdata:
+  uploads:
