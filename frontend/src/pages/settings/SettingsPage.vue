@@ -82,12 +82,11 @@
                   size="sm"
                   variant="ghost"
                   type="button"
-                  :aria-label="showCurrentPassword ? 'Скрыть пароль' : 'Показать пароль'"
-                  :aria-pressed="showCurrentPassword"
+                  :title="showCurrentPassword ? 'Скрыть пароль' : 'Показать пароль'"
                   @click="showCurrentPassword = !showCurrentPassword"
                 >
-                  <PhEyeSlash v-if="showCurrentPassword" aria-hidden="true" />
-                  <PhEye v-else aria-hidden="true" />
+                  <PhEyeSlash v-if="showCurrentPassword" />
+                  <PhEye v-else />
                 </IconButton>
               </template>
             </TextInput>
@@ -106,12 +105,11 @@
                   size="sm"
                   variant="ghost"
                   type="button"
-                  :aria-label="showNewPassword ? 'Скрыть пароль' : 'Показать пароль'"
-                  :aria-pressed="showNewPassword"
-                  @click="showNewPassword = !showNewPassword"
+                  :title="showCurrentPassword ? 'Скрыть пароль' : 'Показать пароль'"
+                  @click="showCurrentPassword = !showCurrentPassword"
                 >
-                  <PhEyeSlash v-if="showNewPassword" aria-hidden="true" />
-                  <PhEye v-else aria-hidden="true" />
+                  <PhEyeSlash v-if="showCurrentPassword" />
+                  <PhEye v-else />
                 </IconButton>
               </template>
             </TextInput>
@@ -130,12 +128,11 @@
                   size="sm"
                   variant="ghost"
                   type="button"
-                  :aria-label="showConfirmPassword ? 'Скрыть пароль' : 'Показать пароль'"
-                  :aria-pressed="showConfirmPassword"
-                  @click="showConfirmPassword = !showConfirmPassword"
+                  :title="showCurrentPassword ? 'Скрыть пароль' : 'Показать пароль'"
+                  @click="showCurrentPassword = !showCurrentPassword"
                 >
-                  <PhEyeSlash v-if="showConfirmPassword" aria-hidden="true" />
-                  <PhEye v-else aria-hidden="true" />
+                  <PhEyeSlash v-if="showCurrentPassword" />
+                  <PhEye v-else />
                 </IconButton>
               </template>
             </TextInput>
@@ -158,13 +155,17 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue'
+import { PhEye, PhEyeSlash } from '@phosphor-icons/vue'
+
 import style from './SettingsPage.module.scss'
 import StyleTab from '@/components/UI/tabs/StyleTab/StyleTab.vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
+import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import Modal from '@/components/UI/modal/BaseModal/Modal.vue'
-import { PhEye, PhEyeSlash } from '@phosphor-icons/vue'
 import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
+import type { ThemePreference } from '@/stores/utility'
+
 export default defineComponent({
   name: 'SettingsPage',
 
@@ -173,6 +174,7 @@ export default defineComponent({
     StyleTab,
     Modal,
     Button,
+    IconButton,
     TextInput,
     PhEye,
     PhEyeSlash,
@@ -190,25 +192,22 @@ export default defineComponent({
       confirmPassword: '',
       passwordError: '',
       photoPreview: null as string | null,
+
       themeOptions: [
         { value: 'system', label: 'Системная' },
         { value: 'light', label: 'Светлая' },
         { value: 'dark', label: 'Тёмная' },
-        { value: 'system', label: 'Системная' },
-      ],
+      ] satisfies { value: ThemePreference; label: string }[],
     }
   },
-  methods: {
-    openPasswordModal() {
-      this.resetPasswordForm()
-      this.isPasswordModalOpen = true
-    },
 
+  methods: {
     resetPasswordForm() {
       this.currentPassword = ''
       this.newPassword = ''
       this.confirmPassword = ''
       this.passwordError = ''
+
       this.showCurrentPassword = false
       this.showNewPassword = false
       this.showConfirmPassword = false
