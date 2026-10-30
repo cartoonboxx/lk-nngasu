@@ -155,7 +155,8 @@
               :title="attachment.name"
               :meta="attachment.meta"
               :readonly="!attachment.file && !attachment.url"
-              @click="download(attachment)"
+              :src="attachment.file || attachment.url"
+              :filename="attachment.name"
             >
               <template #icon>
                 <component
@@ -378,15 +379,6 @@ export default defineComponent({
         return
       }
       this.$emit('submit', { attachments: [...this.attachments], comment: this.comment.trim() })
-    },
-    download(attachment: AssignmentAttachment) {
-      const url = attachment.file ? URL.createObjectURL(attachment.file) : attachment.url
-      if (!url) return
-      const link = document.createElement('a')
-      link.href = url
-      link.download = attachment.name
-      link.click()
-      if (attachment.file) setTimeout(() => URL.revokeObjectURL(url), 1000)
     },
   },
 })

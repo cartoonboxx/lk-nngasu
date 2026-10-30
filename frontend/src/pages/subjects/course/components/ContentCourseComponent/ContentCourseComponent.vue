@@ -14,7 +14,7 @@
           :key="material.kind"
           :title="material.title"
           :meta="material.meta"
-          @click="downloadMaterial(material)"
+          :src="material.file"
         >
           <template #icon>
             <component :is="material.icon" :class="style[material.kind]" :size="30" weight="fill" />
@@ -80,8 +80,8 @@ export default defineComponent({
     return { style }
   },
   computed: {
-    materials(): CourseMaterial[] {
-      return [
+    materials(): (CourseMaterial & { file: File })[] {
+      const materials: CourseMaterial[] = [
         {
           kind: 'lecture',
           title: `Лекция ${this.topicIndex + 1}`,
@@ -101,19 +101,16 @@ export default defineComponent({
           icon: markRaw(PhFileCode),
         },
       ]
-    },
-  },
-
-  methods: {
-    downloadMaterial(material: CourseMaterial) {
-      const topic = this.topic
-      const content = `# ${material.title}\n\n## ${topic.title}\n\n${topic.description}\n\n${material.kind === 'practice' ? topic.task : 'План изучения темы'}\n\n${topic.steps.map((step, index) => `${index + 1}. ${step}`).join('\n')}\n`
-      const url = URL.createObjectURL(new Blob([content], { type: 'text/markdown;charset=utf-8' }))
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `${topic.id}-${material.kind}.md`
-      link.click()
-      setTimeout(() => URL.revokeObjectURL(url), 1000)
+      return materials.map((material) => {
+        const topic = this.topic
+        const content = `# ${material.title}\n\n## ${topic.title}\n\n${topic.description}\n\n${material.kind === 'practice' ? topic.task : 'План изучения темы'}\n\n${topic.steps.map((step, index) => `${index + 1}. ${step}`).join('\n')}\n`
+        return {
+          ...material,
+          file: new File([content], `${topic.id}-${material.kind}.md`, {
+            type: 'text/markdown;charset=utf-8',
+          }),
+        }
+      })
     },
   },
 })

@@ -132,29 +132,35 @@
         <article :class="style.group">
           <h3>Скачивание материалов</h3>
           <div :class="style.mediaList">
-            <MediaButton title="Лекция 1" meta="Конспект · MD" @click="downloadMediaExample">
+            <MediaButton title="Лекция 1" meta="Конспект · MD" :src="mediaExample">
               <template #icon
                 ><PhFileText :class="style.mediaError" :size="30" weight="fill"
               /></template>
             </MediaButton>
-            <MediaButton
-              title="План темы"
-              meta="Учебный материал · MD"
-              @click="downloadMediaExample"
-            >
+            <MediaButton title="План темы" meta="Учебный материал · MD" :src="mediaExample">
               <template #icon
                 ><PhPresentationChart :class="style.mediaWarning" :size="30" weight="fill"
               /></template>
             </MediaButton>
-            <MediaButton
-              title="Практическая работа №1"
-              meta="Задание · MD"
-              @click="downloadMediaExample"
-            >
+            <MediaButton title="Практическая работа №1" meta="Задание · MD" :src="mediaExample">
               <template #icon><PhFileCode :size="30" weight="fill" /></template>
             </MediaButton>
             <MediaButton title="Недоступный материал" meta="Скачивание недоступно" disabled>
               <template #icon><PhFileText :size="30" /></template>
+            </MediaButton>
+          </div>
+        </article>
+        <article :class="style.group">
+          <h3>Все типы файлов</h3>
+          <div :class="style.mediaFileGrid">
+            <MediaButton
+              v-for="file in mediaFileTypes"
+              :key="file.extension"
+              :title="`Пример.${file.extension}`"
+              :meta="`Формат .${file.extension}`"
+              readonly
+            >
+              <template #icon><component :is="file.icon" :size="28" /></template>
             </MediaButton>
           </div>
         </article>
@@ -619,6 +625,7 @@ import Tooltip from '@/components/UI/Tooltip/Tooltip.vue'
 import Badge from '@/components/UI/Badge/Badge.vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
 import MediaButton from '@/components/UI/buttons/MediaButton/MediaButton.vue'
+import { fileTypes } from '@/components/UI/buttons/MediaButton/files.types'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 import Input from '@/components/UI/inputs/Input/Input.vue'
 import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
@@ -736,6 +743,10 @@ export default defineComponent({
       style,
       tooltipPositions: ['top', 'bottom', 'left', 'right'] as TooltipPosition[],
       mediaAttachmentVisible: true,
+      mediaFileTypes: Object.entries(fileTypes).map(([extension, icon]) => ({ extension, icon })),
+      mediaExample: new File(['# Учебный материал\n\nПример файла из UI Kit.'], 'material.md', {
+        type: 'text/markdown;charset=utf-8',
+      }),
       ghostFilter: 'all',
       textInputName: '',
       textInputEmail: 'name@',
@@ -780,20 +791,6 @@ export default defineComponent({
       textareaValue:
         'Textarea использует базовую высоту 96px и расширяется по высоте, когда текста становится больше.',
     }
-  },
-  methods: {
-    downloadMediaExample() {
-      const url = URL.createObjectURL(
-        new Blob(['# Учебный материал\n\nПример файла из UI Kit.'], {
-          type: 'text/markdown;charset=utf-8',
-        }),
-      )
-      const link = document.createElement('a')
-      link.href = url
-      link.download = 'material.md'
-      link.click()
-      setTimeout(() => URL.revokeObjectURL(url), 1000)
-    },
   },
 })
 </script>
