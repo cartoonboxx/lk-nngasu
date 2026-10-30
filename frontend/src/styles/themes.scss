@@ -1,6 +1,13 @@
 @mixin dark {
   color-scheme: dark;
 
+  --color-file-icon-pink: #f472b6;
+  --color-file-icon-blue: #4da3ff;
+  --color-file-icon-orange: #ff921f;
+  --color-file-icon-violet: #a78bfa;
+  --color-file-icon-teal: #2dd4bf;
+  --color-file-icon-cyan: #22d3ee;
+
   // shadows
   --shadow-panel: 0 6px 24px #00000012;
   --shadow-floating: 0 14px 40px #0000003d, 0 2px 8px #00000026;
@@ -72,6 +79,13 @@
 
 @mixin light {
   color-scheme: light;
+
+  --color-file-icon-pink: #b82073;
+  --color-file-icon-blue: #1967d2;
+  --color-file-icon-orange: #c75b00;
+  --color-file-icon-violet: #7541cf;
+  --color-file-icon-teal: #087e70;
+  --color-file-icon-cyan: #087b96;
 
   --shadow-panel: 0 4px 20px #18202b06;
   --shadow-floating: 0 12px 36px #18202b1a, 0 2px 6px #18202b0d;
