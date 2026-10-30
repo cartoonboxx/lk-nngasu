@@ -13,6 +13,7 @@ import SubjectsPage from '@/pages/subjects/SubjectsPage.vue'
 import CoursePage from '@/pages/subjects/course/CoursePage.vue'
 import NewsPage from '@/pages/news/NewsPage.vue'
 import NewsDetailsPage from '@/pages/news/page/NewsDetailsPage.vue'
+import NotFoundPage from '@/pages/notFound/NotFoundPage.vue'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
@@ -65,15 +66,15 @@ const router = createRouter({
           component: SettingsPage,
         },
         {
-          path:'news',
-          name:'news',
-          component:NewsPage,
+          path: 'news',
+          name: 'news',
+          component: NewsPage,
         },
         {
           path: '/news/:idNews',
           name: 'news-details',
           component: NewsDetailsPage,
-        }
+        },
       ],
     },
     {
@@ -90,6 +91,11 @@ const router = createRouter({
       path: '/ui-kit',
       name: 'ui-kit',
       component: UiKitPage,
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      name: 'NotFound',
+      component: NotFoundPage,
     },
   ],
 })
