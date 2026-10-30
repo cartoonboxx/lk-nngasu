@@ -68,30 +68,77 @@
           <form :class="style.passwordForm" @submit.prevent="submitPasswordChange">
             <h2 id="password-modal-title">Изменить пароль</h2>
 
-            <label :class="style.passwordField">
-              <span>Текущий пароль</span>
-              <input
-                v-model="currentPassword"
-                type="password"
-                autocomplete="current-password"
-                required
-              />
-            </label>
+            <TextInput
+              v-model="currentPassword"
+              label="Текущий пароль"
+              :type="showCurrentPassword ? 'text' : 'password'"
+              autocomplete="current-password"
+              fullWidth
+              size="lg"
+              required
+            >
+              <template #actions>
+                <IconButton
+                  size="sm"
+                  variant="ghost"
+                  type="button"
+                  :aria-label="showCurrentPassword ? 'Скрыть пароль' : 'Показать пароль'"
+                  :aria-pressed="showCurrentPassword"
+                  @click="showCurrentPassword = !showCurrentPassword"
+                >
+                  <PhEyeSlash v-if="showCurrentPassword" aria-hidden="true" />
+                  <PhEye v-else aria-hidden="true" />
+                </IconButton>
+              </template>
+            </TextInput>
 
-            <label :class="style.passwordField">
-              <span>Новый пароль</span>
-              <input v-model="newPassword" type="password" autocomplete="new-password" required />
-            </label>
+            <TextInput
+              v-model="newPassword"
+              label="Новый пароль"
+              :type="showNewPassword ? 'text' : 'password'"
+              autocomplete="new-password"
+              fullWidth
+              size="lg"
+              required
+            >
+              <template #actions>
+                <IconButton
+                  size="sm"
+                  variant="ghost"
+                  type="button"
+                  :aria-label="showNewPassword ? 'Скрыть пароль' : 'Показать пароль'"
+                  :aria-pressed="showNewPassword"
+                  @click="showNewPassword = !showNewPassword"
+                >
+                  <PhEyeSlash v-if="showNewPassword" aria-hidden="true" />
+                  <PhEye v-else aria-hidden="true" />
+                </IconButton>
+              </template>
+            </TextInput>
 
-            <label :class="style.passwordField">
-              <span>Повторите новый пароль</span>
-              <input
-                v-model="confirmPassword"
-                type="password"
-                autocomplete="new-password"
-                required
-              />
-            </label>
+            <TextInput
+              v-model="confirmPassword"
+              label="Повторите новый пароль"
+              :type="showConfirmPassword ? 'text' : 'password'"
+              autocomplete="new-password"
+              fullWidth
+              size="lg"
+              required
+            >
+              <template #actions>
+                <IconButton
+                  size="sm"
+                  variant="ghost"
+                  type="button"
+                  :aria-label="showConfirmPassword ? 'Скрыть пароль' : 'Показать пароль'"
+                  :aria-pressed="showConfirmPassword"
+                  @click="showConfirmPassword = !showConfirmPassword"
+                >
+                  <PhEyeSlash v-if="showConfirmPassword" aria-hidden="true" />
+                  <PhEye v-else aria-hidden="true" />
+                </IconButton>
+              </template>
+            </TextInput>
 
             <p v-if="passwordError" :class="style.passwordError" role="alert">
               {{ passwordError }}
@@ -116,7 +163,8 @@ import StyleTab from '@/components/UI/tabs/StyleTab/StyleTab.vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
 import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import Modal from '@/components/UI/modal/BaseModal/Modal.vue'
-import type { ThemePreference } from '@/stores/utility'
+import { PhEye, PhEyeSlash } from '@phosphor-icons/vue'
+import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
 export default defineComponent({
   name: 'SettingsPage',
 
@@ -125,12 +173,18 @@ export default defineComponent({
     StyleTab,
     Modal,
     Button,
+    TextInput,
+    PhEye,
+    PhEyeSlash,
   },
 
   data() {
     return {
       style,
       isPasswordModalOpen: false,
+      showCurrentPassword: false,
+      showNewPassword: false,
+      showConfirmPassword: false,
       currentPassword: '',
       newPassword: '',
       confirmPassword: '',
@@ -140,15 +194,24 @@ export default defineComponent({
         { value: 'system', label: 'Системная' },
         { value: 'light', label: 'Светлая' },
         { value: 'dark', label: 'Тёмная' },
-      ] satisfies { value: ThemePreference; label: string }[],
+        { value: 'system', label: 'Системная' },
+      ],
     }
   },
   methods: {
+    openPasswordModal() {
+      this.resetPasswordForm()
+      this.isPasswordModalOpen = true
+    },
+
     resetPasswordForm() {
       this.currentPassword = ''
       this.newPassword = ''
       this.confirmPassword = ''
       this.passwordError = ''
+      this.showCurrentPassword = false
+      this.showNewPassword = false
+      this.showConfirmPassword = false
     },
 
     submitPasswordChange() {

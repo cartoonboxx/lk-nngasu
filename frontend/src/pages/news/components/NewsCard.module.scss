@@ -11,7 +11,9 @@
   border-radius: var(--radius-xl);
   box-shadow: var(--shadow-panel);
   background: var(--color-surface-level-2);
-
+  color: var(--color-text-primary);
+text-decoration: none;
+cursor: pointer;
   @media (hover: hover) and (pointer: fine) {
     &:hover:not([data-disabled='true']) {
       background: var(--color-surface-level-4);
@@ -46,9 +48,8 @@
   align-self: flex-end;
   gap: var(--space-1);
   margin-top: auto;
-  color: var(--color-text-secondary);
   font-size: var(--font-size-caption);
-  line-height: 1.2;
+  color: #42a5f5;
 }
 .content {
   display: flex;
@@ -106,7 +107,7 @@
 }
 
 .featured {
-  align-items: center;
+  position: relative;
   gap: var(--space-5);
   padding: var(--space-4);
 
@@ -115,6 +116,12 @@
     width: 46%;
     height: auto;
     aspect-ratio: 16 / 9;
+  }
+  .readHint {
+    position: absolute;
+    right: var(--space-4);
+    bottom: var(--space-4);
+    margin-top: 0;
   }
   .description {
     font-size: var(--font-size-body);

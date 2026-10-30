@@ -1,9 +1,5 @@
 <template>
-  <component
-    :is="canOpen ? 'a' : 'article'"
-    :href="canOpen ? url : undefined"
-    :class="[style.card, featured ? style.featured : '']"
-  >
+  <a :class="[style.card, featured ? style.featured : '']" :href="url">
     <div
       v-if="image"
       :class="style.image"
@@ -29,12 +25,12 @@
         </p>
       </div>
 
-      <div v-if="canOpen" :class="style.readHint">
+      <div :class="style.readHint">
         Читать далее
         <PhArrowRight :size="14" />
       </div>
     </div>
-  </component>
+  </a>
 </template>
 
 <script lang="ts">
