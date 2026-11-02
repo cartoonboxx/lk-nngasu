@@ -53,11 +53,16 @@ export const useMessageStore = defineStore('messages', {
     initialize() {
       try {
         const saved = parseChats(browserStorage('localStorage')?.getItem(baseKey) ?? null)
-        this.baseline =
+        const existing =
           saved ??
           parseChats(browserStorage('localStorage')?.getItem('lk-nngasu-messages-v1') ?? null) ??
           this.baseline
-        if (!saved) browserStorage('localStorage')?.setItem(baseKey, JSON.stringify(this.baseline))
+        this.baseline = [
+          ...existing,
+          ...this.baseline.filter((chat) => !existing.some((item) => item.id === chat.id)),
+        ]
+        if (!saved || saved.length !== this.baseline.length)
+          browserStorage('localStorage')?.setItem(baseKey, JSON.stringify(this.baseline))
       } catch {
         /* Sending still works in memory when storage is unavailable. */
       }

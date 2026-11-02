@@ -1,5 +1,5 @@
 <template>
-  <div ref="root" :class="style.root" @focusout="onFocusout" @keydown.esc="close(true)">
+  <div ref="root" :class="style.root" @keydown.esc="close(true)">
     <slot name="trigger" :trigger-props="triggerProps" :open="open">
       <button v-bind="triggerProps" type="button" :class="style.trigger">{{ triggerText }}</button>
     </slot>
@@ -104,9 +104,11 @@ export default defineComponent({
   },
   mounted() {
     document.addEventListener('pointerdown', this.onPointerdown)
+    document.addEventListener('focusin', this.onFocusin)
   },
   beforeUnmount() {
     document.removeEventListener('pointerdown', this.onPointerdown)
+    document.removeEventListener('focusin', this.onFocusin)
   },
   methods: {
     focusItem(index: number) {
@@ -180,10 +182,9 @@ export default defineComponent({
       if (!(this.$refs.root as HTMLElement | undefined)?.contains(event.target as Node))
         this.close()
     },
-    onFocusout(event: FocusEvent) {
-      if (
-        !(this.$refs.root as HTMLElement | undefined)?.contains(event.relatedTarget as Node | null)
-      )
+    onFocusin(event: FocusEvent) {
+      // Safari can blur an item before a trigger click without focusing the trigger.
+      if (!(this.$refs.root as HTMLElement | undefined)?.contains(event.target as Node))
         this.close()
     },
   },

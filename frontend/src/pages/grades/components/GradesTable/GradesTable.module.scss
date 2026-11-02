@@ -187,7 +187,16 @@
 
 @media (max-width: 600px) {
   .resultsHeader,
-  .table tr {
-    padding: var(--mobile-card-padding);
+
+  .table {
+    tbody {
+      tr {
+        padding: var(--mobile-card-padding);
+
+        &:hover {
+          background: transparent;
+        }
+      }
+    }
   }
 }

@@ -90,7 +90,7 @@ export default defineComponent({
           }
         })
         .sort((a, b) => b.timestamp - a.timestamp)
-        .slice(0, 4)
+        .slice(0, 6)
     },
   },
 })

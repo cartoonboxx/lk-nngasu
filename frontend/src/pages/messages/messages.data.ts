@@ -161,6 +161,54 @@ export function createChats(): Chat[] {
         },
       ],
     },
+    {
+      id: 'maria',
+      name: 'Мария Кузнецова',
+      initials: 'МК',
+      group: false,
+      description: 'Студент · ИТ-202',
+      unread: 0,
+      messages: [
+        {
+          id: 'm1',
+          sender: 'Вы',
+          text: 'Привет! Можешь прислать конспект по математическому анализу?',
+          own: true,
+          sentAt: sentAt(13, 10, true),
+        },
+        {
+          id: 'm2',
+          sender: 'Мария Кузнецова',
+          text: 'Привет! Да, отправлю после занятий.',
+          own: false,
+          sentAt: sentAt(13, 18, true),
+        },
+      ],
+    },
+    {
+      id: 'ivan',
+      name: 'Иван Петров',
+      initials: 'ИП',
+      group: false,
+      description: 'Студент · ИТ-202',
+      unread: 0,
+      messages: [
+        {
+          id: 'i1',
+          sender: 'Иван Петров',
+          text: 'Привет! Вместе подготовим доклад по физике?',
+          own: false,
+          sentAt: sentAt(12, 5, true),
+        },
+        {
+          id: 'i2',
+          sender: 'Вы',
+          text: 'Давай! Обсудим тему завтра на перемене.',
+          own: true,
+          sentAt: sentAt(12, 15, true),
+        },
+      ],
+    },
   ]
 }
 
