@@ -1,0 +1,347 @@
+Project university_cabinet {
+  database_type: 'PostgreSQL'
+}
+
+// Тип занятия в расписании
+Enum lesson_kind {
+  lecture
+  practice
+  laboratory
+  consultation
+  exam
+}
+
+// Статусы ответа студента на ДЗ
+Enum submission_state {
+  not_submitted // не отправлено на проверку
+  submitted     // отправлено на проверку -> ожидает проверки
+  reviewed      // проверено и оценено
+}
+
+// ====================================================
+// БЛОК 1. Пользователи и структура ВУЗа
+// ====================================================
+
+Table app_user {
+  id int [pk, increment]
+  last_name varchar(50) [not null]
+  first_name varchar(50) [not null]
+  middle_names varchar(50)
+
+  email varchar(255) [not null, unique]
+  password_hash varchar(255) [not null]
+
+  avatar_file_id int
+  is_admin bool [not null, default: false]
+  is_active bool [not null, default: true] // soft delete
+}
+
+// Преподаватель
+Table teacher {
+  user_id int [pk]
+  department_id int [not null]
+
+  indexes {
+    department_id
+  }
+}
+
+// Студент
+Table student {
+  user_id int [pk]
+  group_id int [not null]
+  record_book_number varchar(50) [unique] // номер зачетки
+  is_headman bool [not null, default: false] // староста (для отображения в чатах)
+
+  indexes {
+    group_id
+  }
+}
+
+// Кафедра
+Table department {
+  id int [pk, increment]
+  name varchar(150) [not null, unique]
+}
+
+// Код и наименование направления подготовки
+Table specialization {
+  id int [pk, increment]
+  code varchar(20) [not null, unique]
+  name varchar(200) [not null]
+}
+
+// Учебная группа
+Table study_group {
+  id int [pk, increment]
+  name varchar(50) [not null]
+  specialization_id int [not null]
+  admission_year smallint [not null] // год поступления (например, 2026)
+
+  indexes {
+    (name, admission_year) [unique]
+    specialization_id
+  }
+
+  checks {
+    `admission_year >= 2000` [name: 'study_group_admission_year_valid']
+  }
+}
+
+// ====================================================
+// БЛОК 2. Учебный контекст
+// ====================================================
+
+// Общевузовский справочник семестров (2 записи в год)
+Table semester {
+  id int [pk, increment]
+  academic_year_start smallint [not null] // начало учебного года (например, 2026)
+  number smallint [not null]              // номер семестра в году (1 или 2)
+  is_current bool [not null, default: false] // флаг текущего активного семестра
+
+  indexes {
+    (academic_year_start, number) [unique]
+  }
+
+  checks {
+    `number IN (1, 2)` [name: 'semester_number_valid']
+  }
+}
+
+// Каталог дисциплин
+Table subject {
+  id int [pk, increment]
+  name varchar(200) [not null, unique]
+}
+
+// Курс группы в семестре (формирует список предметов на /subjects)
+Table course_offering {
+  id int [pk, increment]
+  subject_id int [not null]
+  group_id int [not null]
+  semester_id int [not null]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (subject_id, group_id, semester_id) [unique]
+    (group_id, semester_id)
+    semester_id
+  }
+}
+
+// Распределение нагрузки преподавателей по курсу
+Table workload {
+  id int [pk, increment]
+  course_id int [not null]
+  teacher_id int [not null]
+  lesson_type lesson_kind [not null]
+  planned_hours numeric(7,2)
+
+  indexes {
+    (course_id, teacher_id, lesson_type) [unique]
+    teacher_id
+  }
+
+  checks {
+    `planned_hours IS NULL OR planned_hours >= 0` [name: 'workload_hours_nonnegative']
+  }
+}
+
+// ====================================================
+// БЛОК 3. Расписание (Двухнедельный шаблон)
+// ====================================================
+
+// Каталог кабинетов
+Table room {
+  id int [pk, increment]
+  number varchar(30) [not null, unique]
+}
+
+// Шаблон занятия в расписании на 2 недели
+Table lesson {
+  id int [pk, increment]
+  workload_id int [not null]      // связывает с преподавателем, курсом, группой и семестром
+  week_number smallint [not null] // 1 (первая неделя шаблона) или 2 (вторая неделя)
+  day_of_week smallint [not null] // 1 (Пн) .. 6 (Сб)
+  starts_at time [not null]       // время начала пары (например, 08:30:00)
+  room_id int [not null]
+
+  indexes {
+    (workload_id, week_number, day_of_week, starts_at) [unique]
+    (room_id, week_number, day_of_week, starts_at) // без unique для поддержки потоковых лекций
+    (week_number, day_of_week, starts_at)
+  }
+
+  checks {
+    `week_number IN (1, 2)` [name: 'lesson_week_number_valid']
+    `day_of_week >= 1 AND day_of_week <= 6` [name: 'lesson_day_of_week_valid']
+  }
+}
+
+// ====================================================
+// БЛОК 4. Файлы, темы и материалы
+// ====================================================
+
+// Реестр файлов (ID и путь к файлу в папке пользователя на диске)
+Table file {
+  id int [pk, increment]
+  storage_key text [not null, unique]
+}
+
+// Тема внутри предмета на странице /subjects/{course_id}
+Table topic {
+  id int [pk, increment]
+  course_id int [not null]
+  title varchar(200) [not null]
+  description text
+  position int [not null]
+
+  indexes {
+    (course_id, position)
+    (id, course_id) [unique]
+  }
+
+  checks {
+    `position >= 1` [name: 'topic_position_positive']
+  }
+}
+
+// Учебные материалы внутри темы
+Table material {
+  id int [pk, increment]
+  topic_id int [not null]
+  title varchar(200) [not null]
+  file_id int
+  external_url text
+  position int [not null, default: 1]
+  created_by int [not null]
+  created_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (topic_id, position)
+  }
+
+  checks {
+    `(file_id IS NOT NULL) OR (external_url IS NOT NULL)` [name: 'material_has_at_least_one_source']
+    `position >= 1` [name: 'material_position_positive']
+  }
+}
+
+// ====================================================
+// БЛОК 5. Задания и ответы студентов
+// ====================================================
+
+// Домашнее задание внутри темы
+Table assignment {
+  id int [pk, increment]
+  course_id int [not null]
+  topic_id int [not null]
+  created_by int [not null]
+  title varchar(200) [not null]
+  description text
+  deadline_at timestamptz
+  published_at timestamptz [not null, default: `now()`]
+
+  indexes {
+    (course_id, deadline_at)
+    (topic_id, course_id)
+  }
+}
+
+// Файлы преподавателя к заданию (до 5 файлов)
+Table assignment_file {
+  assignment_id int [not null]
+  file_id int [not null]
+
+  indexes {
+    (assignment_id, file_id) [pk]
+    file_id
+  }
+}
+
+// Ответ студента и оценка преподавателя
+Table submission {
+  id int [pk, increment]
+  assignment_id int [not null]
+  student_id int [not null]
+
+  status submission_state [not null, default: 'submitted']
+  answer_text text
+  submitted_at timestamptz
+
+  review_comment text
+  reviewed_by int
+  reviewed_at timestamptz
+  grade numeric(2,1) // оценка от 0.0 до 5.0
+
+  indexes {
+    (assignment_id, student_id) [unique]
+    (assignment_id, status)
+    student_id
+  }
+
+  checks {
+    `grade IS NULL OR (grade >= 0.0 AND grade <= 5.0)` [name: 'submission_grade_range_valid']
+
+    `(status = 'not_submitted' AND submitted_at IS NULL)
+      OR
+     (status <> 'not_submitted' AND submitted_at IS NOT NULL)` [name: 'submission_sent_state_valid']
+
+    `(status = 'reviewed' AND reviewed_by IS NOT NULL AND reviewed_at IS NOT NULL AND grade IS NOT NULL)
+      OR
+     (status IN ('not_submitted', 'submitted') AND reviewed_by IS NULL AND reviewed_at IS NULL AND grade IS NULL)` [name: 'submission_review_state_valid']
+  }
+}
+
+// Файлы ответа студента (до 5 файлов)
+Table submission_file {
+  submission_id int [not null]
+  file_id int [not null]
+
+  indexes {
+    (submission_id, file_id) [pk]
+    file_id
+  }
+}
+
+// ====================================================
+// БЛОК СВЯЗЕЙ (References)
+// ====================================================
+
+// Пользователи и структура
+Ref: app_user.id - teacher.user_id
+Ref: app_user.id - student.user_id
+Ref: teacher.department_id > department.id
+Ref: student.group_id > study_group.id
+Ref: study_group.specialization_id > specialization.id
+Ref: app_user.avatar_file_id > file.id
+
+// Учебный контекст
+Ref: course_offering.subject_id > subject.id
+Ref: course_offering.group_id > study_group.id
+Ref: course_offering.semester_id > semester.id
+Ref: workload.course_id > course_offering.id
+Ref: workload.teacher_id > teacher.user_id
+
+// Расписание
+Ref: lesson.workload_id > workload.id
+Ref: lesson.room_id > room.id
+
+// Темы, материалы и задания
+Ref: topic.course_id > course_offering.id
+Ref: material.topic_id > topic.id
+Ref: material.file_id > file.id
+Ref: material.created_by > teacher.user_id
+
+Ref: assignment.course_id > course_offering.id
+Ref: assignment.(topic_id, course_id) > topic.(id, course_id)
+Ref: assignment.created_by > teacher.user_id
+Ref: assignment_file.assignment_id > assignment.id
+Ref: assignment_file.file_id > file.id
+
+// Ответы и оценки
+Ref: submission.assignment_id > assignment.id
+Ref: submission.student_id > student.user_id
+Ref: submission.reviewed_by > teacher.user_id
+Ref: submission_file.submission_id > submission.id
+Ref: submission_file.file_id > file.id
