@@ -1,5 +1,5 @@
 <template>
-  <a :class="[style.card, featured ? style.featured : '']" :href="url">
+  <RouterLink :class="[style.card, featured ? style.featured : '']" :to="url">
     <div
       v-if="image"
       :class="style.image"
@@ -30,19 +30,21 @@
         <PhArrowRight :size="14" />
       </div>
     </div>
-  </a>
+  </RouterLink>
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue'
 import { PhArrowRight } from '@phosphor-icons/vue'
 import style from './NewsCard.module.scss'
+import { RouterLink } from 'vue-router'
 
 export default defineComponent({
   name: 'NewsCard',
 
   components: {
     PhArrowRight,
+    RouterLink,
   },
 
   props: {
