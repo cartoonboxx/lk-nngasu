@@ -1,12 +1,14 @@
 <template>
   <section :class="style.page">
-    <header :class="style.heading">
-      <div>
-        <h1>Пользователи</h1>
-        <p>Учебные роли, персональные данные и доступ к кабинету</p>
-      </div>
-      <Button @click="openUser()"><PhPlus :size="18" />Создать пользователя</Button>
-    </header>
+    <SectionHeader
+      header="Пользователи"
+      paragraph="Учебные роли, персональные данные и доступ к кабинету"
+      nm
+    >
+      <template #actions>
+        <Button @click="openUser()"><PhPlus :size="18" />Создать пользователя</Button>
+      </template>
+    </SectionHeader>
     <div :class="style.toolbar">
       <TextInput
         v-model="search"
@@ -120,6 +122,7 @@
   </section>
 </template>
 <script lang="ts">
+import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import Select from '@/components/UI/inputs/Select/Select.vue'
 import { defineComponent } from 'vue'
 import { PhPlus } from '@phosphor-icons/vue'
@@ -133,6 +136,7 @@ import type { AdminUser } from './admin.types'
 import style from './Admin.module.scss'
 export default defineComponent({
   components: {
+    SectionHeader,
     Select,
     PhPlus,
     TextInput,
@@ -206,6 +210,8 @@ export default defineComponent({
             first_name: '',
             middle_names: '',
             email: '',
+            passport: '',
+            snils: '',
             avatar_url: '',
             is_active: true,
             is_admin: false,

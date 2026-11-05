@@ -1,12 +1,14 @@
 <template>
   <section :class="style.page">
-    <header :class="style.heading">
-      <div>
-        <h1>Дисциплины и нагрузка</h1>
-        <p>Назначения по группам, семестрам и преподавателям</p>
-      </div>
-      <Button @click="openCourse()"><PhPlus :size="18" />Назначить дисциплину</Button>
-    </header>
+    <SectionHeader
+      header="Дисциплины и нагрузка"
+      paragraph="Назначения по группам, семестрам и преподавателям"
+      nm
+    >
+      <template #actions>
+        <Button @click="openCourse()"><PhPlus :size="18" />Назначить дисциплину</Button>
+      </template>
+    </SectionHeader>
     <div :class="style.grid">
       <label :class="style.field">
         Учебная группа
@@ -69,16 +71,14 @@
       </tr>
     </AdminTable>
     <template v-if="selectedCourse">
-      <header :class="style.heading">
-        <div>
-          <h2>
-            Нагрузка:
-            {{ subjectNames[selectedCourse.subject_id] }}
-          </h2>
-          <p>Разные типы занятий могут вести разные преподаватели</p>
-        </div>
-        <Button variant="secondary" @click="openWorkload()">Добавить нагрузку</Button>
-      </header>
+      <SectionHeader
+        :header="`Нагрузка: ${subjectNames[selectedCourse.subject_id]}`"
+        paragraph="Разные типы занятий могут вести разные преподаватели"
+      >
+        <template #actions>
+          <Button variant="secondary" @click="openWorkload()">Добавить нагрузку</Button>
+        </template>
+      </SectionHeader>
       <AdminTable :columns="workloadColumns" :total="workloads.length" v-slot="{ start, end }">
         <tr v-for="item in workloads.slice(start, end)" :key="item.id">
           <td>
@@ -196,6 +196,7 @@
   </section>
 </template>
 <script lang="ts">
+import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import Select from '@/components/UI/inputs/Select/Select.vue'
 import { defineComponent } from 'vue'
 import { PhPlus } from '@phosphor-icons/vue'
@@ -205,7 +206,7 @@ import AdminDialog from './components/AdminDialog.vue'
 import { lessonLabels, type CourseOffering, type AdminWorkload } from './admin.types'
 import style from './Admin.module.scss'
 export default defineComponent({
-  components: { Select, PhPlus, Button, AdminTable, AdminDialog },
+  components: { SectionHeader, Select, PhPlus, Button, AdminTable, AdminDialog },
   data() {
     return {
       columns: ['Дисциплина', 'Нагрузка', 'Действия'],

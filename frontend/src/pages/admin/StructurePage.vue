@@ -1,12 +1,14 @@
 <template>
   <section :class="style.page">
-    <header :class="style.heading">
-      <div>
-        <h1>Учебная структура</h1>
-        <p>Общие справочники университета и учебного процесса</p>
-      </div>
-      <Button @click="openEntry()"><PhPlus :size="18" />Добавить запись</Button>
-    </header>
+    <SectionHeader
+      header="Учебная структура"
+      paragraph="Общие справочники университета и учебного процесса"
+      nm
+    >
+      <template #actions>
+        <Button @click="openEntry()"><PhPlus :size="18" />Добавить запись</Button>
+      </template>
+    </SectionHeader>
     <div :class="style.tabs">
       <StyleTab
         :text="label"
@@ -149,6 +151,7 @@
   </section>
 </template>
 <script lang="ts">
+import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import Select from '@/components/UI/inputs/Select/Select.vue'
 import StyleTab from '@/components/UI/tabs/StyleTab/StyleTab.vue'
 import { defineComponent } from 'vue'
@@ -160,7 +163,16 @@ import AdminDialog from './components/AdminDialog.vue'
 import { catalogLabels, type CatalogKind, type CatalogEntry } from './admin.types'
 import style from './Admin.module.scss'
 export default defineComponent({
-  components: { StyleTab, Select, PhPlus, TextInput, Button, AdminTable, AdminDialog },
+  components: {
+    SectionHeader,
+    StyleTab,
+    Select,
+    PhPlus,
+    TextInput,
+    Button,
+    AdminTable,
+    AdminDialog,
+  },
   data() {
     return {
       archiveOptions: [

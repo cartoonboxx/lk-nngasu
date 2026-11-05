@@ -1,12 +1,10 @@
 <template>
   <section :class="style.page">
-    <header :class="style.heading">
-      <div>
-        <h1>Новости</h1>
-        <p>Черновики, публикации и объявления университета</p>
-      </div>
-      <Button @click="openNews()"><PhPlus :size="18" />Создать новость</Button>
-    </header>
+    <SectionHeader header="Новости" paragraph="Черновики, публикации и объявления университета" nm>
+      <template #actions>
+        <Button @click="openNews()"><PhPlus :size="18" />Создать новость</Button>
+      </template>
+    </SectionHeader>
     <div :class="style.toolbar">
       <TextInput
         v-model="search"
@@ -162,6 +160,7 @@
   </section>
 </template>
 <script lang="ts">
+import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import Select from '@/components/UI/inputs/Select/Select.vue'
 import { defineComponent } from 'vue'
 import { PhPlus, PhPushPin } from '@phosphor-icons/vue'
@@ -176,6 +175,7 @@ import style from './Admin.module.scss'
 import newsStyle from '@/pages/news/page/NewsDetailsPage.module.scss'
 export default defineComponent({
   components: {
+    SectionHeader,
     Select,
     PhPlus,
     PhPushPin,

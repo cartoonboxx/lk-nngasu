@@ -6,7 +6,7 @@ export interface AdminRepository {
   load(): Promise<AdminData>
   save(data: AdminData): Promise<void>
 }
-export const adminStorageKey = 'unihub-admin-demo-v1'
+export const adminStorageKey = 'lk-nngasu-admin-demo-v1'
 export const adminRepository: AdminRepository = {
   async load() {
     let saved: string | null
@@ -41,6 +41,13 @@ export const adminRepository: AdminRepository = {
           )
         )
           throw new Error()
+      }
+      for (const item of [...data.users, ...data.requests]) {
+        if (!item) throw new Error()
+        for (const field of ['passport', 'snils'] as const) {
+          if (item[field] === undefined) item[field] = ''
+          else if (typeof item[field] !== 'string') throw new Error()
+        }
       }
       if (
         data.users.some(

@@ -82,9 +82,6 @@
         <div :class="style.formArea">
           <slot />
         </div>
-        <p :class="style.panelFooter">
-          Личный кабинет ННГАСУ <span>Учись. Создавай. Двигайся вперёд.</span>
-        </p>
       </section>
     </div>
   </main>

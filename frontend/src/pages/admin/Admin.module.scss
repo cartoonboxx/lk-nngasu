@@ -6,7 +6,6 @@
   gap: var(--space-6);
   min-width: 0;
 }
-.heading,
 .toolbar,
 .actions,
 .pagination,
@@ -14,26 +13,26 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
+
+  h2 {
+    font-size: var(--font-size-h3);
+  }
 }
-.heading,
 .dialogHeader {
   justify-content: space-between;
   align-items: flex-start;
 }
-.heading p,
 .muted {
   color: var(--color-text-muted);
   font-size: var(--font-size-body-small);
 }
-.heading h1 {
-  margin-bottom: var(--space-1);
-}
 .toolbar {
   flex-wrap: wrap;
-}
-.toolbar > :first-child {
-  flex: 1;
-  min-width: 200px;
+
+  > :first-child {
+    flex: 1;
+    min-width: 200px;
+  }
 }
 .panel {
   background: var(--color-surface-panel);
@@ -50,33 +49,52 @@
   text-align: left;
   font-size: var(--font-size-body-small);
   white-space: nowrap;
-}
-.table th {
-  color: var(--color-text-muted);
-  font-weight: 500;
-  background: var(--color-surface-raised);
-}
-.table th,
-.table td {
-  padding: var(--space-4) var(--space-5);
-  border-bottom: 1px solid var(--color-border-level-1);
-}
-.table tbody tr:last-child td {
-  border-bottom: none;
-}
-.table tbody tr:hover {
-  background: var(--color-surface-raised);
-}
-.table td:first-child {
-  white-space: normal;
-  min-width: 180px;
-}
-.table strong {
-  display: block;
-  font-weight: 550;
-}
-.table small {
-  color: var(--color-text-muted);
+
+  th {
+    color: var(--color-text-muted);
+    font-weight: 500;
+    background: var(--color-surface-raised);
+  }
+
+  th,
+  td {
+    padding: var(--space-4) var(--space-5);
+    border-bottom: 1px solid var(--color-border-level-1);
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  tbody tr:hover {
+    background: var(--color-surface-raised);
+  }
+
+  td:first-child {
+    white-space: normal;
+    min-width: 180px;
+  }
+
+  strong {
+    display: block;
+    font-weight: 550;
+  }
+
+  small {
+    color: var(--color-text-muted);
+  }
+
+  .recordButton {
+    height: auto;
+    min-height: 0;
+    padding: 0;
+    color: var(--color-text-primary);
+    text-align: left;
+
+    &:hover {
+      color: var(--color-accent-default);
+    }
+  }
 }
 .pagination {
   padding: var(--space-3) var(--space-5);
@@ -105,19 +123,10 @@
   text-align: left;
   cursor: pointer;
   font-size: inherit;
-}
-.link:hover {
-  color: var(--color-accent-default);
-}
-.table .recordButton {
-  height: auto;
-  min-height: 0;
-  padding: 0;
-  color: var(--color-text-primary);
-  text-align: left;
-}
-.table .recordButton:hover {
-  color: var(--color-accent-default);
+
+  &:hover {
+    color: var(--color-accent-default);
+  }
 }
 .recordCopy {
   display: flex;
@@ -182,30 +191,30 @@
   gap: var(--space-2);
   font-size: var(--font-size-label);
   color: var(--color-text-secondary);
+
+  input {
+    width: 100%;
+    min-height: var(--control-height-md);
+    border: 1px solid var(--color-border-level-2);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-raised);
+    color: var(--color-text-primary);
+    padding: var(--space-3);
+    font-size: var(--font-size-body-small);
+  }
 }
-.field input {
-  width: 100%;
-  min-height: var(--control-height-md);
-  border: 1px solid var(--color-border-level-2);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-raised);
-  color: var(--color-text-primary);
-  padding: var(--space-3);
-  font-size: var(--font-size-body-small);
-}
-.page :focus-visible,
-.dialog :focus-visible {
-  outline: 2px solid var(--color-border-focus);
-  outline-offset: 3px;
+.page,
+.dialog {
+  :focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 3px;
+  }
 }
 .dialog {
   display: flex;
   flex-direction: column;
   gap: var(--space-5);
   min-width: 0;
-}
-.dialogHeader h2 {
-  font-size: var(--font-size-h3);
 }
 .dialogFooter {
   display: flex;
@@ -239,37 +248,41 @@
   grid-template-columns: 1fr 2fr;
   gap: var(--space-3);
   font-size: var(--font-size-body-small);
-}
-.detail dt {
-  color: var(--color-text-muted);
-}
-.detail dd {
-  overflow-wrap: anywhere;
+
+  dt {
+    color: var(--color-text-muted);
+  }
+
+  dd {
+    overflow-wrap: anywhere;
+  }
 }
 .preview {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
   overflow-wrap: anywhere;
-}
-.preview img {
-  width: 100%;
-  max-width: 900px;
-  aspect-ratio: 3/2;
-  object-fit: cover;
-  border-radius: var(--radius-md);
-  align-self: center;
-}
-.preview p {
-  white-space: pre-wrap;
-  line-height: 1.6;
-  color: var(--color-text-secondary);
+
+  img {
+    width: 100%;
+    max-width: 900px;
+    aspect-ratio: 3/2;
+    object-fit: cover;
+    border-radius: var(--radius-md);
+    align-self: center;
+  }
+
+  p {
+    white-space: pre-wrap;
+    line-height: 1.6;
+    color: var(--color-text-secondary);
+  }
 }
 .scheduleTable {
   min-width: 1120px;
   table-layout: fixed;
   th:first-child {
-    width: 90px;
+    width: 120px;
   }
   th,
   td {
@@ -283,7 +296,35 @@
   }
   .lesson {
     width: 100%;
-    margin-bottom: var(--space-2);
+    min-height: 84px;
+    position: relative;
+    border: 0;
+    background: color-mix(in srgb, var(--lesson-color) 4%, transparent);
+    border-radius: var(--radius-sm);
+    padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+
+    &::before {
+      position: absolute;
+      inset: var(--space-2) auto var(--space-2) var(--space-1);
+      width: 3px;
+      border-radius: var(--radius-round);
+      background: var(--lesson-color);
+      content: '';
+    }
+
+    &:hover {
+      background: color-mix(in srgb, var(--lesson-color) 10%, transparent);
+    }
+  }
+  tbody tr:hover {
+    background: transparent;
+  }
+  td {
+    padding: var(--space-2);
+  }
+  td:last-child,
+  th:last-child {
+    border-right: 0;
   }
 }
 .lesson {
@@ -299,36 +340,83 @@
   text-align: left;
   cursor: pointer;
   font-size: var(--font-size-caption);
-}
-.lesson small {
-  color: var(--color-text-muted);
+
+  &_lecture {
+    --lesson-color: var(--color-content-accent);
+  }
+
+  &_practice {
+    --lesson-color: var(--color-brand-blue);
+  }
+
+  &_laboratory {
+    --lesson-color: #bd3df5;
+  }
+
+  &_consultation {
+    --lesson-color: var(--color-status-success-content);
+  }
+
+  &_exam {
+    --lesson-color: var(--color-status-warning-content);
+  }
+
+  .lessonType {
+    color: var(--lesson-color);
+  }
+
+  small {
+    color: var(--color-text-muted);
+  }
 }
 @media (max-width: breakpoints.$screen-phone-max) {
-  .heading {
-    flex-direction: column;
-    gap: var(--space-4);
-  }
   .grid {
     grid-template-columns: 1fr;
   }
   .toolbar {
     align-items: stretch;
-  }
-  .toolbar > * {
-    flex: 1 1 100%;
+
+    > * {
+      flex: 1 1 100%;
+    }
   }
   .pagination {
     padding: var(--space-3);
     flex-wrap: wrap;
   }
-  .dialogFooter > * {
-    flex: 1;
+  .dialogFooter {
+    > * {
+      flex: 1;
+    }
   }
   .detail {
     grid-template-columns: 1fr;
     gap: var(--space-1);
+
+    dd {
+      margin-bottom: var(--space-3);
+    }
   }
-  .detail dd {
-    margin-bottom: var(--space-3);
+}
+
+.scheduleCell {
+  height: 100px;
+}
+.addLesson {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: var(--space-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+
+  &:hover {
+    color: var(--color-text-primary);
+    background: var(--color-surface-raised);
   }
 }

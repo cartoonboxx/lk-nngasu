@@ -12,6 +12,24 @@
         :disabled="registration"
         full-width
       />
+      <TextInput
+        v-model="user.passport"
+        label="Паспорт (серия и номер)"
+        name="passport"
+        placeholder="45 09 123456"
+        :maxlength="12"
+        required
+        full-width
+      />
+      <TextInput
+        v-model="user.snils"
+        label="СНИЛС"
+        name="snils"
+        placeholder="112-233-445 95"
+        :maxlength="14"
+        required
+        full-width
+      />
     </div>
     <template v-if="registration">
       <label :class="style.field">

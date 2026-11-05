@@ -1,12 +1,17 @@
 <template>
   <section :class="style.page">
-    <header :class="style.heading">
-      <div>
-        <h1>Расписание</h1>
-        <p>Повторяющийся двухнедельный шаблон · понедельник — суббота</p>
-      </div>
-      <Button @click="openLesson()"><PhPlus :size="18" />Добавить занятие</Button>
-    </header>
+    <SectionHeader
+      header="Расписание"
+      paragraph="Повторяющийся двухнедельный шаблон · понедельник — суббота"
+      nm
+    >
+      <template #actions>
+        <Button @click="openLesson()">
+          <PhPlus :size="18" />
+          Добавить занятие
+        </Button>
+      </template>
+    </SectionHeader>
     <div :class="style.toolbar">
       <label :class="style.field">
         Семестр
@@ -40,46 +45,57 @@
         />
       </label>
     </div>
-    <div :class="style.heading">
+    <div :class="style.toolbar">
       <div :class="style.tabs">
         <StyleTab text="Недельная сетка" :active="view === 'grid'" @select="view = 'grid'" />
         <StyleTab text="Список" :active="view === 'list'" @select="view = 'list'" />
       </div>
-      <Button variant="secondary" size="sm" @click="copyOpen = true">Скопировать шаблон</Button>
     </div>
     <div v-if="view === 'grid'" :class="style.panel">
       <div :class="style.tableScroll">
-        <table v-if="filtered.length" :class="[style.table, style.scheduleTable]">
+        <table :class="[style.table, style.scheduleTable]">
           <thead>
             <tr>
-              <th>Время</th>
+              <th>Пара</th>
               <th v-for="day in days" :key="day">{{ day }}</th>
             </tr>
           </thead>
           <tbody>
-            <tr v-for="row in scheduleGrid" :key="row.time">
-              <th>{{ row.time }}</th>
-              <td v-for="(lessons, day) in row.days" :key="day">
+            <tr v-for="row in scheduleGrid" :key="row.number">
+              <th>
+                <strong>{{ row.number }} пара</strong>
+                <small>{{ row.start }}–{{ row.end }}</small>
+              </th>
+              <td
+                v-for="(lessons, day) in row.days"
+                :key="day"
+                :class="style.scheduleCell"
+                @click="!lessons.length && openLesson(undefined, day + 1, row.number)"
+              >
                 <button
                   v-for="item in lessons"
                   :key="item.id"
-                  :class="style.lesson"
-                  @click="openLesson(item)"
+                  :class="[style.lesson, style[`lesson_${item.lesson_type}`]]"
+                  @click.stop="openLesson(item)"
                 >
-                  <strong>{{ item.starts_at }}–{{ item.ends_at }}</strong>
-                  <span>{{ item.subject }}</span>
-                  <small>{{ lessonLabels[item.lesson_type] }}</small>
+                  <strong>{{ item.subject }}</strong>
+                  <small :class="style.lessonType">{{ lessonLabels[item.lesson_type] }}</small>
                   <span>{{ item.group }} · {{ item.room }}</span>
                   <small>{{ item.teacher }}</small>
+                </button>
+                <button
+                  v-if="!lessons.length"
+                  type="button"
+                  :class="style.addLesson"
+                  :title="`${days[day]}, ${row.number} пара — добавить занятие`"
+                  @click.stop="openLesson(undefined, day + 1, row.number)"
+                >
+                  <PhPlus :size="18" />
                 </button>
               </td>
             </tr>
           </tbody>
         </table>
-        <div v-else :class="style.empty">
-          <strong>Занятий пока нет</strong>
-          <p>Измените фильтры или добавьте занятие в шаблон.</p>
-        </div>
       </div>
     </div>
     <AdminTable
@@ -166,12 +182,8 @@
             />
           </label>
           <label :class="style.field">
-            Начало
-            <input v-model="draft.starts_at" type="time" required />
-          </label>
-          <label :class="style.field">
-            Окончание
-            <input v-model="draft.ends_at" type="time" required />
+            Пара
+            <Select v-model="selectedPeriod" :options="periodOptions" full-width />
           </label>
         </div>
         <label :class="style.field">
@@ -210,22 +222,11 @@
         </Button>
       </div>
     </AdminDialog>
-    <ScheduleCopyDialog
-      v-if="copyOpen"
-      v-model="copyOpen"
-      :group="scope === 'group' && scopeId ? scopeId : 1"
-      :semester="semester"
-      :week="week"
-      @copied="
-        (target) => {
-          semester = target.semester
-          week = target.week
-        }
-      "
-    />
   </section>
 </template>
 <script lang="ts">
+import { periods } from '@/pages/schedule/schedule.periods'
+import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import Select from '@/components/UI/inputs/Select/Select.vue'
 import StyleTab from '@/components/UI/tabs/StyleTab/StyleTab.vue'
 import { defineComponent } from 'vue'
@@ -233,7 +234,6 @@ import { PhPlus } from '@phosphor-icons/vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
 import AdminTable from './components/AdminTable.vue'
 import AdminDialog from './components/AdminDialog.vue'
-import ScheduleCopyDialog from './components/ScheduleCopyDialog.vue'
 import { adminDays, lessonLabels, type AdminLesson, type LessonKind } from './admin.types'
 import { lessonConflicts } from '@/stores/admin'
 import style from './Admin.module.scss'
@@ -248,7 +248,15 @@ interface ScheduleRow extends AdminLesson {
   lesson_type: LessonKind
 }
 export default defineComponent({
-  components: { ScheduleCopyDialog, StyleTab, Select, PhPlus, Button, AdminTable, AdminDialog },
+  components: {
+    SectionHeader,
+    StyleTab,
+    Select,
+    PhPlus,
+    Button,
+    AdminTable,
+    AdminDialog,
+  },
   data() {
     return {
       scopeTypeOptions: [
@@ -266,6 +274,10 @@ export default defineComponent({
         { value: '2', label: 'Вторая неделя' },
       ],
       style,
+      periodOptions: periods.map((period, index) => ({
+        value: String(index + 1),
+        label: `${index + 1} пара · ${period.start}–${period.end}`,
+      })),
       lessonLabels,
       days: adminDays,
       semester: 1,
@@ -277,14 +289,13 @@ export default defineComponent({
       confirmOpen: false,
       formGroup: 1,
       formSemester: 1,
-      copyOpen: false,
       draft: {
         id: 0,
         workload_id: 0,
         week_number: 1,
         day_of_week: 1,
-        starts_at: '08:30',
-        ends_at: '10:00',
+        starts_at: periods[0]!.start,
+        ends_at: periods[0]!.end,
         room_id: 0,
       } as AdminLesson,
     }
@@ -309,19 +320,36 @@ export default defineComponent({
       )
     },
 
-    scheduleGrid(): { time: string; days: ScheduleRow[][] }[] {
-      const rows = new Map<string, ScheduleRow[][]>()
-      for (const lesson of this.filtered) {
-        let days = rows.get(lesson.starts_at)
-        if (!days) {
-          days = this.days.map(() => [])
-          rows.set(lesson.starts_at, days)
-        }
-        days[lesson.day_of_week - 1]?.push(lesson)
-      }
-      return [...rows]
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([time, days]) => ({ time, days }))
+    selectedPeriod: {
+      get(): string {
+        return String(
+          periods.findIndex(
+            (period, index) =>
+              this.draft.starts_at >= period.start &&
+              this.draft.starts_at < (periods[index + 1]?.start ?? '24:00'),
+          ) + 1,
+        )
+      },
+      set(value: string) {
+        const period = periods[Number(value) - 1]
+        if (!period) return
+        this.draft.starts_at = period.start
+        this.draft.ends_at = period.end
+      },
+    },
+    scheduleGrid() {
+      return periods.map((period, index) => ({
+        ...period,
+        number: index + 1,
+        days: this.days.map((_, day) =>
+          this.filtered.filter(
+            (lesson) =>
+              lesson.day_of_week === day + 1 &&
+              lesson.starts_at >= period.start &&
+              lesson.starts_at < (periods[index + 1]?.start ?? '24:00'),
+          ),
+        ),
+      }))
     },
     scopeFilterOptions(): FloatingPopupItem[] {
       const data = this.$adminStore.data
@@ -419,7 +447,8 @@ export default defineComponent({
     },
   },
   methods: {
-    openLesson(item?: AdminLesson) {
+    openLesson(item?: AdminLesson, day = 1, periodNumber = 1) {
+      const period = periods[periodNumber - 1] ?? periods[0]!
       const workload = this.$adminStore.data?.workloads.find(
         (value) => value.id === item?.workload_id,
       )
@@ -427,7 +456,10 @@ export default defineComponent({
         (value) => value.id === workload?.course_id,
       )
       this.formGroup =
-        course?.group_id ?? (this.scope === 'group' && this.scopeId ? this.scopeId : 1)
+        course?.group_id ??
+        (this.scope === 'group' && this.scopeId
+          ? this.scopeId
+          : Number(this.groupOptions[0]?.value ?? 0))
       this.formSemester = course?.semester_id ?? this.semester
       this.draft = item
         ? {
@@ -443,10 +475,10 @@ export default defineComponent({
             id: 0,
             workload_id: 0,
             week_number: this.week,
-            day_of_week: 1,
-            starts_at: '08:30',
-            ends_at: '10:00',
-            room_id: 0,
+            day_of_week: day,
+            starts_at: period.start,
+            ends_at: period.end,
+            room_id: this.scope === 'room' ? this.scopeId : 0,
           }
       this.$adminStore.error = ''
       this.opened = true

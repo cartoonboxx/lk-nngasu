@@ -17,6 +17,8 @@ export interface AdminUser {
   first_name: string
   middle_names: string
   email: string
+  passport: string
+  snils: string
   avatar_url: string
   is_active: boolean
   is_admin: boolean
@@ -26,6 +28,8 @@ export interface AdminUser {
 export interface RegistrationRequest {
   id: number
   email: string
+  passport: string
+  snils: string
   last_name: string
   first_name: string
   middle_names: string

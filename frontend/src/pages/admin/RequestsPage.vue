@@ -1,12 +1,14 @@
 <template>
   <section :class="style.page">
-    <header :class="style.heading">
-      <div>
-        <h1>Заявки на регистрацию</h1>
-        <p>Проверяйте данные и предоставляйте доступ к личному кабинету</p>
-      </div>
-      <span :class="[style.pill, style.pending]">Ожидают решения: {{ pending }}</span>
-    </header>
+    <SectionHeader
+      header="Заявки на регистрацию"
+      paragraph="Проверяйте данные и предоставляйте доступ к личному кабинету"
+      nm
+    >
+      <template #actions>
+        <span :class="[style.pill, style.pending]">Ожидают решения: {{ pending }}</span>
+      </template>
+    </SectionHeader>
     <div :class="style.toolbar">
       <TextInput
         v-model="search"
@@ -55,6 +57,10 @@
         <dl :class="style.detail">
           <dt>Получена</dt>
           <dd>{{ requestDates[selected.id]?.created }}</dd>
+          <dt>Паспорт (серия и номер)</dt>
+          <dd>{{ selected.passport || 'Не указан' }}</dd>
+          <dt>СНИЛС</dt>
+          <dd>{{ selected.snils || 'Не указан' }}</dd>
           <dt>Комментарий</dt>
           <dd>{{ selected.comment || 'Не указан' }}</dd>
         </dl>
@@ -118,6 +124,7 @@
   </section>
 </template>
 <script lang="ts">
+import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import Select from '@/components/UI/inputs/Select/Select.vue'
 import StyleTab from '@/components/UI/tabs/StyleTab/StyleTab.vue'
 import { defineComponent } from 'vue'
@@ -131,6 +138,7 @@ import { adminDate, statusLabels, type RegistrationRequest, type AdminUser } fro
 import style from './Admin.module.scss'
 export default defineComponent({
   components: {
+    SectionHeader,
     StyleTab,
     Select,
     RouterLink,
@@ -201,6 +209,8 @@ export default defineComponent({
         first_name: item.first_name,
         middle_names: item.middle_names,
         email: item.email,
+        passport: item.passport,
+        snils: item.snils,
         avatar_url: '',
         is_active: true,
         is_admin: false,

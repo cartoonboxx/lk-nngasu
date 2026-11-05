@@ -94,16 +94,7 @@ const lessons = {
   },
 } satisfies Record<string, Omit<ScheduleLesson, 'id' | 'start' | 'end'>>
 
-// Шкала времени для таблицы; занятия хранятся внутри дней.
-export const periods = [
-  { start: '08:00', end: '09:30' },
-  { start: '09:45', end: '11:15' },
-  { start: '11:30', end: '13:00' },
-  { start: '13:20', end: '14:50' },
-  { start: '15:10', end: '16:40' },
-  { start: '16:55', end: '18:25' },
-  { start: '18:35', end: '19:55' },
-]
+export { periods } from './schedule.periods'
 
 const monday = new Date()
 monday.setHours(0, 0, 0, 0)

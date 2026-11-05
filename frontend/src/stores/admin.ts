@@ -1,3 +1,4 @@
+import { periods } from '@/pages/schedule/schedule.periods'
 import { defineStore } from 'pinia'
 import { adminRepository } from '@/pages/admin/admin.repository'
 import type {
@@ -17,6 +18,10 @@ function validateUser(data: AdminData, user: AdminUser) {
     throw new Error('Имя, фамилия и отчество — не более 50 символов каждое.')
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email) || user.email.length > 255)
     throw new Error('Укажите корректный email.')
+  if (!/^(?:\d{10}|\d{2} \d{2} \d{6})$/.test(user.passport.trim()))
+    throw new Error('Укажите серию и номер паспорта: 10 цифр, например 45 09 123456.')
+  if (!/^(?:\d{11}|\d{3}-\d{3}-\d{3} \d{2})$/.test(user.snils.trim()))
+    throw new Error('Укажите СНИЛС: 11 цифр, например 112-233-445 95.')
   if (
     data.users.some(
       (item) => item.id !== user.id && item.email.toLowerCase() === user.email.toLowerCase(),
@@ -131,6 +136,8 @@ export const useAdminStore = defineStore('adminStore', {
             ...user,
             id: Math.max(0, ...data.users.map((item) => item.id)) + 1,
             email: request.email.toLowerCase(),
+            passport: user.passport.trim(),
+            snils: user.snils.trim(),
             is_admin: false,
             is_active: true,
           }
@@ -138,6 +145,8 @@ export const useAdminStore = defineStore('adminStore', {
             throw new Error('Выберите одну учебную роль для регистрации.')
           validateUser(data, created)
           data.users.push(created)
+          request.passport = created.passport
+          request.snils = created.snils
           request.user_id = created.id
           request.status = 'approved'
         } else {
@@ -153,6 +162,8 @@ export const useAdminStore = defineStore('adminStore', {
         const next = {
           ...user,
           email: user.email.trim().toLowerCase(),
+          passport: user.passport.trim(),
+          snils: user.snils.trim(),
           is_admin: existing?.is_admin ?? false,
           is_active: existing?.is_active ?? true,
           id: user.id || Math.max(0, ...data.users.map((item) => item.id)) + 1,
@@ -330,20 +341,21 @@ export const useAdminStore = defineStore('adminStore', {
     },
     async saveLesson(lesson: AdminLesson) {
       return this.commit((data) => {
+        const existing = data.lessons.find((item) => item.id === lesson.id)
         if (
           ![1, 2].includes(lesson.week_number) ||
           lesson.day_of_week < 1 ||
           lesson.day_of_week > 6 ||
-          !/^\d{2}:\d{2}$/.test(lesson.starts_at) ||
-          !/^\d{2}:\d{2}$/.test(lesson.ends_at) ||
-          lesson.starts_at >= lesson.ends_at
+          (!periods.some(
+            (period) => period.start === lesson.starts_at && period.end === lesson.ends_at,
+          ) &&
+            !(existing?.starts_at === lesson.starts_at && existing.ends_at === lesson.ends_at))
         )
-          throw new Error('Проверьте неделю, день и интервал занятия.')
+          throw new Error('Проверьте неделю, день и номер пары (1–7).')
         if (!data.catalogs.rooms.some((item) => item.id === lesson.room_id && !item.archived))
           throw new Error('Выберите действующую аудиторию.')
         const conflicts = lessonConflicts(data, lesson)
         if (conflicts.length) throw new Error(conflicts.join(' '))
-        const existing = data.lessons.find((item) => item.id === lesson.id)
         const next = {
           ...lesson,
           id: lesson.id || Math.max(0, ...data.lessons.map((item) => item.id)) + 1,

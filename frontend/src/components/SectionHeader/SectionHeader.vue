@@ -1,5 +1,5 @@
 <template>
-  <section :class="style.sectionHeader">
+  <section :class="[style.sectionHeader, nm ? style.noMargin : null]">
     <div :class="style.information">
       <h1>{{ header }}</h1>
       <p>{{ paragraph }}</p>
@@ -24,6 +24,10 @@ export default defineComponent({
     paragraph: {
       type: String,
       default: '',
+    },
+    nm: {
+      type: Boolean,
+      default: false,
     },
   },
   data() {
