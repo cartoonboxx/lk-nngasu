@@ -49,7 +49,7 @@
     }
   }
 
-  &:has(> button:is(:active, [data-pressed='true']):not(:disabled)) {
+  &:has(> :is(button, a):is(:active, [data-pressed='true']):not(:disabled)) {
     background: var(--color-surface-navigation-selected);
     color: var(--color-content-accent);
   }
