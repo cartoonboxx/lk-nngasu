@@ -39,7 +39,7 @@
         @click="unreadOnly = true"
       >
         Непрочитанные
-        <Badge v-if="unreadChats" :value="unreadChats" inline />
+        <Badge v-if="unreadChats" :value="unreadChats" variant="info" inline />
       </Button>
     </div>
     <ul v-if="filteredChats.length" ref="chatList" :class="style.chatList">
@@ -66,7 +66,7 @@
                 </span>
                 <span :class="style.chatLine">
                   <span :class="style.preview">{{ chat.preview }}</span>
-                  <Badge v-if="chat.unread" :value="chat.unread" inline />
+                  <Badge v-if="chat.unread" :value="chat.unread" variant="info" inline />
                 </span>
               </span>
             </span>

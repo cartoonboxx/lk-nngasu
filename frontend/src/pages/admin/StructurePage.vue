@@ -45,7 +45,7 @@
           {{ entryDetails[item.id] }}
         </td>
         <td>
-          <span :class="style.pill">{{ item.archived ? 'В архиве' : 'Действует' }}</span>
+          <StatusBadge>{{ item.archived ? 'В архиве' : 'Действует' }}</StatusBadge>
         </td>
         <td>
           <div :class="style.actions">
@@ -151,6 +151,7 @@
   </section>
 </template>
 <script lang="ts">
+import StatusBadge from '@/components/UI/StatusBadge/StatusBadge.vue'
 import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import Select from '@/components/UI/inputs/Select/Select.vue'
 import StyleTab from '@/components/UI/tabs/StyleTab/StyleTab.vue'
@@ -164,6 +165,7 @@ import { catalogLabels, type CatalogKind, type CatalogEntry } from './admin.type
 import style from './Admin.module.scss'
 export default defineComponent({
   components: {
+    StatusBadge,
     SectionHeader,
     StyleTab,
     Select,
