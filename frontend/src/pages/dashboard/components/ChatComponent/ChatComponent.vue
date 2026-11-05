@@ -27,9 +27,7 @@
                 <span v-if="chat.sender" :class="style.sender">{{ chat.sender }}: </span>
                 {{ chat.preview }}
               </span>
-              <span v-if="chat.unread" :class="style.unread">
-                {{ chat.unread }}
-              </span>
+              <Badge v-if="chat.unread" :value="chat.unread" variant="info" inline />
             </span>
           </span>
         </RouterLink>
@@ -54,6 +52,7 @@
 </template>
 
 <script lang="ts">
+import Badge from '@/components/UI/Badge/Badge.vue'
 import { defineComponent } from 'vue'
 import { RouterLink } from 'vue-router'
 import { PhChatsCircle, PhNotePencil, PhArrowUpRight, PhUsersThree } from '@phosphor-icons/vue'
@@ -62,7 +61,7 @@ import style from './ChatComponent.module.scss'
 
 export default defineComponent({
   name: 'ChatComponent',
-  components: { RouterLink, PhChatsCircle, PhNotePencil, PhArrowUpRight, PhUsersThree },
+  components: { Badge, RouterLink, PhChatsCircle, PhNotePencil, PhArrowUpRight, PhUsersThree },
   directives: { press: pressFeedback },
   data() {
     return {

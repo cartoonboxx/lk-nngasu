@@ -6,7 +6,7 @@
       nm
     >
       <template #actions>
-        <span :class="[style.pill, style.pending]">Ожидают решения: {{ pending }}</span>
+        <StatusBadge variant="warning">Ожидают решения: {{ pending }}</StatusBadge>
       </template>
     </SectionHeader>
     <div :class="style.toolbar">
@@ -43,7 +43,9 @@
         </td>
         <td>{{ requestDates[item.id]?.created }}</td>
         <td>
-          <span :class="[style.pill, style[item.status]]">{{ statusLabels[item.status] }}</span>
+          <StatusBadge :variant="statusVariants[item.status]">{{
+            statusLabels[item.status]
+          }}</StatusBadge>
         </td>
         <td>
           <Button variant="ghost" size="sm" @click="openRequest(item)">
@@ -124,6 +126,7 @@
   </section>
 </template>
 <script lang="ts">
+import StatusBadge from '@/components/UI/StatusBadge/StatusBadge.vue'
 import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import Select from '@/components/UI/inputs/Select/Select.vue'
 import StyleTab from '@/components/UI/tabs/StyleTab/StyleTab.vue'
@@ -134,10 +137,17 @@ import Button from '@/components/UI/buttons/Button/Button.vue'
 import AdminTable from './components/AdminTable.vue'
 import AdminDialog from './components/AdminDialog.vue'
 import UserFields from './components/UserFields.vue'
-import { adminDate, statusLabels, type RegistrationRequest, type AdminUser } from './admin.types'
+import {
+  adminDate,
+  statusLabels,
+  statusVariants,
+  type RegistrationRequest,
+  type AdminUser,
+} from './admin.types'
 import style from './Admin.module.scss'
 export default defineComponent({
   components: {
+    StatusBadge,
     SectionHeader,
     StyleTab,
     Select,
@@ -163,6 +173,7 @@ export default defineComponent({
       columns: ['Заявитель', 'Дата заявки', 'Статус', 'Действие'],
       style,
       statusLabels,
+      statusVariants,
       search: '',
       status: 'pending',
       sort: 'desc',

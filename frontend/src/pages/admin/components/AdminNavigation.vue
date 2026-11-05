@@ -39,9 +39,7 @@
             :active="$route.name === `admin-${item.path}`"
           >
             <template v-if="item.path === 'requests' && pending && !collapsed" #actions>
-              <span :class="desktop.tabBadge">
-                {{ pending }}
-              </span>
+              <Badge :value="pending" variant="info" inline />
             </template>
           </NavTab>
         </Tooltip>
@@ -129,6 +127,7 @@
   </AdminDialog>
 </template>
 <script lang="ts">
+import Badge from '@/components/UI/Badge/Badge.vue'
 import { defineComponent, markRaw } from 'vue'
 import { RouterLink } from 'vue-router'
 import {
@@ -156,6 +155,7 @@ import breakpoints from '@/styles/breakpoints.module.scss'
 import style from '../Admin.module.scss'
 export default defineComponent({
   components: {
+    Badge,
     RouterLink,
     BrandHeader,
     StudentCard,

@@ -107,6 +107,17 @@ export const statusLabels: Record<string, string> = {
   published: 'Опубликована',
   archived: 'В архиве',
 }
+export const statusVariants: Record<
+  RegistrationRequest['status'] | AdminNews['status'],
+  StatusBadgeVariant
+> = {
+  pending: 'warning',
+  approved: 'success',
+  rejected: 'error',
+  draft: 'warning',
+  published: 'success',
+  archived: 'neutral',
+}
 export const adminDate = new Intl.DateTimeFormat('ru-RU', {
   dateStyle: 'medium',
   timeStyle: 'short',

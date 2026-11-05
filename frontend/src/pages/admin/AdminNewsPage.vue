@@ -46,7 +46,9 @@
           </Button>
         </td>
         <td>
-          <span :class="[style.pill, style[item.status]]">{{ statusLabels[item.status] }}</span>
+          <StatusBadge :variant="statusVariants[item.status]">{{
+            statusLabels[item.status]
+          }}</StatusBadge>
         </td>
         <td>{{ item.author }}</td>
         <td>{{ newsDates[item.id]?.updated }}</td>
@@ -160,6 +162,7 @@
   </section>
 </template>
 <script lang="ts">
+import StatusBadge from '@/components/UI/StatusBadge/StatusBadge.vue'
 import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import Select from '@/components/UI/inputs/Select/Select.vue'
 import { defineComponent } from 'vue'
@@ -170,11 +173,12 @@ import Button from '@/components/UI/buttons/Button/Button.vue'
 import AdminTable from './components/AdminTable.vue'
 import AdminDialog from './components/AdminDialog.vue'
 import AdminImage from './components/AdminImage.vue'
-import { adminDate, statusLabels, type AdminNews } from './admin.types'
+import { adminDate, statusLabels, statusVariants, type AdminNews } from './admin.types'
 import style from './Admin.module.scss'
 import newsStyle from '@/pages/news/page/NewsDetailsPage.module.scss'
 export default defineComponent({
   components: {
+    StatusBadge,
     SectionHeader,
     Select,
     PhPlus,
@@ -203,6 +207,7 @@ export default defineComponent({
       style,
       newsStyle,
       statusLabels,
+      statusVariants,
       search: '',
       status: '',
       sort: 'updated',

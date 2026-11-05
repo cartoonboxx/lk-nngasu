@@ -53,9 +53,9 @@
           <strong v-if="item.is_admin">Администратор</strong>
         </td>
         <td>
-          <span :class="[style.pill, item.is_active ? style.approved : style.rejected]">
+          <StatusBadge :variant="item.is_active ? 'success' : 'error'">
             {{ item.is_active ? 'Активен' : 'Заблокирован' }}
-          </span>
+          </StatusBadge>
         </td>
         <td>
           <div :class="style.actions">
@@ -122,6 +122,7 @@
   </section>
 </template>
 <script lang="ts">
+import StatusBadge from '@/components/UI/StatusBadge/StatusBadge.vue'
 import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import Select from '@/components/UI/inputs/Select/Select.vue'
 import { defineComponent } from 'vue'
@@ -136,6 +137,7 @@ import type { AdminUser } from './admin.types'
 import style from './Admin.module.scss'
 export default defineComponent({
   components: {
+    StatusBadge,
     SectionHeader,
     Select,
     PhPlus,

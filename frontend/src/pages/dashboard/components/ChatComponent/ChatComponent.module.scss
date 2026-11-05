@@ -115,20 +115,6 @@
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
-.unread {
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  min-width: 18px;
-  height: 18px;
-  padding: 0 5px;
-  border-radius: var(--radius-round);
-  background: var(--color-content-interactive);
-  color: var(--color-surface-page);
-  font-size: 10px;
-  font-weight: 600;
-  line-height: 1;
-}
 .hasUnread {
   .name {
     font-weight: 600;

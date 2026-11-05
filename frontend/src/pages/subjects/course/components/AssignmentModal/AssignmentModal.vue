@@ -13,15 +13,9 @@
           </p>
           <div :class="style.titleRow">
             <h2>Практическая работа №{{ topicIndex + 1 }}</h2>
-            <p
-              :class="[
-                style.status,
-                reviewed ? style.reviewed : null,
-                answer && !reviewed ? style.pending : null,
-              ]"
-            >
+            <StatusBadge :variant="reviewed ? 'success' : answer ? 'info' : 'neutral'">
               {{ reviewed ? 'Работа проверена' : answer ? 'Ожидает проверки' : 'Не отправлено' }}
-            </p>
+            </StatusBadge>
           </div>
           <p :class="style.deadline">
             <PhCalendarBlank :size="23" />
@@ -215,6 +209,7 @@
 </template>
 
 <script lang="ts">
+import StatusBadge from '@/components/UI/StatusBadge/StatusBadge.vue'
 import { defineComponent, useId, type PropType } from 'vue'
 import {
   PhCalendarBlank,
@@ -240,6 +235,7 @@ import style from './AssignmentModal.module.scss'
 export default defineComponent({
   name: 'AssignmentModal',
   components: {
+    StatusBadge,
     Modal,
     Button,
     MediaButton,

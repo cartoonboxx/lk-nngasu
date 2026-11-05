@@ -43,23 +43,6 @@
   flex-shrink: 0;
   color: var(--color-content-interactive);
 }
-.status {
-  flex-shrink: 0;
-  padding: var(--space-2) var(--space-4);
-  border-radius: var(--radius-round);
-  background: var(--color-surface-interactive);
-  color: var(--color-text-secondary);
-  font-size: var(--font-size-body-small);
-  font-weight: 600;
-}
-.pending {
-  background: var(--color-status-info-surface);
-  color: var(--color-status-info-content);
-}
-.reviewed {
-  background: var(--color-status-success-surface);
-  color: var(--color-status-success-content);
-}
 .deadline {
   display: flex;
   align-items: center;

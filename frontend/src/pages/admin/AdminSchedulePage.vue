@@ -1,10 +1,6 @@
 <template>
   <section :class="style.page">
-    <SectionHeader
-      header="Расписание"
-      paragraph="Повторяющийся двухнедельный шаблон · понедельник — суббота"
-      nm
-    >
+    <SectionHeader header="Расписание" paragraph="Повторяющийся двухнедельный шаблон" nm>
       <template #actions>
         <Button @click="openLesson()">
           <PhPlus :size="18" />
