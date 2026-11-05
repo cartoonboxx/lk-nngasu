@@ -14,9 +14,50 @@ import CoursePage from '@/pages/subjects/course/CoursePage.vue'
 import NewsPage from '@/pages/news/NewsPage.vue'
 import NewsDetailsPage from '@/pages/news/page/NewsDetailsPage.vue'
 import NotFoundPage from '@/pages/notFound/NotFoundPage.vue'
+import AdminPage from '@/pages/admin/AdminPage.vue'
+import { adminDemoSession, adminDemoSessionKey } from '@/pages/auth/admin-demo'
+
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
+    {
+      path: '/admin',
+      component: AdminPage,
+      meta: { adminOnly: true },
+      children: [
+        { path: '', redirect: { name: 'admin-requests' } },
+        {
+          path: 'requests',
+          name: 'admin-requests',
+          component: () => import('@/pages/admin/RequestsPage.vue'),
+        },
+        {
+          path: 'users',
+          name: 'admin-users',
+          component: () => import('@/pages/admin/UsersPage.vue'),
+        },
+        {
+          path: 'structure',
+          name: 'admin-structure',
+          component: () => import('@/pages/admin/StructurePage.vue'),
+        },
+        {
+          path: 'courses',
+          name: 'admin-courses',
+          component: () => import('@/pages/admin/CoursesPage.vue'),
+        },
+        {
+          path: 'schedule',
+          name: 'admin-schedule',
+          component: () => import('@/pages/admin/AdminSchedulePage.vue'),
+        },
+        {
+          path: 'news',
+          name: 'admin-news',
+          component: () => import('@/pages/admin/AdminNewsPage.vue'),
+        },
+      ],
+    },
     {
       path: '/',
       component: HomeLayout,
@@ -98,6 +139,20 @@ const router = createRouter({
       component: NotFoundPage,
     },
   ],
+})
+
+router.beforeEach((to, from) => {
+  if (to.name === 'authorization' || (from.meta.adminOnly && !to.meta.adminOnly)) {
+    adminDemoSession.active = false
+    try {
+      sessionStorage.removeItem(adminDemoSessionKey)
+    } catch {
+      /* In-memory access is already cleared. */
+    }
+  }
+  if (to.meta.adminOnly && !adminDemoSession.active) {
+    return { name: 'authorization', query: { reason: 'admin-required' } }
+  }
 })
 
 export default router

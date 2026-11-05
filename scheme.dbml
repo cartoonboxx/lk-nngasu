@@ -18,6 +18,13 @@ Enum submission_state {
   reviewed      // проверено и оценено
 }
 
+// Роли пользователей в системе
+Enum user_role {
+  student    // студент
+  teacher // преподаватель
+  admin   // администратор
+}
+
 // ====================================================
 // БЛОК 1. Пользователи и структура ВУЗа
 // ====================================================
@@ -29,10 +36,12 @@ Table app_user {
   middle_names varchar(50)
 
   email varchar(255) [not null, unique]
+  SNILS char(11) [not null, unique] // СНИЛС
+  passport char(10) [not null, unique]
   password_hash varchar(255) [not null]
 
   avatar_file_id int
-  is_admin bool [not null, default: false]
+  role user_role [not null, default: 'studnet']
   is_active bool [not null, default: true] // soft delete
 }
 

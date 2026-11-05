@@ -1,5 +1,6 @@
 <template>
   <BaseTab
+    :to="to"
     :class="[style.tab, compact ? style.compact : null]"
     :text="text"
     :image-src="imageSrc"

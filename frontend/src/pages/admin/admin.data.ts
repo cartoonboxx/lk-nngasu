@@ -1,0 +1,218 @@
+import type { AdminData, AdminUser } from './admin.types'
+import cover from '$images/photoNews/Nngasu.png'
+
+export function createAdminData(): AdminData {
+  const users: AdminUser[] = [
+    {
+      id: 1,
+      last_name: 'Иванова',
+      first_name: 'Анна',
+      middle_names: 'Сергеевна',
+      email: 'a.ivanova@nngasu.ru',
+      passport: '45 09 100001',
+      snils: '100-000-001 00',
+      avatar_url: '',
+      is_active: true,
+      is_admin: true,
+      student: { group_id: 1, record_book_number: '240001', is_headman: true },
+      teacher: null,
+    },
+    {
+      id: 2,
+      last_name: 'Петров',
+      first_name: 'Алексей',
+      middle_names: 'Викторович',
+      email: 'a.petrov@nngasu.ru',
+      passport: '45 09 100002',
+      snils: '100-000-002 00',
+      avatar_url: '',
+      is_active: true,
+      is_admin: false,
+      student: null,
+      teacher: { department_id: 1 },
+    },
+    {
+      id: 3,
+      last_name: 'Смирнова',
+      first_name: 'Елена',
+      middle_names: 'Павловна',
+      email: 'e.smirnova@nngasu.ru',
+      passport: '45 09 100003',
+      snils: '100-000-003 00',
+      avatar_url: '',
+      is_active: true,
+      is_admin: false,
+      student: null,
+      teacher: { department_id: 2 },
+    },
+    ...Array.from({ length: 14 }, (_, index): AdminUser => ({
+      id: index + 4,
+      last_name: ['Соколов', 'Кузнецова', 'Волков', 'Морозова', 'Орлов', 'Лебедева', 'Попов'][
+        index % 7
+      ]!,
+      first_name: index % 2 ? 'Мария' : 'Дмитрий',
+      middle_names: index % 2 ? 'Андреевна' : 'Сергеевич',
+      email: `student${index + 1}@edu.nngasu.ru`,
+      passport: `45 09 ${100004 + index}`,
+      snils: `100-000-${String(index + 4).padStart(3, '0')} 00`,
+      avatar_url: '',
+      is_active: index !== 8,
+      is_admin: false,
+      student: {
+        group_id: (index % 2) + 1,
+        record_book_number: `2400${String(index + 2).padStart(2, '0')}`,
+        is_headman: false,
+      },
+      teacher: null,
+    })),
+  ]
+  return {
+    version: 1,
+    users,
+    requests: Array.from({ length: 16 }, (_, index) => ({
+      id: index + 1,
+      email: ['nikita.romanov@mail.ru', 'olga.volkova@nngasu.ru', 'maria.belova@yandex.ru'][
+        index % 3
+      ]!.replace('@', index > 2 ? `${index}@` : '@'),
+      last_name: ['Романов', 'Волкова', 'Белова', 'Козлов'][index % 4]!,
+      first_name: ['Никита', 'Ольга', 'Мария', 'Илья'][index % 4]!,
+      middle_names: '',
+      passport: `45 10 ${200001 + index}`,
+      snils: `200-000-${String(index + 1).padStart(3, '0')} 00`,
+      comment:
+        index % 3 === 1
+          ? 'Преподаватель кафедры строительных конструкций.'
+          : 'Прошу предоставить доступ к личному кабинету.',
+      status: index === 14 ? 'rejected' : 'pending',
+      created_at: new Date(Date.UTC(2026, 10, 5, 10, 30) - index * 3_600_000).toISOString(),
+      reviewed_at: index === 14 ? '2026-11-05T09:00:00.000Z' : null,
+      reviewed_by: index === 14 ? 'Анна Иванова' : null,
+      user_id: null,
+    })),
+    catalogs: {
+      groups: [
+        { id: 1, name: '24-ИСТ-1', specialization_id: 1, admission_year: 2024, archived: false },
+        { id: 2, name: '24-ПГС-1', specialization_id: 2, admission_year: 2024, archived: false },
+        { id: 3, name: '25-ИСТ-1', specialization_id: 1, admission_year: 2025, archived: false },
+      ],
+      specializations: [
+        { id: 1, name: 'Информационные системы и технологии', code: '09.03.02', archived: false },
+        { id: 2, name: 'Строительство', code: '08.03.01', archived: false },
+      ],
+      departments: [
+        { id: 1, name: 'Информационные системы и технологии', archived: false },
+        { id: 2, name: 'Строительные конструкции', archived: false },
+      ],
+      subjects: [
+        { id: 1, name: 'Математический анализ', archived: false },
+        { id: 2, name: 'Программирование', archived: false },
+        { id: 3, name: 'Строительная механика', archived: false },
+      ],
+      semesters: [
+        {
+          id: 1,
+          name: '2026/27 · Осенний семестр',
+          academic_year_start: 2026,
+          number: 1,
+          archived: false,
+        },
+        {
+          id: 2,
+          name: '2026/27 · Весенний семестр',
+          academic_year_start: 2026,
+          number: 2,
+          archived: false,
+        },
+      ],
+      rooms: [
+        { id: 1, name: 'Корпус А · 302', archived: false },
+        { id: 2, name: 'Корпус Б · 415', archived: false },
+        { id: 3, name: 'Корпус А · 201', archived: false },
+      ],
+    },
+    courses: [
+      { id: 1, group_id: 1, semester_id: 1, subject_id: 1 },
+      { id: 2, group_id: 1, semester_id: 1, subject_id: 2 },
+      { id: 3, group_id: 2, semester_id: 1, subject_id: 3 },
+    ],
+    workloads: [
+      { id: 1, course_id: 1, teacher_id: 2, lesson_type: 'lecture', planned_hours: 36 },
+      { id: 2, course_id: 1, teacher_id: 3, lesson_type: 'practice', planned_hours: 36 },
+      { id: 3, course_id: 2, teacher_id: 2, lesson_type: 'laboratory', planned_hours: 72 },
+      { id: 4, course_id: 3, teacher_id: 3, lesson_type: 'lecture', planned_hours: 36 },
+    ],
+    lessons: [
+      {
+        id: 1,
+        workload_id: 1,
+        week_number: 1,
+        day_of_week: 1,
+        starts_at: '08:30',
+        ends_at: '10:00',
+        room_id: 1,
+      },
+      {
+        id: 2,
+        workload_id: 3,
+        week_number: 1,
+        day_of_week: 1,
+        starts_at: '10:10',
+        ends_at: '11:40',
+        room_id: 2,
+      },
+      {
+        id: 3,
+        workload_id: 2,
+        week_number: 1,
+        day_of_week: 3,
+        starts_at: '12:00',
+        ends_at: '13:30',
+        room_id: 3,
+      },
+      {
+        id: 4,
+        workload_id: 4,
+        week_number: 1,
+        day_of_week: 2,
+        starts_at: '08:30',
+        ends_at: '10:00',
+        room_id: 1,
+      },
+      {
+        id: 5,
+        workload_id: 1,
+        week_number: 2,
+        day_of_week: 2,
+        starts_at: '10:10',
+        ends_at: '11:40',
+        room_id: 1,
+      },
+    ],
+    news: [
+      {
+        id: 1,
+        title: 'Открыта регистрация на летнюю практику',
+        body: 'Университет объявляет старт регистрации на летнюю практику.\n\nПрограмма позволяет студентам применить полученные знания и получить профессиональный опыт. Подробности участия и сроки подачи заявок будут опубликованы дополнительно.',
+        cover,
+        author: 'Анна Иванова',
+        status: 'published',
+        is_pinned: true,
+        created_at: '2026-11-01T09:00:00Z',
+        updated_at: '2026-11-04T09:00:00Z',
+        published_at: '2026-11-04T09:00:00Z',
+      },
+      {
+        id: 2,
+        title: 'День открытых дверей ННГАСУ',
+        body: 'Приглашаем познакомиться с университетом, образовательными программами и преподавателями.',
+        cover: '',
+        author: 'Анна Иванова',
+        status: 'draft',
+        is_pinned: false,
+        created_at: '2026-11-05T09:00:00Z',
+        updated_at: '2026-11-05T09:00:00Z',
+        published_at: null,
+      },
+    ],
+  }
+}
