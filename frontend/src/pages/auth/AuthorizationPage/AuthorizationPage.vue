@@ -14,7 +14,6 @@
           autocomplete="username"
           placeholder="name@example.ru"
           :type="devPreview ? 'text' : 'email'"
-          required
           full-width
         />
         <TextInput
