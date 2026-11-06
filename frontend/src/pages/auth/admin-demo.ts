@@ -14,7 +14,7 @@ if (import.meta.env.DEV) {
 export const adminDemoSession = reactive({ active })
 
 export function signInAdminDemo(login: string, password: string): boolean {
-  if (!import.meta.env.DEV || login !== 'root' || password !== 'admin') return false
+  if (!import.meta.env.DEV || login !== 'root@mail' || password !== 'admin') return false
   adminDemoSession.active = true
   try {
     sessionStorage.setItem(adminDemoSessionKey, 'active')
