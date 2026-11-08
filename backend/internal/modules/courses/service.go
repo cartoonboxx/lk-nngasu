@@ -7,13 +7,19 @@ import (
 	"university-api/internal/platform/middleware"
 )
 
+// TopicsLoader загружает темы курса для страницы предмета.
+// Реализация — в app: она объединяет темы с материалами (content) и задания (assignments).
+// Права на курс проверяют сами эти модули.
+type TopicsLoader func(ctx context.Context, p middleware.Principal, courseID int64) (any, error)
+
 type Service struct {
 	repo   *Repository
 	access *access.Checker
+	topics TopicsLoader // nil — страница предмета без тем
 }
 
-func NewService(repo *Repository, checker *access.Checker) *Service {
-	return &Service{repo: repo, access: checker}
+func NewService(repo *Repository, checker *access.Checker, topics TopicsLoader) *Service {
+	return &Service{repo: repo, access: checker, topics: topics}
 }
 
 // List возвращает курсы, видимые пользователю: студент — своей группы, преподаватель — где он ведёт,
@@ -40,7 +46,13 @@ func (s *Service) Get(ctx context.Context, p middleware.Principal, id int64) (Co
 	if err != nil {
 		return CourseDetail{}, err
 	}
-	return CourseDetail{Course: c, Workloads: ws}, nil
+	d := CourseDetail{Course: c, Workloads: ws, Topics: []any{}}
+	if s.topics != nil {
+		if d.Topics, err = s.topics(ctx, p, id); err != nil {
+			return CourseDetail{}, err
+		}
+	}
+	return d, nil
 }
 
 // Students — состав курса; студентам список не отдаётся.

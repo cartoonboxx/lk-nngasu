@@ -97,12 +97,26 @@ func (s *Service) ListAssignments(ctx context.Context, p middleware.Principal, c
 	return s.repo.ListAssignments(ctx, courseID, s.staff(p), viewer(p))
 }
 
+// GetAssignment — карточка задания. Студенту дополнительно отдаётся его ответ целиком
+// (Submission), чтобы модальному окну задания хватало одного запроса.
 func (s *Service) GetAssignment(ctx context.Context, p middleware.Principal, id int64) (Assignment, error) {
 	a, err := s.repo.GetAssignment(ctx, id, s.staff(p), viewer(p))
 	if err != nil {
 		return Assignment{}, err
 	}
-	return a, s.guard.CourseView(ctx, p, a.CourseID)
+	if err := s.guard.CourseView(ctx, p, a.CourseID); err != nil {
+		return Assignment{}, err
+	}
+	if p.IsStudent() {
+		sub, err := s.repo.GetSubmissionOf(ctx, id, p.UserID)
+		switch {
+		case err == nil:
+			a.Submission = &sub
+		case !apperr.IsNotFound(err): // «ответа ещё нет» — не ошибка, Submission остаётся nil
+			return Assignment{}, err
+		}
+	}
+	return a, nil
 }
 
 // CreateAssignment: created_by ссылается на teacher — создаёт преподаватель курса.

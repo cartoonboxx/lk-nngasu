@@ -46,6 +46,18 @@ func (h *Handler) ListCourses(c *gin.Context) {
 	httpx.Reply(c, list, err)
 }
 
+// Subjects — предметы текущего семестра: студенту — его группы, преподавателю — которые он ведёт,
+// админу — все. Те же курсы, что GET /courses?current=true.
+//
+// GET /subjects
+func (h *Handler) Subjects(c *gin.Context) {
+	list, err := h.svc.List(c.Request.Context(), middleware.Me(c), CourseFilter{CurrentSemester: true})
+	httpx.Reply(c, list, err)
+}
+
+// GetCourse — страница предмета: курс, нагрузка и темы с материалами и заданиями.
+//
+// GET /courses/:id
 func (h *Handler) GetCourse(c *gin.Context) {
 	id, ok := httpx.ID(c, "id")
 	if !ok {

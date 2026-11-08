@@ -25,9 +25,14 @@ type Workload struct {
 	PlannedHours *float64 `json:"planned_hours"`
 }
 
+// CourseDetail — ответ GET /courses/:id (страница предмета).
 type CourseDetail struct {
 	Course
 	Workloads []Workload `json:"workloads"`
+
+	// Topics — темы курса, в каждой материалы и задания. Собирается в app из модулей
+	// content и assignments (см. TopicsLoader), поэтому тип здесь — any.
+	Topics any `json:"topics"`
 }
 
 type CourseStudent struct {

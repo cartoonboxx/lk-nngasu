@@ -32,6 +32,7 @@ func Purge(ctx context.Context, db database.DB, ids []int64) ([]string, error) {
 		  AND NOT EXISTS (SELECT 1 FROM material        WHERE file_id = f.id)
 		  AND NOT EXISTS (SELECT 1 FROM assignment_file WHERE file_id = f.id)
 		  AND NOT EXISTS (SELECT 1 FROM submission_file WHERE file_id = f.id)
+		  AND NOT EXISTS (SELECT 1 FROM chat_message_file WHERE file_id = f.id)
 		  AND NOT EXISTS (SELECT 1 FROM app_user        WHERE avatar_file_id = f.id)
 		RETURNING f.storage_key`, ids)
 }

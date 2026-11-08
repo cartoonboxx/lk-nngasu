@@ -24,3 +24,6 @@ admin:   ## создать первого администратора: ADMIN_EM
 
 up:      ## docker compose с БД и API
 	docker compose up --build
+migrate: ## применить миграцию к $DATABASE_URL (для БД вне docker-compose)
+	psql "$$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/001_init.sql
+	psql "$$DATABASE_URL" -v ON_ERROR_STOP=1 -f migrations/002_chat.sql
