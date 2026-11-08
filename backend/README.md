@@ -6,20 +6,29 @@ REST API личного кабинета вуза: **Go + Gin + pgx + PostgreSQL
 ## Быстрый старт
 
 ```bash
+cd ..                               # команды из корня репозитория
 export JWT_SECRET=$(openssl rand -hex 32)
-docker compose up --build            # БД (миграция применится сама) + API на :8080
+docker compose up -d --build --wait  # фронтенд, API, PostgreSQL и Adminer
 
 # первый администратор (через API создать нельзя: POST /users требует админа)
 docker compose exec -e ADMIN_EMAIL=admin@example.com \
   -e ADMIN_PASSWORD='сменить-меня-123' \
-  -e DATABASE_URL='postgres://uni:uni@db:5432/university_cabinet?sslmode=disable' \
-  api createadmin
+  backend createadmin
 
-curl -s localhost:8080/api/v1/auth/login -H 'Content-Type: application/json' \
+curl -s localhost:5173/api/v1/auth/login -H 'Content-Type: application/json' \
   -d '{"email":"admin@example.com","password":"сменить-меня-123"}'
 # -> {"data":{"access_token":"...","token_type":"Bearer","expires_at":"...","role":"admin"}}
 # дальше: Authorization: Bearer <token>
 ```
+
+Браузер и HTTP-клиенты обращаются к API через фронтенд: `/api/v1/...`.
+Vite проксирует запросы в контейнер `backend:8080`. SQL применяется автоматически
+только к пустому тому PostgreSQL; для существующей БД см. корневой README.
+Загруженные файлы сохраняются в отдельном томе `uploads`.
+
+Проверка работоспособности без авторизации: `GET /api/healthz` возвращает
+`{"status":"ok"}` через Vite и продакшен-nginx. Внутренний `GET /healthz`
+используется healthcheck контейнера и возвращает тот же ответ.
 
 Без Docker: `cp .env.example .env`, задать переменные, `make tidy` (создаст `go.sum`), `make migrate`, `make admin`, `make run`.
 
@@ -148,8 +157,10 @@ migrations         001_init.sql
 миграция и основные SQL-запросы на реальном PostgreSQL 16 (список заданий, upsert ответа, запрет правки после проверки,
 производные статусы, FK темы и курса, диапазон оценки).
 
-**Не проверено:** сборка с настоящими gin, pgx, jwt и bcrypt и запуск HTTP-слоя целиком — при разработке не было доступа к
-Go-прокси, поэтому использовались заглушки с тем же API. Первым делом выполните `make tidy && make vet && make test`.
+Дополнительно проверена настоящая Docker-сборка API и `createadmin` с зависимостями из `go.sum`,
+запуск общего Compose с PostgreSQL 17 и применение начальной миграции к новой БД.
+Через прокси фронтенда проверены расписание, вход администратора, профиль, запрет доступа без JWT,
+загрузка и скачивание файла после перезапуска API. Vue также открывается в браузере из контейнера.
 
 ## Не реализовано
 
