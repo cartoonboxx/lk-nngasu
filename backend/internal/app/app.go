@@ -6,6 +6,8 @@ import (
 	"log/slog"
 	"net/http"
 	"time"
+	"university-api/internal/modules/chat"
+	"university-api/internal/platform/middleware"
 
 	"github.com/gin-gonic/gin"
 
@@ -15,12 +17,12 @@ import (
 	"university-api/internal/modules/content"
 	"university-api/internal/modules/courses"
 	"university-api/internal/modules/files"
+	"university-api/internal/modules/profile"
 	"university-api/internal/modules/schedule"
 	"university-api/internal/modules/structure"
 	"university-api/internal/modules/users"
 	"university-api/internal/platform/access"
 	"university-api/internal/platform/database"
-	"university-api/internal/platform/middleware"
 )
 
 // Run собирает зависимости и запускает HTTP-сервер.
@@ -55,13 +57,25 @@ func Run(ctx context.Context, cfg config.Config) error {
 
 	cal := schedule.NewCalendar(cfg.Location, cfg.WeekOneDate, cfg.LessonDuration)
 
-	structure.Register(protected, pool)
-	courses.Register(protected, pool, checker)
-	users.Register(protected, pool, checker)
-	schedule.Register(v1, protected, pool, cal)
-	content.Register(protected, pool, checker, storage)
-	assignments.Register(protected, pool, checker, storage)
+	// Каждый модуль регистрируется ровно один раз: повторная регистрация
+	// тех же путей роняет gin при старте ("handlers are already registered").
+
+	// Модули, чьи сервисы нужны сборным страницам ЛК (см. cabinet.go).
+	// content и assignments — раньше courses: courses получает от них загрузчик тем.
+	contentSvc := content.Register(protected, pool, checker, storage)
+	assignSvc := assignments.Register(protected, pool, checker, storage)
+	coursesSvc := courses.Register(protected, pool, checker, courseTopics(contentSvc, assignSvc))
+	schedSvc := schedule.Register(v1, protected, pool, cal)
+
+	// Остальные модули.
+	chat.Register(protected, pool, checker, storage)
 	files.Register(protected, pool, storage, cfg.MaxUploadBytes)
+	structure.Register(protected, pool)
+	users.Register(protected, pool, checker)
+	profile.Register(protected, pool, "/api/v1/files/") // GET /auth/me
+
+	// Сборные страницы ЛК: /dashboard и /grades.
+	registerCabinet(protected, schedSvc, coursesSvc, assignSvc)
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,

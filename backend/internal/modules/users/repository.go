@@ -11,10 +11,26 @@ import (
 	"university-api/internal/platform/database"
 )
 
+// Repository — доступ к таблицам app_user, student, teacher.
+// Знает только SQL: хеширование паролей, проверка ролей и прав живут в сервисе.
+// Ошибки БД переводятся в apperr (через database.Translate или userErr),
+// поэтому наружу не уходят ошибки pgx.
 type Repository struct{ db *pgxpool.Pool }
 
 func newRepository(db *pgxpool.Pool) *Repository { return &Repository{db: db} }
 
+// userSelect — общий SELECT, который собирает User из app_user и профилей.
+// К нему дописываются WHERE / ORDER BY / LIMIT.
+//
+// Роль не хранится отдельной колонкой, а вычисляется:
+//   - is_admin = true          → 'admin' (имеет приоритет над профилем);
+//   - есть строка в teacher    → 'teacher';
+//   - есть строка в student    → 'student';
+//   - иначе                    → 'none' (учётка без профиля, в норме не должно быть).
+//
+// Все JOIN-ы левые: у пользователя есть максимум один из профилей,
+// поля чужой роли приходят NULL и сканируются в nil.
+// Порядок колонок должен совпадать с scanUser.
 var userSelect = `
 	SELECT u.id, u.last_name, u.first_name, u.middle_names, ` + database.FullName("u") + `,
 	       u.email, u.avatar_file_id, u.is_active,
@@ -29,6 +45,8 @@ var userSelect = `
 	LEFT JOIN student s        ON s.user_id = u.id
 	LEFT JOIN study_group g    ON g.id = s.group_id`
 
+// scanUser читает одну строку userSelect в User.
+// Подходит и для QueryRow, и для строк из database.Collect.
 func scanUser(row pgx.Row) (User, error) {
 	var u User
 	err := row.Scan(&u.ID, &u.LastName, &u.FirstName, &u.MiddleNames, &u.FullName,
@@ -37,7 +55,10 @@ func scanUser(row pgx.Row) (User, error) {
 	return u, err
 }
 
-// userErr уточняет нарушения уникальности по имени ограничения.
+// userErr — перевод ошибок записи пользователя.
+// Нарушения уникальности email и номера зачётки превращаются в 409 с
+// понятными кодами для фронта; всё остальное — в общий database.Translate.
+// Имена ограничений должны совпадать с теми, что в миграциях.
 func userErr(err error) error {
 	if database.PgCode(err) == database.CodeUnique {
 		switch database.ConstraintName(err) {
@@ -50,13 +71,22 @@ func userErr(err error) error {
 	return database.Translate(err)
 }
 
+// Get возвращает пользователя по id; если его нет — ошибку «не найдено»
+// (pgx.ErrNoRows переводит database.Translate).
 func (r *Repository) Get(ctx context.Context, id int64) (User, error) {
 	u, err := scanUser(r.db.QueryRow(ctx, userSelect+` WHERE u.id = $1`, id))
 	return u, database.Translate(err)
 }
 
+// List возвращает страницу пользователей по фильтру.
+// Условия собираются в database.Filter, значения идут параметрами запроса,
+// в текст SQL пользовательский ввод не подставляется.
+// Сортировка по фамилии и имени; u.id в конце делает порядок стабильным,
+// чтобы при пагинации строки с одинаковым ФИО не прыгали между страницами.
 func (r *Repository) List(ctx context.Context, f ListFilter) ([]User, error) {
 	var w database.Filter
+
+	// Фильтр по роли — по наличию профиля, той же логикой, что CASE в userSelect.
 	switch f.Role {
 	case "student":
 		w.Raw("s.user_id IS NOT NULL")
@@ -71,15 +101,24 @@ func (r *Repository) List(ctx context.Context, f ListFilter) ([]User, error) {
 	if f.DepartmentID != nil {
 		w.Add("t.department_id = ?", *f.DepartmentID)
 	}
+	// Поиск подстроки без учёта регистра по фамилии, имени и email.
 	if f.Q != "" {
 		w.Add("(u.last_name ILIKE ? OR u.first_name ILIKE ? OR u.email ILIKE ?)", "%"+f.Q+"%")
 	}
+
+	// LIMIT/OFFSET тоже передаются параметрами (w.Arg возвращает плейсхолдер).
 	q := userSelect + w.Where() +
 		fmt.Sprintf(" ORDER BY u.last_name, u.first_name, u.id LIMIT %s OFFSET %s", w.Arg(f.Limit), w.Arg(f.Offset))
 	return database.Collect(ctx, r.db, scanUser, q, w.Args()...)
 }
 
 // Create заводит пользователя и его профиль (student/teacher) одной транзакцией.
+// Если вставка профиля упала, app_user тоже откатывается.
+//
+// Админ — это флаг is_admin в app_user, отдельного профиля у него нет.
+// Ожидается, что сервис уже проверил: для student задан GroupID,
+// для teacher — DepartmentID (здесь они разыменовываются без проверки).
+// Пароль приходит уже хешированным.
 func (r *Repository) Create(ctx context.Context, in CreateUser, passwordHash string) (int64, error) {
 	var id int64
 	err := database.InTx(ctx, r.db, func(tx pgx.Tx) error {
@@ -98,11 +137,15 @@ func (r *Repository) Create(ctx context.Context, in CreateUser, passwordHash str
 		case "teacher":
 			_, err = tx.Exec(ctx, `INSERT INTO teacher (user_id, department_id) VALUES ($1, $2)`, id, *in.DepartmentID)
 		}
-		return userErr(err)
+		return userErr(err) // для admin err == nil
 	})
 	return id, err
 }
 
+// UpdateProfile частично обновляет данные, которые пользователь меняет сам.
+// COALESCE($n, колонка): nil-параметр оставляет текущее значение.
+// Обратная сторона: поле через этот метод нельзя сделать NULL
+// (стереть отчество или убрать аватар).
 func (r *Repository) UpdateProfile(ctx context.Context, id int64, in UpdateProfile) error {
 	tag, err := r.db.Exec(ctx, `
 		UPDATE app_user SET
@@ -114,8 +157,16 @@ func (r *Repository) UpdateProfile(ctx context.Context, id int64, in UpdateProfi
 	return database.Affected(tag, err, "user_not_found")
 }
 
+// AdminUpdate частично обновляет пользователя и его профиль одной транзакцией.
+// nil-поля не меняются (COALESCE). Пароль приходит уже хешированным отдельным
+// аргументом, in.Password здесь не используется.
+//
+// Поля профиля применяются только к существующему профилю: роль этот метод
+// не меняет. Попытка задать группу не-студенту или кафедру не-преподавателю
+// даёт ошибку валидации и откатывает всю транзакцию, включая app_user.
 func (r *Repository) AdminUpdate(ctx context.Context, id int64, in AdminUpdate, passwordHash *string) error {
 	return database.InTx(ctx, r.db, func(tx pgx.Tx) error {
+		// 1. Общие поля учётки.
 		tag, err := tx.Exec(ctx, `
 			UPDATE app_user SET
 				last_name     = COALESCE($2, last_name),
@@ -134,6 +185,7 @@ func (r *Repository) AdminUpdate(ctx context.Context, id int64, in AdminUpdate, 
 			return apperr.NewNotFound("user_not_found")
 		}
 
+		// 2. Профиль студента — только если передано хоть одно его поле.
 		if in.GroupID != nil || in.IsHeadman != nil || in.RecordBookNumber != nil {
 			tag, err = tx.Exec(ctx, `
 				UPDATE student SET
@@ -144,10 +196,13 @@ func (r *Repository) AdminUpdate(ctx context.Context, id int64, in AdminUpdate, 
 			if err != nil {
 				return userErr(err)
 			}
+			// Строки нет — пользователь не студент.
 			if tag.RowsAffected() == 0 {
 				return apperr.NewInvalid("not_a_student", "user is not a student")
 			}
 		}
+
+		// 3. Профиль преподавателя.
 		if in.DepartmentID != nil {
 			tag, err = tx.Exec(ctx, `UPDATE teacher SET department_id = $2 WHERE user_id = $1`, id, *in.DepartmentID)
 			if err != nil {
@@ -161,17 +216,22 @@ func (r *Repository) AdminUpdate(ctx context.Context, id int64, in AdminUpdate, 
 	})
 }
 
+// PasswordHash возвращает хеш пароля — для проверки старого пароля
+// при смене пароля или email. Наружу (в User) хеш никогда не попадает.
 func (r *Repository) PasswordHash(ctx context.Context, id int64) (string, error) {
 	var h string
 	err := r.db.QueryRow(ctx, `SELECT password_hash FROM app_user WHERE id = $1`, id).Scan(&h)
 	return h, database.Translate(err)
 }
 
+// SetPassword записывает новый хеш пароля.
 func (r *Repository) SetPassword(ctx context.Context, id int64, hash string) error {
 	tag, err := r.db.Exec(ctx, `UPDATE app_user SET password_hash = $2 WHERE id = $1`, id, hash)
 	return database.Affected(tag, err, "user_not_found")
 }
 
+// SetEmail меняет email. Ошибка проходит через userErr, чтобы занятый email
+// вернулся как 409 email_taken, а не как общая ошибка БД.
 func (r *Repository) SetEmail(ctx context.Context, id int64, email string) error {
 	tag, err := r.db.Exec(ctx, `UPDATE app_user SET email = $2 WHERE id = $1`, id, email)
 	if err != nil {

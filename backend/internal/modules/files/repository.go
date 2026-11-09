@@ -44,7 +44,8 @@ func courseMember(courseExpr string) string {
 }
 
 // CanRead — может ли пользователь скачать файл: админ, владелец (его папка), любой — аватар,
-// участники курса — материалы и вложения заданий, автор и преподаватели курса — ответы студентов.
+// участники курса — материалы и вложения заданий, автор и преподаватели курса — ответы студентов,
+// участники чата — вложения его сообщений.
 // Для несуществующего файла вернёт NotFound.
 func (r *Repository) CanRead(ctx context.Context, fileID, userID int64, isAdmin bool, ownerPrefix string) (bool, error) {
 	q := `
@@ -65,6 +66,15 @@ func (r *Repository) CanRead(ctx context.Context, fileID, userID int64, isAdmin 
 				WHERE sf.file_id = f.id AND (
 					sb.student_id = $3
 					OR EXISTS (SELECT 1 FROM workload w WHERE w.course_id = a.course_id AND w.teacher_id = $3)))
+			OR EXISTS (
+				SELECT 1 FROM chat_message_file mf
+				JOIN chat_message cm ON cm.id = mf.message_id
+				JOIN chat ch ON ch.id = cm.chat_id
+				WHERE mf.file_id = f.id AND cm.deleted_at IS NULL AND (
+					ch.user_low = $3 OR ch.user_high = $3
+					OR EXISTS (SELECT 1 FROM student st WHERE st.user_id = $3 AND st.group_id = ch.group_id)
+					OR EXISTS (SELECT 1 FROM workload w JOIN course_offering c ON c.id = w.course_id
+					           WHERE w.teacher_id = $3 AND c.group_id = ch.group_id)))
 		)
 		FROM file f WHERE f.id = $1`
 	var ok bool

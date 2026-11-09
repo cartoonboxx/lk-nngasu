@@ -6,46 +6,70 @@ import (
 	"university-api/internal/platform/httpx"
 )
 
+// Handler — HTTP-слой справочников. Сервисного слоя нет: правила простые
+// (уникальность, ссылочная целостность) и обеспечиваются ограничениями БД,
+// поэтому хендлеры вызывают репозиторий напрямую.
+// Права доступа (правка — только admin) навешиваются в Register.
 type Handler struct{ repo *Repository }
 
+// --- Тела запросов ---
+//
+// Все изменения через PUT: клиент присылает объект целиком,
+// поэтому поля здесь обычные значения, а не указатели.
+
+// nameRequest — тело создания и переименования для справочников «id + название»
+// (кафедры, дисциплины).
 type nameRequest struct {
 	Name string `json:"name" binding:"required,max=150"`
 }
 
+// specializationRequest — специальность: шифр направления
+// (например, «09.03.04») и название.
 type specializationRequest struct {
 	Code string `json:"code" binding:"required,max=20"`
 	Name string `json:"name" binding:"required,max=200"`
 }
 
+// groupRequest — учебная группа.
+// Поля должны совпадать с GroupInput один в один: хендлеры конвертируют
+// GroupInput(req) напрямую, и при расхождении код не скомпилируется.
 type groupRequest struct {
 	Name             string `json:"name" binding:"required,max=50"`
 	SpecializationID int64  `json:"specialization_id" binding:"required"`
-	AdmissionYear    int    `json:"admission_year" binding:"required,min=2000,max=2100"`
+	AdmissionYear    int    `json:"admission_year" binding:"required,min=2000,max=2100"` // год набора
 }
 
+// semesterRequest — семестр задаётся учебным годом и номером в нём:
+// {2026, 1} — осенний семестр 2026/27, {2026, 2} — весенний.
 type semesterRequest struct {
-	AcademicYearStart int `json:"academic_year_start" binding:"required,min=2000,max=2100"`
+	AcademicYearStart int `json:"academic_year_start" binding:"required,min=2000,max=2100"` // год начала учебного года
 	Number            int `json:"number" binding:"required,oneof=1 2"`
 }
 
+// roomRequest — аудитория. Номер строкой: бывают «301а», «Б-12», «спортзал».
 type roomRequest struct {
 	Number string `json:"number" binding:"required,max=30"`
 }
 
 // catalogHandlers строит четыре хендлера для справочника «id + название».
+// Хендлеры замыкаются на cat, так что один код обслуживает любую таблицу
+// такого вида (см. registerCatalog).
 func catalogHandlers(cat catalog) (list, create, update, remove gin.HandlerFunc) {
+	// GET path?q= — список; q — необязательный поиск по названию.
 	list = func(c *gin.Context) {
 		items, err := cat.list(c.Request.Context(), c.Query("q"))
 		httpx.Reply(c, items, err)
 	}
+	// POST path — создать, ответ 201 с созданной записью.
 	create = func(c *gin.Context) {
 		var req nameRequest
 		if !httpx.Bind(c, &req) {
-			return
+			return // ответ с ошибкой валидации уже отправлен в Bind
 		}
 		n, err := cat.create(c.Request.Context(), req.Name)
 		httpx.ReplyCreated(c, n, err)
 	}
+	// PUT path/:id — переименовать.
 	update = func(c *gin.Context) {
 		id, ok := httpx.ID(c, "id")
 		if !ok {
@@ -58,6 +82,7 @@ func catalogHandlers(cat catalog) (list, create, update, remove gin.HandlerFunc)
 		n, err := cat.update(c.Request.Context(), id, req.Name)
 		httpx.Reply(c, n, err)
 	}
+	// DELETE path/:id — удалить, ответ без тела.
 	remove = func(c *gin.Context) {
 		id, ok := httpx.ID(c, "id")
 		if !ok {
@@ -70,11 +95,18 @@ func catalogHandlers(cat catalog) (list, create, update, remove gin.HandlerFunc)
 
 // ---- specializations ----
 
+// ListSpecializations возвращает все специальности, без фильтров и пагинации:
+// справочник небольшой.
+//
+// GET /specializations
 func (h *Handler) ListSpecializations(c *gin.Context) {
 	list, err := h.repo.ListSpecializations(c.Request.Context())
 	httpx.Reply(c, list, err)
 }
 
+// CreateSpecialization создаёт специальность.
+//
+// POST /specializations
 func (h *Handler) CreateSpecialization(c *gin.Context) {
 	var req specializationRequest
 	if !httpx.Bind(c, &req) {
@@ -84,6 +116,9 @@ func (h *Handler) CreateSpecialization(c *gin.Context) {
 	httpx.ReplyCreated(c, s, err)
 }
 
+// UpdateSpecialization заменяет шифр и название специальности.
+//
+// PUT /specializations/:id
 func (h *Handler) UpdateSpecialization(c *gin.Context) {
 	id, ok := httpx.ID(c, "id")
 	if !ok {
@@ -97,6 +132,10 @@ func (h *Handler) UpdateSpecialization(c *gin.Context) {
 	httpx.Reply(c, s, err)
 }
 
+// DeleteSpecialization удаляет специальность. Если на неё ссылаются группы,
+// удаление упрётся во внешний ключ.
+//
+// DELETE /specializations/:id
 func (h *Handler) DeleteSpecialization(c *gin.Context) {
 	id, ok := httpx.ID(c, "id")
 	if !ok {
@@ -107,6 +146,9 @@ func (h *Handler) DeleteSpecialization(c *gin.Context) {
 
 // ---- groups ----
 
+// ListGroups возвращает группы с необязательными фильтрами
+// по специальности и году набора.
+//
 // GET /groups?specialization_id=&admission_year=
 func (h *Handler) ListGroups(c *gin.Context) {
 	spec, ok := httpx.OptInt64(c, "specialization_id")
@@ -121,6 +163,9 @@ func (h *Handler) ListGroups(c *gin.Context) {
 	httpx.Reply(c, list, err)
 }
 
+// GetGroup возвращает группу по id.
+//
+// GET /groups/:id
 func (h *Handler) GetGroup(c *gin.Context) {
 	id, ok := httpx.ID(c, "id")
 	if !ok {
@@ -130,6 +175,10 @@ func (h *Handler) GetGroup(c *gin.Context) {
 	httpx.Reply(c, g, err)
 }
 
+// CreateGroup создаёт группу и возвращает её перечитанной через GetGroup,
+// чтобы в ответе были вычисляемые поля (например, название специальности).
+//
+// POST /groups
 func (h *Handler) CreateGroup(c *gin.Context) {
 	var req groupRequest
 	if !httpx.Bind(c, &req) {
@@ -144,6 +193,9 @@ func (h *Handler) CreateGroup(c *gin.Context) {
 	httpx.ReplyCreated(c, g, err)
 }
 
+// UpdateGroup заменяет данные группы и возвращает её перечитанной.
+//
+// PUT /groups/:id
 func (h *Handler) UpdateGroup(c *gin.Context) {
 	id, ok := httpx.ID(c, "id")
 	if !ok {
@@ -161,6 +213,10 @@ func (h *Handler) UpdateGroup(c *gin.Context) {
 	httpx.Reply(c, g, err)
 }
 
+// DeleteGroup удаляет группу. Если в группе есть студенты,
+// удаление упрётся во внешний ключ.
+//
+// DELETE /groups/:id
 func (h *Handler) DeleteGroup(c *gin.Context) {
 	id, ok := httpx.ID(c, "id")
 	if !ok {
@@ -171,16 +227,27 @@ func (h *Handler) DeleteGroup(c *gin.Context) {
 
 // ---- semesters ----
 
+// ListSemesters возвращает все семестры.
+//
+// GET /semesters
 func (h *Handler) ListSemesters(c *gin.Context) {
 	list, err := h.repo.ListSemesters(c.Request.Context())
 	httpx.Reply(c, list, err)
 }
 
+// CurrentSemester возвращает семестр, отмеченный текущим.
+// Если текущий не выбран — «не найдено».
+//
+// GET /semesters/current
 func (h *Handler) CurrentSemester(c *gin.Context) {
 	s, err := h.repo.CurrentSemester(c.Request.Context())
 	httpx.Reply(c, s, err)
 }
 
+// CreateSemester создаёт семестр (текущим он не становится)
+// и возвращает его перечитанным.
+//
+// POST /semesters
 func (h *Handler) CreateSemester(c *gin.Context) {
 	var req semesterRequest
 	if !httpx.Bind(c, &req) {
@@ -195,6 +262,10 @@ func (h *Handler) CreateSemester(c *gin.Context) {
 	httpx.ReplyCreated(c, s, err)
 }
 
+// UpdateSemester меняет учебный год и номер семестра.
+// Признак «текущий» здесь не меняется, для этого есть SetCurrentSemester.
+//
+// PUT /semesters/:id
 func (h *Handler) UpdateSemester(c *gin.Context) {
 	id, ok := httpx.ID(c, "id")
 	if !ok {
@@ -212,6 +283,9 @@ func (h *Handler) UpdateSemester(c *gin.Context) {
 	httpx.Reply(c, s, err)
 }
 
+// SetCurrentSemester делает семестр текущим; с прежнего текущего флаг снимается.
+// Тела запроса нет, в ответе — обновлённый семестр.
+//
 // POST /semesters/:id/current
 func (h *Handler) SetCurrentSemester(c *gin.Context) {
 	id, ok := httpx.ID(c, "id")
@@ -226,6 +300,10 @@ func (h *Handler) SetCurrentSemester(c *gin.Context) {
 	httpx.Reply(c, s, err)
 }
 
+// DeleteSemester удаляет семестр. Если удалить текущий,
+// GET /semesters/current начнёт отвечать «не найдено».
+//
+// DELETE /semesters/:id
 func (h *Handler) DeleteSemester(c *gin.Context) {
 	id, ok := httpx.ID(c, "id")
 	if !ok {
@@ -236,11 +314,17 @@ func (h *Handler) DeleteSemester(c *gin.Context) {
 
 // ---- rooms ----
 
+// ListRooms возвращает все аудитории.
+//
+// GET /rooms
 func (h *Handler) ListRooms(c *gin.Context) {
 	list, err := h.repo.ListRooms(c.Request.Context())
 	httpx.Reply(c, list, err)
 }
 
+// CreateRoom создаёт аудиторию.
+//
+// POST /rooms
 func (h *Handler) CreateRoom(c *gin.Context) {
 	var req roomRequest
 	if !httpx.Bind(c, &req) {
@@ -250,6 +334,9 @@ func (h *Handler) CreateRoom(c *gin.Context) {
 	httpx.ReplyCreated(c, rm, err)
 }
 
+// UpdateRoom меняет номер аудитории.
+//
+// PUT /rooms/:id
 func (h *Handler) UpdateRoom(c *gin.Context) {
 	id, ok := httpx.ID(c, "id")
 	if !ok {
@@ -263,6 +350,9 @@ func (h *Handler) UpdateRoom(c *gin.Context) {
 	httpx.Reply(c, rm, err)
 }
 
+// DeleteRoom удаляет аудиторию.
+//
+// DELETE /rooms/:id
 func (h *Handler) DeleteRoom(c *gin.Context) {
 	id, ok := httpx.ID(c, "id")
 	if !ok {

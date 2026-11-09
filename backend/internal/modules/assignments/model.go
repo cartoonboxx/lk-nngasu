@@ -49,6 +49,11 @@ type Assignment struct {
 	Files       []FileRef     `json:"files"`
 	Mine        *MySubmission `json:"mine,omitempty"`  // только для студента
 	Stats       *Stats        `json:"stats,omitempty"` // только для преподавателя и админа
+
+	// Submission — полный ответ студента (текст, файлы, комментарий преподавателя).
+	// Заполняется только в GET /assignments/:id для студента, если ответ уже есть;
+	// в списках заданий не отдаётся — там хватает сводки Mine.
+	Submission *Submission `json:"submission,omitempty"`
 }
 
 type AssignmentInput struct {
