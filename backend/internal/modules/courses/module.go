@@ -24,6 +24,7 @@ func Register(r *gin.RouterGroup, pool *pgxpool.Pool, checker *access.Checker, t
 	// Предметы текущего семестра для ЛК (= /courses?current=true).
 	// Справочник дисциплин для админки — в structure по пути /catalog/subjects.
 	r.GET("/subjects", h.Subjects)
+	r.GET("/subjects/:id", h.GetCourse) // страница предмета; id — id курса из списка /subjects
 	r.POST("/courses", admin, h.CreateCourse)
 	r.GET("/courses/:id", h.GetCourse)
 	r.DELETE("/courses/:id", admin, h.DeleteCourse)

@@ -20,5 +20,6 @@ func Register(r *gin.RouterGroup, pool *pgxpool.Pool, avatarBase string) {
 	h := &Handler{svc: NewService(newRepository(pool), avatarBase)}
 
 	// GET <префикс группы>/auth/me → Handler.Me — профиль текущего пользователя.
-	r.GET("/auth/me", h.Me)
+	r.GET("/user", h.Me)    // данные текущего пользователя для ЛК
+	r.GET("/auth/me", h.Me) // старый путь; удалить, когда фронт перейдёт на /user
 }

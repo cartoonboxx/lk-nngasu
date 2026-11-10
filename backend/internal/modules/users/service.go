@@ -82,6 +82,30 @@ func (s *Service) Create(ctx context.Context, in CreateUser) (User, error) {
 	return s.repo.Get(ctx, id)
 }
 
+// teacherNeedsApproval — преподаватель после самостоятельной регистрации неактивен,
+// пока его не включит администратор. Роль преподавателя даёт доступ к карточкам
+// пользователей и составам групп, поэтому выдавать её без проверки нельзя.
+// false — преподаватель входит сразу, как студент.
+const teacherNeedsApproval = true
+
+// SelfRegister — самостоятельная регистрация по email и паролю (POST /auth/register).
+// Доступна только для ролей student и teacher: администратора так создать нельзя.
+// Студент активен сразу, преподаватель — после одобрения (см. teacherNeedsApproval).
+// Остальные правила (обязательная группа или кафедра, уникальные email и зачётка)
+// те же, что при создании администратором.
+func (s *Service) SelfRegister(ctx context.Context, in CreateUser) (User, error) {
+	switch in.Role {
+	case "student":
+		in.PendingApproval = false
+	case "teacher":
+		in.PendingApproval = teacherNeedsApproval
+	default:
+		return User{}, apperr.NewInvalid("invalid_role", "role must be student or teacher")
+	}
+	in.IsHeadman = false // старосту назначает администратор, не сам студент
+	return s.Create(ctx, in)
+}
+
 // UpdateProfile обновляет данные, которые пользователь меняет о себе,
 // и возвращает обновлённый профиль.
 // Аватаром можно сделать только свой файл, иначе через этот метод

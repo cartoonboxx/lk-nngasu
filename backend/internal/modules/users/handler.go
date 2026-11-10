@@ -58,6 +58,20 @@ type createUserRequest struct {
 	IsHeadman        bool    `json:"is_headman"`                                    // для студента
 }
 
+// registerRequest — тело POST /auth/register (самостоятельная регистрация).
+// Как createUserRequest, но роль только student или teacher и без is_headman.
+type registerRequest struct {
+	Role             string  `json:"role" binding:"required,oneof=student teacher"`
+	LastName         string  `json:"last_name" binding:"required,max=50"`
+	FirstName        string  `json:"first_name" binding:"required,max=50"`
+	MiddleNames      *string `json:"middle_names" binding:"omitempty,max=50"`
+	Email            string  `json:"email" binding:"required,email,max=255"`
+	Password         string  `json:"password" binding:"required,min=8,max=72"`
+	GroupID          *int64  `json:"group_id"`                                      // для студента
+	DepartmentID     *int64  `json:"department_id"`                                 // для преподавателя
+	RecordBookNumber *string `json:"record_book_number" binding:"omitempty,max=50"` // для студента
+}
+
 // adminUpdateRequest — тело PATCH /users/:id (правка пользователя администратором).
 type adminUpdateRequest struct {
 	LastName         *string `json:"last_name" binding:"omitempty,min=1,max=50"`
@@ -189,6 +203,24 @@ func (h *Handler) Create(c *gin.Context) {
 		Role: req.Role, LastName: req.LastName, FirstName: req.FirstName, MiddleNames: req.MiddleNames,
 		Email: req.Email, Password: req.Password, GroupID: req.GroupID, DepartmentID: req.DepartmentID,
 		RecordBookNumber: req.RecordBookNumber, IsHeadman: req.IsHeadman,
+	})
+	httpx.ReplyCreated(c, u, err)
+}
+
+// SelfRegister — самостоятельная регистрация по email и паролю. Маршрут публичный.
+// Ответ 201 с созданным пользователем; поле is_active показывает, можно ли сразу
+// войти (студент) или нужно дождаться одобрения администратора (преподаватель).
+//
+// POST /auth/register
+func (h *Handler) SelfRegister(c *gin.Context) {
+	var req registerRequest
+	if !httpx.Bind(c, &req) {
+		return
+	}
+	u, err := h.svc.SelfRegister(c.Request.Context(), CreateUser{
+		Role: req.Role, LastName: req.LastName, FirstName: req.FirstName, MiddleNames: req.MiddleNames,
+		Email: req.Email, Password: req.Password, GroupID: req.GroupID, DepartmentID: req.DepartmentID,
+		RecordBookNumber: req.RecordBookNumber,
 	})
 	httpx.ReplyCreated(c, u, err)
 }

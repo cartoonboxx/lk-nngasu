@@ -2,13 +2,14 @@ package app
 
 import (
 	"context"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
 	"university-api/internal/modules/assignments"
 	"university-api/internal/modules/content"
 	"university-api/internal/modules/courses"
-	"university-api/internal/modules/schedule"
+	"university-api/internal/platform/apperr"
 	"university-api/internal/platform/httpx"
 	"university-api/internal/platform/middleware"
 )
@@ -59,32 +60,45 @@ func courseTopics(ct *content.Service, as *assignments.Service) courses.TopicsLo
 	}
 }
 
-// ===== Главная: GET /dashboard =====
+// ===== Новости: GET /news?limit= =====
 
-// newsItem — элемент ленты новостей. Пока заглушка: лента всегда пустая.
+// Таблицы новостей в БД пока нет, поэтому маршрут — заглушка: всегда пустой список.
+// Формат и параметр limit уже рабочие, чтобы фронт мог подключить блок новостей сейчас,
+// а при появлении таблицы news поменялся только источник данных.
+
+const (
+	newsDefaultLimit = 10 // без ?limit=
+	newsMaxLimit     = 50 // больше за раз не отдаём
+)
+
+// newsItem — новость в ленте. Поля предварительные: уточнить с фронтом при создании таблицы.
 type newsItem struct {
-	ID    int64  `json:"id"`
-	Title string `json:"title"`
+	ID          int64     `json:"id"`
+	Title       string    `json:"title"`
+	Text        string    `json:"text"`
+	PublishedAt time.Time `json:"published_at"`
 }
 
-// dashboardPage — ответ главной страницы.
-type dashboardPage struct {
-	Week    schedule.WeekInfo `json:"week"`    // сегодняшняя дата и верхняя/нижняя неделя
-	Lessons []schedule.Lesson `json:"lessons"` // пары на сегодня: студенту — группы, преподавателю — свои
-	News    []newsItem        `json:"news"`    // заглушка: []
-}
-
-// dashboard — главная: пары на сегодня и лента новостей.
-// Администратору пар не положено — придёт пустой список (см. schedule.Service.Today).
-func dashboard(ss *schedule.Service) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		lessons, err := ss.Today(c.Request.Context(), middleware.Me(c))
-		if err != nil {
-			httpx.Fail(c, err)
+// news — последние новости, не больше limit штук (1..50, по умолчанию 10).
+func news(c *gin.Context) {
+	limit, ok := httpx.OptInt64(c, "limit")
+	if !ok {
+		return
+	}
+	n := int64(newsDefaultLimit)
+	if limit != nil {
+		if *limit < 1 || *limit > newsMaxLimit {
+			httpx.Fail(c, apperr.NewInvalid("invalid_limit", "limit must be between 1 and 50"))
 			return
 		}
-		httpx.OK(c, dashboardPage{Week: ss.Week(nil), Lessons: lessons, News: []newsItem{}})
+		n = *limit
 	}
+
+	items := []newsItem{} // заглушка: новостей пока нет
+	if int64(len(items)) > n {
+		items = items[:n]
+	}
+	httpx.OK(c, items)
 }
 
 // ===== Оценки: GET /grades =====
@@ -128,9 +142,10 @@ func grades(cs *courses.Service, as *assignments.Service) gin.HandlerFunc {
 }
 
 // registerCabinet регистрирует сборные страницы ЛК в группе с проверкой JWT.
-func registerCabinet(protected *gin.RouterGroup, ss *schedule.Service, cs *courses.Service, as *assignments.Service) {
+// Главная собирается на фронте из отдельных запросов: /user, /schedule, /news, /chats.
+func registerCabinet(protected *gin.RouterGroup, cs *courses.Service, as *assignments.Service) {
 	student := middleware.RequireRole(middleware.RoleStudent)
 
-	protected.GET("/dashboard", dashboard(ss))        // главная
+	protected.GET("/news", news)                      // лента новостей (пока пустая)
 	protected.GET("/grades", student, grades(cs, as)) // оценки студента
 }

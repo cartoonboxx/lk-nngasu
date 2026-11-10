@@ -65,17 +65,17 @@ func Run(ctx context.Context, cfg config.Config) error {
 	contentSvc := content.Register(protected, pool, checker, storage)
 	assignSvc := assignments.Register(protected, pool, checker, storage)
 	coursesSvc := courses.Register(protected, pool, checker, courseTopics(contentSvc, assignSvc))
-	schedSvc := schedule.Register(v1, protected, pool, cal)
+	schedule.Register(v1, protected, pool, cal)
 
 	// Остальные модули.
 	chat.Register(protected, pool, checker, storage)
 	files.Register(protected, pool, storage, cfg.MaxUploadBytes)
-	structure.Register(protected, pool)
-	users.Register(protected, pool, checker)
+	structure.Register(v1, protected, pool)             // v1 — публичные списки кафедр и групп для регистрации
+	users.Register(v1, protected, pool, checker)        // v1 — POST /auth/register
 	profile.Register(protected, pool, "/api/v1/files/") // GET /auth/me
 
 	// Сборные страницы ЛК: /dashboard и /grades.
-	registerCabinet(protected, schedSvc, coursesSvc, assignSvc)
+	registerCabinet(protected, coursesSvc, assignSvc)
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,

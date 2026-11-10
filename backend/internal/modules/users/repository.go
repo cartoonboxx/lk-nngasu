@@ -123,9 +123,10 @@ func (r *Repository) Create(ctx context.Context, in CreateUser, passwordHash str
 	var id int64
 	err := database.InTx(ctx, r.db, func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `
-			INSERT INTO app_user (last_name, first_name, middle_names, email, password_hash, is_admin)
-			VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
-			in.LastName, in.FirstName, in.MiddleNames, in.Email, passwordHash, in.Role == "admin").Scan(&id)
+			INSERT INTO app_user (last_name, first_name, middle_names, email, password_hash, is_admin, is_active)
+			VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id`,
+			in.LastName, in.FirstName, in.MiddleNames, in.Email, passwordHash, in.Role == "admin",
+			!in.PendingApproval).Scan(&id)
 		if err != nil {
 			return userErr(err)
 		}

@@ -8,16 +8,20 @@ import (
 )
 
 // Register собирает пакет users (репозиторий → сервис → хендлеры)
-// и вешает его маршруты на r.
+// и вешает его маршруты.
 //
-// r должна быть уже закрыта middleware аутентификации: все маршруты
-// пакета рассчитывают, что middleware.Me(c) вернёт текущего пользователя.
+// public — группа без аутентификации: только регистрация.
+// protected должна быть уже закрыта middleware аутентификации: её маршруты
+// рассчитывают, что middleware.Me(c) вернёт текущего пользователя.
 // Здесь поверх этого задаются только ограничения по ролям.
 //
 // files нужен сервису, чтобы проверять, что файл аватара принадлежит
 // пользователю, который его ставит.
-func Register(r *gin.RouterGroup, pool *pgxpool.Pool, files FileOwnership) {
+func Register(public, r *gin.RouterGroup, pool *pgxpool.Pool, files FileOwnership) {
 	h := &Handler{svc: NewService(newRepository(pool), files)}
+
+	// Самостоятельная регистрация студентов и преподавателей — без входа.
+	public.POST("/auth/register", h.SelfRegister)
 
 	// Ограничения по ролям, навешиваются на отдельные маршруты.
 	admin := middleware.RequireRole(middleware.RoleAdmin)

@@ -50,6 +50,11 @@ type CreateUser struct {
 	// Только для студента.
 	RecordBookNumber *string
 	IsHeadman        bool
+
+	// PendingApproval — учётка создаётся неактивной (is_active = false) и ждёт,
+	// пока администратор включит её через PATCH /users/:id. Ставится при самостоятельной
+	// регистрации преподавателя; при создании администратором всегда false.
+	PendingApproval bool
 }
 
 // UpdateProfile — что пользователь может менять о себе сам.
