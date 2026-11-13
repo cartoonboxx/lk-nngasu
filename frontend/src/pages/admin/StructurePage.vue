@@ -23,7 +23,7 @@
         v-model="search"
         type="search"
         :label="`Поиск: ${catalogLabels[kind].toLowerCase()}`"
-        placeholder="Название или код"
+        :placeholder="kind === 'specializations' ? 'Код и название' : 'Название'"
         full-width
       />
       <label :class="style.field">

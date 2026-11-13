@@ -125,8 +125,6 @@
     background: var(--color-status-info-surface);
   }
   &:focus-within {
-    outline: 2px solid var(--color-border-focus);
-    outline-offset: 2px;
   }
 }
 .uploadCopy {

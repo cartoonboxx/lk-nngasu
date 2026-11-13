@@ -3,7 +3,7 @@
     <slot name="trigger" :trigger-props="triggerProps" :open="open">
       <button v-bind="triggerProps" type="button" :class="style.trigger">{{ triggerText }}</button>
     </slot>
-    <div v-if="open" :class="style.popup">
+    <div v-if="open" ref="popup" :class="style.popup" popover="manual">
       <div
         ref="list"
         :class="style.list"
@@ -69,7 +69,12 @@ export default defineComponent({
   },
   emits: { 'update:modelValue': (value: string) => typeof value === 'string' },
   data() {
-    return { style, open: false, internalValue: undefined as string | undefined }
+    return {
+      style,
+      open: false,
+      internalValue: undefined as string | undefined,
+      resizeObserver: null as ResizeObserver | null,
+    }
   },
   computed: {
     isTabs(): boolean {
@@ -101,16 +106,57 @@ export default defineComponent({
     disabled(value: boolean) {
       if (value) this.close()
     },
+    items: {
+      deep: true,
+      handler() {
+        void this.$nextTick(this.updatePosition)
+      },
+    },
   },
   mounted() {
     document.addEventListener('pointerdown', this.onPointerdown)
     document.addEventListener('focusin', this.onFocusin)
+    window.addEventListener('scroll', this.updatePosition, true)
+    window.addEventListener('resize', this.updatePosition)
+    window.visualViewport?.addEventListener('resize', this.updatePosition)
+    window.visualViewport?.addEventListener('scroll', this.updatePosition)
+    this.resizeObserver = new ResizeObserver(this.updatePosition)
+    this.resizeObserver.observe(this.$refs.root as HTMLElement)
   },
   beforeUnmount() {
     document.removeEventListener('pointerdown', this.onPointerdown)
     document.removeEventListener('focusin', this.onFocusin)
+    window.removeEventListener('scroll', this.updatePosition, true)
+    window.removeEventListener('resize', this.updatePosition)
+    window.visualViewport?.removeEventListener('resize', this.updatePosition)
+    window.visualViewport?.removeEventListener('scroll', this.updatePosition)
+    this.resizeObserver?.disconnect()
   },
   methods: {
+    updatePosition() {
+      const root = this.$refs.root as HTMLElement | undefined
+      const popup = this.$refs.popup as HTMLElement | undefined
+      const list = this.$refs.list as HTMLElement | undefined
+      if (!this.open || !root || !popup || !list) return
+      const anchor = root.getBoundingClientRect()
+      const viewport = window.visualViewport
+      const left = (viewport?.offsetLeft ?? 0) + 12
+      const top = (viewport?.offsetTop ?? 0) + 12
+      const right = left + (viewport?.width ?? window.innerWidth) - 24
+      const bottom = top + (viewport?.height ?? window.innerHeight) - 24
+      const width = Math.min(anchor.width, right - left)
+      popup.style.width = `${width}px`
+      const height = Math.min(list.scrollHeight, 280) + popup.offsetHeight - list.clientHeight
+      const below = Math.max(0, bottom - anchor.bottom - 8)
+      const above = Math.max(0, anchor.top - top - 8)
+      const upwards = below < height && above > below
+      const maxHeight = upwards ? above : below
+      popup.style.maxHeight = `${maxHeight}px`
+      popup.style.left = `${Math.max(left, Math.min(anchor.left, right - width))}px`
+      popup.style.top = `${
+        upwards ? Math.max(top, anchor.top - 8 - Math.min(height, maxHeight)) : anchor.bottom + 8
+      }px`
+    },
     focusItem(index: number) {
       ;(this.$refs.list as HTMLElement | undefined)
         ?.querySelectorAll<HTMLButtonElement>('[data-popup-item]')
@@ -120,6 +166,10 @@ export default defineComponent({
       if (this.disabled) return
       this.open = true
       await this.$nextTick()
+      const popup = this.$refs.popup as HTMLElement | undefined
+      if (!this.open || !popup) return
+      if (!popup.matches(':popover-open')) popup.showPopover()
+      this.updatePosition()
       const index =
         this.activeIndex >= 0 && !this.items[this.activeIndex]?.disabled
           ? this.activeIndex
@@ -130,6 +180,8 @@ export default defineComponent({
       else this.focusItem(index)
     },
     close(restoreFocus = false) {
+      const popup = this.$refs.popup as HTMLElement | undefined
+      if (popup?.matches(':popover-open')) popup.hidePopover()
       this.open = false
       if (restoreFocus)
         (this.$refs.root as HTMLElement | undefined)

@@ -19,6 +19,12 @@ import { adminDemoSession, adminDemoSessionKey } from '@/pages/auth/admin-demo'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
+  scrollBehavior(to, _from, savedPosition) {
+    if (to.name === 'api-docs') {
+      if (to.hash) return { el: to.hash, top: 24 }
+      return savedPosition ?? { top: 0 }
+    }
+  },
   routes: [
     {
       path: '/admin',
@@ -127,6 +133,11 @@ const router = createRouter({
       path: '/registration',
       name: 'registration',
       component: RegistrationComponent,
+    },
+    {
+      path: '/api-docs',
+      name: 'api-docs',
+      component: () => import('@/pages/apiDocs/ApiDocsPage.vue'),
     },
     {
       path: '/ui-kit',

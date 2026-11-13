@@ -261,13 +261,13 @@ export default defineComponent({
         { value: 'room', label: 'По аудитории' },
       ],
       weekOptions: [
-        { value: '1', label: 'Первая' },
-        { value: '2', label: 'Вторая' },
+        { value: '1', label: 'Верхняя' },
+        { value: '2', label: 'Нижняя' },
       ],
       columns: ['День и время', 'Дисциплина', 'Группа', 'Преподаватель', 'Аудитория', 'Действие'],
       weekFilterOptions: [
-        { value: '1', label: 'Первая неделя' },
-        { value: '2', label: 'Вторая неделя' },
+        { value: '1', label: 'Верхняя неделя' },
+        { value: '2', label: 'Нижняя неделя' },
       ],
       style,
       periodOptions: periods.map((period, index) => ({

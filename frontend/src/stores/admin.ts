@@ -292,14 +292,27 @@ export const useAdminStore = defineStore('adminStore', {
         )
           throw new Error('Дисциплина уже назначена этой группе в выбранном семестре.')
         const existing = data.courses.find((item) => item.id === course.id)
-        if (existing && data.workloads.some((item) => item.course_id === course.id))
-          throw new Error('Сначала удалите связанную нагрузку перед изменением назначения.')
         const next = {
           ...course,
           id: course.id || Math.max(0, ...data.courses.map((item) => item.id)) + 1,
         }
         if (existing) data.courses.splice(data.courses.indexOf(existing), 1, next)
         else data.courses.push(next)
+        if (
+          existing &&
+          (existing.group_id !== next.group_id || existing.semester_id !== next.semester_id)
+        ) {
+          const workloadIds = new Set(
+            data.workloads.filter((item) => item.course_id === next.id).map((item) => item.id),
+          )
+          for (const lesson of data.lessons.filter((item) => workloadIds.has(item.workload_id))) {
+            const conflicts = lessonConflicts(data, lesson)
+            if (conflicts.length)
+              throw new Error(
+                `Не удалось изменить назначение: занятие №${lesson.id}. ${conflicts.join(' ')}`,
+              )
+          }
+        }
       })
     },
     async saveWorkload(workload: AdminWorkload) {
@@ -324,19 +337,24 @@ export const useAdminStore = defineStore('adminStore', {
         )
           throw new Error('Такая нагрузка уже существует.')
         const existing = data.workloads.find((item) => item.id === workload.id)
-        if (
-          existing &&
-          data.lessons.some((item) => item.workload_id === existing.id) &&
-          (existing.teacher_id !== workload.teacher_id ||
-            existing.lesson_type !== workload.lesson_type)
-        )
-          throw new Error('Нагрузка используется в расписании. Сначала измените занятия.')
         const next = {
           ...workload,
           id: workload.id || Math.max(0, ...data.workloads.map((item) => item.id)) + 1,
         }
         if (existing) data.workloads.splice(data.workloads.indexOf(existing), 1, next)
         else data.workloads.push(next)
+        if (
+          existing &&
+          (existing.teacher_id !== next.teacher_id || existing.course_id !== next.course_id)
+        ) {
+          for (const lesson of data.lessons.filter((item) => item.workload_id === next.id)) {
+            const conflicts = lessonConflicts(data, lesson)
+            if (conflicts.length)
+              throw new Error(
+                `Не удалось изменить нагрузку: занятие №${lesson.id}. ${conflicts.join(' ')}`,
+              )
+          }
+        }
       })
     },
     async saveLesson(lesson: AdminLesson) {

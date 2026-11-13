@@ -46,7 +46,10 @@
           </Button>
         </td>
         <td>
-          <span v-if="item.student">Студент · {{ groupNames[item.student.group_id] }}</span>
+          <span v-if="item.student">
+            {{ item.student.is_headman ? 'Староста' : 'Студент' }} ·
+            {{ groupNames[item.student.group_id] }}
+          </span>
           <br v-if="item.student && item.teacher" />
           <span v-if="item.teacher">Преподаватель</span>
           <small v-if="!item.student && !item.teacher">Без учебной роли</small>
@@ -158,6 +161,7 @@ export default defineComponent({
       roleOptions: [
         { value: '', label: 'Все роли' },
         { value: 'student', label: 'Студент' },
+        { value: 'headman', label: 'Староста' },
         { value: 'teacher', label: 'Преподаватель' },
       ],
       adminOptions: [
@@ -191,7 +195,10 @@ export default defineComponent({
             .toLowerCase()
             .includes(this.search.toLowerCase()) &&
           (!this.active || item.is_active === (this.active === 'active')) &&
-          (!this.role || Boolean(item[this.role as 'student' | 'teacher'])) &&
+          (!this.role ||
+            (this.role === 'headman' && item.student?.is_headman) ||
+            (this.role === 'student' && Boolean(item.student)) ||
+            (this.role === 'teacher' && Boolean(item.teacher))) &&
           (!this.admin || item.is_admin === (this.admin === 'yes')),
       )
     },

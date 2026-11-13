@@ -52,7 +52,9 @@
             >
               Нагрузка
             </Button>
-            <Button size="sm" variant="ghost" @click="openCourse(item)">Изменить</Button>
+            <Button size="sm" variant="ghost" @click="openCourse(item)">
+              Заменить дисциплину
+            </Button>
             <Button
               size="sm"
               variant="ghost"
@@ -117,7 +119,7 @@
     </p>
     <AdminDialog
       v-model="courseOpen"
-      :title="courseDraft.id ? 'Изменить назначение' : 'Назначить дисциплину'"
+      :title="courseDraft.id ? 'Заменить дисциплину' : 'Назначить дисциплину'"
     >
       <form :class="style.form" @submit.prevent="saveCourse">
         <p :class="style.muted">
@@ -135,7 +137,8 @@
           />
         </label>
         <p v-if="courseDraft.id" :class="style.muted">
-          Изменение доступно, если у назначения ещё нет связанной нагрузки.
+          Нагрузка, преподаватели и занятия в расписании сохранятся и будут относиться к выбранной
+          дисциплине.
         </p>
         <div :class="style.dialogFooter">
           <Button variant="ghost" @click="courseOpen = false">Отмена</Button>
@@ -148,6 +151,10 @@
       :title="workloadDraft.id ? 'Изменить нагрузку' : 'Добавить нагрузку'"
     >
       <form :class="style.form" @submit.prevent="saveWorkload">
+        <p v-if="workloadDraft.id" :class="style.muted">
+          Преподаватель и тип занятия изменятся во всех занятиях этой нагрузки. Время и аудитории
+          сохранятся. При смене преподавателя проверим пересечения в расписании.
+        </p>
         <label :class="style.field">
           Преподаватель
           <Select
@@ -357,7 +364,7 @@ export default defineComponent({
       const saved = await this.$adminStore.saveCourse(this.courseDraft)
       if (saved) {
         this.courseOpen = false
-        this.selectedId = 0
+        this.selectedId = this.courseDraft.id
       }
     },
     async saveWorkload() {

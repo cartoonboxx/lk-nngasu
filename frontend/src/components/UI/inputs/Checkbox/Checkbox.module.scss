@@ -31,11 +31,6 @@
       }
     }
 
-    &:focus-visible + .control {
-      border-color: var(--color-border-focus);
-      outline: 2px solid var(--color-border-focus);
-      outline-offset: 2px;
-    }
   }
 
   .control {
@@ -115,14 +110,6 @@
     .input:checked + .control {
       border-color: var(--color-border-accent);
       background: var(--color-accent-hover);
-    }
-  }
-
-  &.focus {
-    .control {
-      border-color: var(--color-border-focus);
-      outline: 2px solid var(--color-border-focus);
-      outline-offset: 2px;
     }
   }
 
