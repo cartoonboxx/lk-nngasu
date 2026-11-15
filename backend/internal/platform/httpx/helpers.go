@@ -73,7 +73,7 @@ func OptDate(c *gin.Context, name string) (*time.Time, bool) {
 // Bind разбирает JSON-тело и валидирует binding-тегами; при ошибке сам пишет 400.
 func Bind(c *gin.Context, dst any) bool {
 	if err := c.ShouldBindJSON(dst); err != nil {
-		BadRequest(c, err)
+		Fail(c, bindError(err))
 		return false
 	}
 	return true
@@ -116,6 +116,36 @@ func ReplyCreated(c *gin.Context, data any, err error) {
 		return
 	}
 	Created(c, data)
+}
+
+// ReplyAccepted — как Reply, но с кодом 202: действие принято и выполняется отдельно
+// (например, письмо поставлено в очередь отправки).
+func ReplyAccepted(c *gin.Context, data any, err error) {
+	if err != nil {
+		Fail(c, err)
+		return
+	}
+	c.JSON(http.StatusAccepted, gin.H{"data": data})
+}
+
+// Meta — сведения о странице списка: {"data": [...], "meta": {"limit", "offset", "total"}}.
+type Meta struct {
+	Limit  int `json:"limit"`
+	Offset int `json:"offset"`
+	Total  int `json:"total"`
+}
+
+// ReplyPage отвечает 200 страницей списка с meta либо ошибкой.
+// Пустая страница — data: [] с корректным total.
+func ReplyPage[T any](c *gin.Context, data []T, meta Meta, err error) {
+	if err != nil {
+		Fail(c, err)
+		return
+	}
+	if data == nil {
+		data = []T{}
+	}
+	c.JSON(http.StatusOK, gin.H{"data": data, "meta": meta})
 }
 
 // ReplyEmpty отвечает 204 либо ошибкой.

@@ -10,18 +10,24 @@ import (
 // Register собирает пакет users (репозиторий → сервис → хендлеры)
 // и вешает его маршруты.
 //
-// public — группа без аутентификации: только регистрация.
+// public — группа без аутентификации: только отправка заявки на регистрацию.
 // protected должна быть уже закрыта middleware аутентификации: её маршруты
 // рассчитывают, что middleware.Me(c) вернёт текущего пользователя.
 // Здесь поверх этого задаются только ограничения по ролям.
 //
 // files нужен сервису, чтобы проверять, что файл аватара принадлежит
 // пользователю, который его ставит.
-func Register(public, r *gin.RouterGroup, pool *pgxpool.Pool, files FileOwnership) {
-	h := &Handler{svc: NewService(newRepository(pool), files)}
+//
+// opts — версия условий для регистрации и отправка приглашений (см. Options).
+func Register(public, r *gin.RouterGroup, pool *pgxpool.Pool, files FileOwnership, opts Options) {
+	h := &Handler{svc: NewService(newRepository(pool), files, opts)}
 
-	// Самостоятельная регистрация студентов и преподавателей — без входа.
-	public.POST("/auth/register", h.SelfRegister)
+	// Заявка на регистрацию — без входа. Учётку создаёт администратор, одобряя заявку.
+	register := []gin.HandlerFunc{h.SubmitRegistration}
+	if opts.RegisterLimit != nil {
+		register = append([]gin.HandlerFunc{opts.RegisterLimit}, register...)
+	}
+	public.POST("/auth/register", register...)
 
 	// Ограничения по ролям, навешиваются на отдельные маршруты.
 	admin := middleware.RequireRole(middleware.RoleAdmin)
@@ -38,6 +44,12 @@ func Register(public, r *gin.RouterGroup, pool *pgxpool.Pool, files FileOwnershi
 	r.GET("/users", admin, h.List)
 	r.POST("/users", admin, h.Create)
 	r.PATCH("/users/:id", admin, h.AdminUpdate)
+	r.POST("/users/:id/invitation", admin, h.ResendInvitation) // повторно отправить приглашение задать пароль
+
+	// Заявки на регистрацию: только администратор.
+	r.GET("/registration-requests", admin, h.ListRegistrations)                // очередь заявок
+	r.GET("/registration-requests/:id", admin, h.GetRegistration)              // одна заявка
+	r.POST("/registration-requests/:id/decision", admin, h.DecideRegistration) // одобрить или отклонить
 
 	// Просмотр карточки пользователя: преподаватели и администраторы.
 	// Студенты чужие карточки не видят.

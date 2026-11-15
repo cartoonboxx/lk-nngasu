@@ -23,6 +23,8 @@ import (
 	"university-api/internal/modules/users"
 	"university-api/internal/platform/access"
 	"university-api/internal/platform/database"
+	"university-api/internal/platform/mail"
+	"university-api/internal/platform/ratelimit"
 )
 
 // Run собирает зависимости и запускает HTTP-сервер.
@@ -47,12 +49,23 @@ func Run(ctx context.Context, cfg config.Config) error {
 
 	secret := []byte(cfg.JWTSecret)
 	v1 := r.Group("/api/v1")
+	limiter := ratelimit.New()
 
-	// Публичные маршруты.
-	auth.Register(v1, pool, secret, cfg.AccessTTL)
+	// Письма: через SMTP, а без настроек — в лог сервера (для разработки).
+	var mailer mail.Sender = mail.Log{}
+	if cfg.SMTP.Host != "" {
+		mailer = mail.SMTP{Host: cfg.SMTP.Host, Port: cfg.SMTP.Port, User: cfg.SMTP.User,
+			Password: cfg.SMTP.Password, From: cfg.SMTP.From}
+	}
 
-	// Всё, что ниже, требует JWT.
-	protected := v1.Group("", middleware.Auth(secret))
+	// Публичные маршруты авторизации: вход, CSRF, refresh, logout, активация.
+	authSvc := auth.Register(v1, pool, auth.Options{
+		Secret: secret, AccessTTL: cfg.AccessTTL, CookieSecure: cfg.CookieSecure,
+		AllowedOrigins: cfg.AllowedOrigins, AppURL: cfg.AppURL, Mail: mailer,
+	}, limiter)
+
+	// Всё, что ниже, требует JWT действующей сессии.
+	protected := v1.Group("", middleware.Auth(secret, authSvc))
 	checker := access.NewChecker(pool)
 
 	cal := schedule.NewCalendar(cfg.Location, cfg.WeekOneDate, cfg.LessonDuration)
@@ -70,8 +83,12 @@ func Run(ctx context.Context, cfg config.Config) error {
 	// Остальные модули.
 	chat.Register(protected, pool, checker, storage)
 	files.Register(protected, pool, storage, cfg.MaxUploadBytes)
-	structure.Register(v1, protected, pool)             // v1 — публичные списки кафедр и групп для регистрации
-	users.Register(v1, protected, pool, checker)        // v1 — POST /auth/register
+	structure.Register(v1, protected, pool)                     // v1 — публичные списки кафедр и групп для регистрации
+	users.Register(v1, protected, pool, checker, users.Options{ // v1 — POST /auth/register
+		TermsVersion:  cfg.TermsVersion,
+		Inviter:       authSvc, // создание пользователя без пароля → письмо
+		RegisterLimit: limiter.Middleware("register", 10, 10*time.Minute),
+	})
 	profile.Register(protected, pool, "/api/v1/files/") // GET /auth/me
 
 	// Сборные страницы ЛК: /dashboard и /grades.
