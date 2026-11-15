@@ -126,7 +126,8 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 	if !httpx.Bind(c, &req) {
 		return
 	}
-	httpx.ReplyEmpty(c, h.svc.ChangePassword(c.Request.Context(), middleware.Me(c).UserID, req.OldPassword, req.NewPassword))
+	me := middleware.Me(c)
+	httpx.ReplyEmpty(c, h.svc.ChangePassword(c.Request.Context(), me.UserID, me.Sid, req.OldPassword, req.NewPassword))
 }
 
 // ChangeEmail меняет свой email после проверки пароля и возвращает профиль.

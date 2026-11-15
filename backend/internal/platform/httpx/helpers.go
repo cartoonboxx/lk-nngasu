@@ -13,9 +13,14 @@ import (
 // ---- разбор запроса ----
 
 // ID разбирает числовой path-параметр; при ошибке сам пишет 400.
+// maxSafeInteger — Number.MAX_SAFE_INTEGER в JavaScript.
+const maxSafeInteger = 1<<53 - 1
+
 func ID(c *gin.Context, name string) (int64, bool) {
 	id, err := strconv.ParseInt(c.Param(name), 10, 64)
-	if err != nil || id <= 0 {
+	// Контракт: положительное целое не больше Number.MAX_SAFE_INTEGER (2^53-1),
+	// иначе id нельзя точно представить в JavaScript.
+	if err != nil || id <= 0 || id > maxSafeInteger {
 		Fail(c, apperr.NewInvalid("invalid_id", "invalid path parameter: "+name))
 		return 0, false
 	}

@@ -68,10 +68,10 @@ func (r *Repository) CreateRequest(ctx context.Context, in SubmitRequest, passwo
 
 	var rc RegistrationReceipt
 	err := r.db.QueryRow(ctx, `
-		INSERT INTO registration_request (email, password_hash, passport, snils, comment, terms_version, accepted_terms_at)
-		VALUES ($1, $2, $3, $4, $5, $6, now())
+		INSERT INTO registration_request (email, password_hash, passport, snils, terms_version, accepted_terms_at)
+		VALUES ($1, $2, $3, $4, $5, now())
 		RETURNING id, status::text, created_at`,
-		in.Email, passwordHash, in.Passport, in.Snils, in.Comment, in.TermsVersion).
+		in.Email, passwordHash, in.Passport, in.Snils, in.TermsVersion).
 		Scan(&rc.ID, &rc.Status, &rc.CreatedAt)
 	if database.PgCode(err) == database.CodeUnique {
 		return RegistrationReceipt{}, errRequestPending // частичный уникальный индекс по email среди pending

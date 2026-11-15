@@ -341,8 +341,8 @@ func (s *Service) verifyPassword(ctx context.Context, id int64, plain string) er
 }
 
 // ChangePassword меняет пароль после проверки текущего (PasswordInput).
-// Новый пароль должен отличаться от старого.
-func (s *Service) ChangePassword(ctx context.Context, id int64, oldPass, newPass string) error {
+// Новый пароль должен отличаться от старого. Все сессии, кроме текущей (sid), отзываются.
+func (s *Service) ChangePassword(ctx context.Context, id int64, sid, oldPass, newPass string) error {
 	if oldPass == newPass {
 		return fieldErr("new_password", "must differ from the current password")
 	}
@@ -353,7 +353,7 @@ func (s *Service) ChangePassword(ctx context.Context, id int64, oldPass, newPass
 	if err != nil {
 		return err
 	}
-	return s.repo.SetPassword(ctx, id, hash)
+	return s.repo.SetPassword(ctx, id, hash, sid) // остальные сессии закрываются
 }
 
 // ChangeEmail меняет почту после подтверждения паролем. Подтверждения самой почты нет:

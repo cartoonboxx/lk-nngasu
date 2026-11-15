@@ -74,7 +74,7 @@ func Load() (Config, error) {
 		cfg.SMTP.From = cfg.SMTP.User
 	}
 
-	mb, err := strconv.ParseInt(getenv("MAX_UPLOAD_MB", "15"), 10, 64)
+	mb, err := strconv.ParseInt(getenv("MAX_UPLOAD_MB", "20"), 10, 64)
 	if err != nil || mb < 1 {
 		return Config{}, errors.New("MAX_UPLOAD_MB must be a positive integer")
 	}

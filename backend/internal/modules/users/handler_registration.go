@@ -13,13 +13,12 @@ import (
 // submitRequestBody — тело POST /auth/register (RegistrationInput).
 // «Повтори пароль» проверяет фронт, на сервер оно не отправляется.
 type submitRequestBody struct {
-	Email         string  `json:"email" binding:"required,email,max=255"`
-	Password      string  `json:"password" binding:"required,min=8,max=72"` // и не больше 72 байт — проверяет сервис
-	Passport      string  `json:"passport" binding:"required,max=20"`       // "45 09 123456" — пробелы допустимы
-	Snils         string  `json:"snils" binding:"required,max=20"`          // "112-233-445 95" — формат формы допустим
-	AcceptedTerms bool    `json:"accepted_terms"`                           // должно быть true
-	TermsVersion  string  `json:"terms_version" binding:"required,max=32"`  // версия условий из конфигурации фронта
-	Comment       *string `json:"comment" binding:"omitempty,max=1000"`     // необязательно, видит администратор
+	Email         string `json:"email" binding:"required,email,max=255"`
+	Password      string `json:"password" binding:"required,min=8,max=72"` // и не больше 72 байт — проверяет сервис
+	Passport      string `json:"passport" binding:"required,max=20"`       // "45 09 123456" — пробелы допустимы
+	Snils         string `json:"snils" binding:"required,max=20"`          // "112-233-445 95" — формат формы допустим
+	AcceptedTerms bool   `json:"accepted_terms"`                           // должно быть true
+	TermsVersion  string `json:"terms_version" binding:"required,max=32"`  // версия условий из конфигурации фронта
 }
 
 // decisionBody — тело POST /registration-requests/:id/decision (RegistrationDecision).
@@ -53,7 +52,7 @@ func (h *Handler) SubmitRegistration(c *gin.Context) {
 	}
 	r, err := h.svc.SubmitRegistration(c.Request.Context(), SubmitRequest{
 		Email: req.Email, Password: req.Password, Passport: req.Passport, Snils: req.Snils,
-		Comment: req.Comment, AcceptedTerms: req.AcceptedTerms, TermsVersion: req.TermsVersion,
+		AcceptedTerms: req.AcceptedTerms, TermsVersion: req.TermsVersion,
 	})
 	httpx.ReplyCreated(c, r, err)
 }

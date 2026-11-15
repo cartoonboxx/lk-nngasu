@@ -19,6 +19,9 @@ import (
 // Имена полей — как в JSON (email, password), а не как в Go-структуре.
 
 func init() {
+	// Контракт: лишние поля в теле отклонять 400, а не молча игнорировать.
+	binding.EnableDecoderDisallowUnknownFields = true
+
 	// Валидатор gin по умолчанию называет поля по Go-структуре (Email);
 	// просим его брать имя из json-тега (email).
 	if v, ok := binding.Validator.Engine().(*validator.Validate); ok {
@@ -60,6 +63,14 @@ func bindError(err error) *apperr.Error {
 	if errors.As(err, &terr) && terr.Field != "" {
 		return base.WithDetails(map[string]any{
 			"fields": map[string][]string{terr.Field: {"must be " + terr.Type.String()}},
+		})
+	}
+
+	// Неизвестный ключ: encoding/json пишет `json: unknown field "x"`.
+	if msg := err.Error(); strings.HasPrefix(msg, `json: unknown field "`) {
+		name := strings.TrimSuffix(strings.TrimPrefix(msg, `json: unknown field "`), `"`)
+		return base.WithDetails(map[string]any{
+			"fields": map[string][]string{name: {"unknown field"}},
 		})
 	}
 

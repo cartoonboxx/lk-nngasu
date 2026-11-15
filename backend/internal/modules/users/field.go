@@ -25,8 +25,12 @@ func (f *Field[T]) UnmarshalJSON(b []byte) error {
 		f.Value = nil
 		return nil
 	}
+	// Свой декодер: обычный json.Unmarshal пропустил бы лишние ключи внутри
+	// вложенного объекта (например, student), а контракт требует 400.
+	dec := json.NewDecoder(bytes.NewReader(b))
+	dec.DisallowUnknownFields()
 	var v T
-	if err := json.Unmarshal(b, &v); err != nil {
+	if err := dec.Decode(&v); err != nil {
 		return err
 	}
 	f.Value = &v

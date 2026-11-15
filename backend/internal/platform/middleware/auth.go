@@ -47,6 +47,7 @@ var (
 type Principal struct {
 	UserID int64
 	Role   string
+	Sid    string // id сессии из access-токена: нужен, чтобы не закрыть текущую сессию при смене пароля
 }
 
 const principalKey = "principal"
@@ -107,7 +108,9 @@ func Auth(secret []byte, sessions SessionChecker) gin.HandlerFunc {
 			return
 		}
 
-		c.Set(principalKey, Principal{UserID: id, Role: claims.Role})
+		// Ответы защищённых маршрутов — приватные данные: не кешировать (контракт, раздел «Заголовки»).
+		c.Header("Cache-Control", "no-store")
+		c.Set(principalKey, Principal{UserID: id, Role: claims.Role, Sid: claims.Sid})
 		c.Next()
 	}
 }

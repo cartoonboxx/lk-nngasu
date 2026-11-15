@@ -33,8 +33,8 @@ type RegistrationRequest struct {
 	LastName    *string    `json:"last_name"`
 	FirstName   *string    `json:"first_name"`
 	MiddleNames *string    `json:"middle_names"`
-	Comment     *string    `json:"comment"`
-	Status      string     `json:"status"` // pending | approved | rejected
+	Comment     *string    `json:"comment"` // в текущей форме регистрации не запрашивается, всегда null
+	Status      string     `json:"status"`  // pending | approved | rejected
 	CreatedAt   time.Time  `json:"created_at"`
 	ReviewedAt  *time.Time `json:"reviewed_at"`
 	ReviewedBy  *PersonRef `json:"reviewed_by"` // администратор, принявший решение
@@ -58,7 +58,6 @@ type RegistrationReceipt struct {
 // SubmitRequest — данные заявки от пользователя.
 type SubmitRequest struct {
 	Email, Password, Passport, Snils string
-	Comment                          *string // необязательный комментарий для администратора
 	AcceptedTerms                    bool
 	TermsVersion                     string
 }
@@ -152,9 +151,6 @@ func (s *Service) SubmitRegistration(ctx context.Context, in SubmitRequest) (Reg
 	snils, err := normSnils("snils", in.Snils)
 	if err != nil {
 		return RegistrationReceipt{}, err
-	}
-	if in.Comment != nil && strings.TrimSpace(*in.Comment) == "" {
-		in.Comment = nil
 	}
 	hash, err := hashPassword(in.Password)
 	if err != nil {

@@ -17,7 +17,7 @@ import (
 )
 
 // maxAvatarBytes — потолок для картинок профиля, независимо от общего лимита.
-const maxAvatarBytes = 5 << 20 // 5 МБ
+const maxAvatarBytes = 2 << 20 // 2 MiB по контракту (JPEG, PNG, WebP)
 
 // Handler — HTTP-слой модуля files. Отдельного сервиса нет:
 // handler сам работает с таблицей file (repo) и файлами на диске (storage).

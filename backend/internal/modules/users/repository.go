@@ -336,9 +336,16 @@ func (r *Repository) AdminUpdate(ctx context.Context, id int64, in AdminUpdate) 
 		case in.Teacher.Set:
 			err = removeRole(ctx, tx, "teacher", id)
 		}
-		// Сессии заблокированного пользователя отдельно отзывать не нужно:
-		// проверка сессии в middleware и refresh смотрят на app_user.is_active.
-		return err
+		if err != nil {
+			return err
+		}
+
+		// 5. Блокировка отзывает сессии (контракт): после разблокировки
+		// пользователь входит заново, старые refresh-токены не оживают.
+		if in.IsActive.Value != nil && !*in.IsActive.Value {
+			return revokeSessions(ctx, tx, id, "", "blocked")
+		}
+		return nil
 	})
 }
 
@@ -371,10 +378,28 @@ func (r *Repository) PasswordHash(ctx context.Context, id int64) (string, error)
 	return h, database.Translate(err)
 }
 
-// SetPassword записывает новый хеш пароля.
-func (r *Repository) SetPassword(ctx context.Context, id int64, hash string) error {
-	tag, err := r.db.Exec(ctx, `UPDATE app_user SET password_hash = $2 WHERE id = $1`, id, hash)
-	return database.Affected(tag, err, "user_not_found")
+// SetPassword записывает новый хеш пароля и закрывает все сессии пользователя,
+// кроме текущей (keepSid): по контракту смена пароля отзывает сессии,
+// а выкидывать из кабинета того, кто только что сменил пароль, незачем.
+func (r *Repository) SetPassword(ctx context.Context, id int64, hash, keepSid string) error {
+	return database.InTx(ctx, r.db, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, `UPDATE app_user SET password_hash = $2 WHERE id = $1`, id, hash)
+		if err := database.Affected(tag, err, "user_not_found"); err != nil {
+			return err
+		}
+		return revokeSessions(ctx, tx, id, keepSid, "password_changed")
+	})
+}
+
+// revokeSessions отзывает активные сессии пользователя, кроме keepSid ("" — все).
+// Таблица auth_session принадлежит модулю auth, но отзыв должен попасть в ту же
+// транзакцию, что и блокировка или смена пароля, поэтому запрос выполняется здесь.
+// Отозванная сессия не проходит проверку в middleware и не обновляется через refresh.
+func revokeSessions(ctx context.Context, tx pgx.Tx, userID int64, keepSid, reason string) error {
+	_, err := tx.Exec(ctx, `
+		UPDATE auth_session SET revoked_at = now(), revoke_reason = $3
+		WHERE user_id = $1 AND revoked_at IS NULL AND id::text <> $2`, userID, keepSid, reason)
+	return database.Translate(err)
 }
 
 // SetEmail меняет email. Ошибка проходит через userErr, чтобы занятый email
