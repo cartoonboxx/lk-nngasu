@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"path"
 	"strconv"
 	"strings"
 
@@ -12,6 +13,7 @@ import (
 
 	"university-api/internal/platform/apperr"
 	"university-api/internal/platform/database"
+	"university-api/internal/platform/filekey"
 )
 
 // Repository — доступ к таблицам app_user, student, teacher.
@@ -40,6 +42,11 @@ var userSelect = `
 	LEFT JOIN department d     ON d.id = t.department_id
 	LEFT JOIN student s        ON s.user_id = u.id
 	LEFT JOIN study_group g    ON g.id = s.group_id`
+
+// likeEscape экранирует спецсимволы шаблона LIKE (\\, %, _).
+func likeEscape(s string) string {
+	return strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(s)
+}
 
 // avatarURL — адрес скачивания аватара (GET /files/:id, с авторизацией).
 const avatarURL = "/api/v1/files/"
@@ -130,8 +137,16 @@ func (r *Repository) List(ctx context.Context, f ListFilter) ([]User, int, error
 		w.Raw("s.user_id IS NOT NULL")
 	case "teacher":
 		w.Raw("t.user_id IS NOT NULL")
-	case "admin":
-		w.Raw("u.is_admin")
+	}
+	// is_headman=false — студенты без признака старосты; пользователи без student не попадают.
+	if f.IsHeadman != nil {
+		w.Add("s.user_id IS NOT NULL AND s.is_headman = ?", *f.IsHeadman)
+	}
+	if f.IsActive != nil {
+		w.Add("u.is_active = ?", *f.IsActive)
+	}
+	if f.IsAdmin != nil {
+		w.Add("u.is_admin = ?", *f.IsAdmin)
 	}
 	if f.GroupID != nil {
 		w.Add("s.group_id = ?", *f.GroupID)
@@ -139,9 +154,10 @@ func (r *Repository) List(ctx context.Context, f ListFilter) ([]User, int, error
 	if f.DepartmentID != nil {
 		w.Add("t.department_id = ?", *f.DepartmentID)
 	}
-	// Поиск подстроки без учёта регистра по фамилии, имени и email.
+	// Поиск без учёта регистра по полному ФИО (в том числе «Иванова Анна») и email.
+	// Спецсимволы LIKE экранируются, чтобы «_» и «%» искались буквально.
 	if f.Q != "" {
-		w.Add("(u.last_name ILIKE ? OR u.first_name ILIKE ? OR u.email ILIKE ?)", "%"+f.Q+"%")
+		w.Add("("+database.FullName("u")+" ILIKE ? OR u.email ILIKE ?)", "%"+likeEscape(f.Q)+"%")
 	}
 
 	// Сколько всего записей под фильтром — для meta.total. Считаем до того,
@@ -153,20 +169,32 @@ func (r *Repository) List(ctx context.Context, f ListFilter) ([]User, int, error
 	}
 
 	// LIMIT/OFFSET тоже передаются параметрами (w.Arg возвращает плейсхолдер).
+	// Сортировка по ФИО (full_name), затем по id — порядок стабилен при пагинации.
+	dir := "ASC"
+	if f.Desc {
+		dir = "DESC"
+	}
 	q := userSelect + w.Where() +
-		fmt.Sprintf(" ORDER BY u.last_name, u.first_name, u.id LIMIT %s OFFSET %s", w.Arg(f.Limit), w.Arg(f.Offset))
+		fmt.Sprintf(" ORDER BY u.last_name %[1]s, u.first_name %[1]s, u.middle_names %[1]s NULLS FIRST, u.id %[1]s LIMIT %s OFFSET %s",
+			dir, w.Arg(f.Limit), w.Arg(f.Offset))
 	list, err := database.Collect(ctx, r.db, scanSummary, q, w.Args()...)
 	return list, total, err
 }
 
 // Create заводит пользователя и его роли одной транзакцией.
-// Если вставка роли упала, app_user тоже откатывается.
-func (r *Repository) Create(ctx context.Context, in CreateUser, passwordHash string) (int64, error) {
+// after выполняется в той же транзакции после вставки (приглашение);
+// ошибка в нём откатывает и пользователя.
+func (r *Repository) Create(ctx context.Context, in CreateUser, passwordHash string, after func(tx pgx.Tx, id int64) error) (int64, error) {
 	var id int64
 	err := database.InTx(ctx, r.db, func(tx pgx.Tx) error {
 		var err error
-		id, err = createUserTx(ctx, tx, in, passwordHash)
-		return err
+		if id, err = createUserTx(ctx, tx, in, passwordHash); err != nil {
+			return err
+		}
+		if after != nil {
+			return after(tx, id)
+		}
+		return nil
 	})
 	return id, err
 }
@@ -248,10 +276,8 @@ func upsertTeacher(ctx context.Context, tx pgx.Tx, userID int64, r TeacherRole) 
 func removeRole(ctx context.Context, tx pgx.Tx, table string, userID int64) error {
 	_, err := tx.Exec(ctx, `DELETE FROM `+table+` WHERE user_id = $1`, userID)
 	if database.PgCode(err) == database.CodeFK {
-		if table == "student" {
-			return apperr.NewConflict("student_role_in_use", "student role has related academic data and cannot be removed")
-		}
-		return apperr.NewConflict("teacher_role_in_use", "teacher role has a teaching load and cannot be removed")
+		return apperr.NewConflict("role_in_use", table+" role has related academic data or teaching load and cannot be removed").
+			WithDetails(map[string]any{"role": table})
 	}
 	return database.Translate(err)
 }
@@ -282,10 +308,10 @@ func (r *Repository) AdminUpdate(ctx context.Context, id int64, in AdminUpdate) 
 			return database.Translate(err)
 		}
 
-		// 2. Нельзя заблокировать или разжаловать последнего активного администратора.
+		// 2. Нельзя заблокировать последнего активного администратора.
 		// Блокируем всех активных админов, чтобы два запроса не прошли проверку одновременно.
-		losesAdmin := (in.IsActive.Value != nil && !*in.IsActive.Value) || (in.IsAdmin.Value != nil && !*in.IsAdmin.Value)
-		if isAdmin && isActive && losesAdmin {
+		blocking := in.IsActive.Value != nil && !*in.IsActive.Value
+		if isAdmin && isActive && blocking {
 			rows, err := tx.Query(ctx, `SELECT id FROM app_user WHERE is_admin AND is_active FOR UPDATE`)
 			if err != nil {
 				return database.Translate(err)
@@ -295,7 +321,7 @@ func (r *Repository) AdminUpdate(ctx context.Context, id int64, in AdminUpdate) 
 				return database.Translate(err)
 			}
 			if len(ids) <= 1 {
-				return apperr.NewConflict("last_active_admin", "cannot block or demote the last active administrator")
+				return apperr.NewConflict("last_active_admin", "cannot block the last active administrator")
 			}
 		}
 
@@ -309,7 +335,6 @@ func (r *Repository) AdminUpdate(ctx context.Context, id int64, in AdminUpdate) 
 		field(&set, "snils", in.Snils)
 		field(&set, "avatar_file_id", in.AvatarFileID)
 		field(&set, "is_active", in.IsActive)
-		field(&set, "is_admin", in.IsAdmin)
 		if len(set.cols) > 0 {
 			q := `UPDATE app_user SET ` + set.sql() + ` WHERE id = ` + set.arg(id) // до чтения set.args
 			if _, err := tx.Exec(ctx, q, set.args...); err != nil {
@@ -340,10 +365,13 @@ func (r *Repository) AdminUpdate(ctx context.Context, id int64, in AdminUpdate) 
 			return err
 		}
 
-		// 5. Блокировка отзывает сессии (контракт): после разблокировки
-		// пользователь входит заново, старые refresh-токены не оживают.
-		if in.IsActive.Value != nil && !*in.IsActive.Value {
+		// 5. Блокировка и изменение учебных ролей отзывают сессии (документация):
+		// права в старом access-токене больше не верны, пользователь входит заново.
+		switch {
+		case blocking:
 			return revokeSessions(ctx, tx, id, "", "blocked")
+		case in.Student.Set || in.Teacher.Set:
+			return revokeSessions(ctx, tx, id, "", "roles_changed")
 		}
 		return nil
 	})
@@ -370,6 +398,66 @@ func field[T any](s *setList, col string, f Field[T]) {
 
 func (s *setList) sql() string { return strings.Join(s.cols, ", ") }
 
+// GroupVisible — группа существует и доступна: администратору любая,
+// преподавателю — если он ведёт у неё хотя бы один курс (есть нагрузка).
+func (r *Repository) GroupVisible(ctx context.Context, groupID, userID int64, isAdmin bool) (bool, error) {
+	var ok bool
+	err := r.db.QueryRow(ctx, `
+		SELECT EXISTS (SELECT 1 FROM study_group g WHERE g.id = $1 AND ($3 OR EXISTS (
+			SELECT 1 FROM workload w JOIN course_offering co ON co.id = w.course_id
+			WHERE co.group_id = g.id AND w.teacher_id = $2)))`, groupID, userID, isAdmin).Scan(&ok)
+	return ok, database.Translate(err)
+}
+
+// GroupStudents — страница состава группы, по ФИО, затем по id.
+func (r *Repository) GroupStudents(ctx context.Context, groupID int64, limit, offset int) ([]CourseStudent, int, error) {
+	var total int
+	if err := r.db.QueryRow(ctx, `SELECT count(*) FROM student WHERE group_id = $1`, groupID).Scan(&total); err != nil {
+		return nil, 0, database.Translate(err)
+	}
+	list, err := database.Collect(ctx, r.db, func(row pgx.Row) (CourseStudent, error) {
+		var s CourseStudent
+		err := row.Scan(&s.StudentID, &s.FullName, &s.RecordBookNumber, &s.IsHeadman)
+		return s, err
+	}, `
+		SELECT u.id, `+database.FullName("u")+`, s.record_book_number, s.is_headman
+		FROM student s JOIN app_user u ON u.id = s.user_id
+		WHERE s.group_id = $1
+		ORDER BY u.last_name, u.first_name, u.middle_names NULLS FIRST, u.id
+		LIMIT $2 OFFSET $3`, groupID, limit, offset)
+	return list, total, err
+}
+
+// errFileNotFound — файла с таким id нет (404 по документации PATCH /me).
+var errFileNotFound = apperr.NewNotFound("file_not_found")
+
+// errInvalidFile — файл есть, но чужой или не картинка.
+var errInvalidFile = apperr.NewInvalid("invalid_file", "avatar must be your own uploaded JPEG, PNG or WebP image")
+
+// avatarExts — допустимые расширения аватара (JPEG, PNG, WebP), как в модуле files.
+var avatarExts = map[string]bool{".jpg": true, ".jpeg": true, ".png": true, ".webp": true}
+
+// CheckAvatar проверяет файл для аватара: существует (иначе 404 file_not_found),
+// загружен этим пользователем и является картинкой (иначе 400 invalid_file).
+// Владелец и имя файла хранятся в ключе "<user_id>/<random>/<имя>".
+func (r *Repository) CheckAvatar(ctx context.Context, userID, fileID int64) error {
+	var key string
+	err := r.db.QueryRow(ctx, `SELECT storage_key FROM file WHERE id = $1`, fileID).Scan(&key)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return errFileNotFound
+	}
+	if err != nil {
+		return database.Translate(err)
+	}
+	if owner, _ := filekey.Owner(key); owner != userID {
+		return errInvalidFile
+	}
+	if !avatarExts[strings.ToLower(path.Ext(filekey.Name(key)))] {
+		return errInvalidFile
+	}
+	return nil
+}
+
 // PasswordHash возвращает хеш пароля — для проверки старого пароля
 // при смене пароля или email. Наружу (в User) хеш никогда не попадает.
 func (r *Repository) PasswordHash(ctx context.Context, id int64) (string, error) {
@@ -378,16 +466,15 @@ func (r *Repository) PasswordHash(ctx context.Context, id int64) (string, error)
 	return h, database.Translate(err)
 }
 
-// SetPassword записывает новый хеш пароля и закрывает все сессии пользователя,
-// кроме текущей (keepSid): по контракту смена пароля отзывает сессии,
-// а выкидывать из кабинета того, кто только что сменил пароль, незачем.
-func (r *Repository) SetPassword(ctx context.Context, id int64, hash, keepSid string) error {
+// SetPassword записывает новый хеш пароля и отзывает все сессии пользователя,
+// включая текущую: после смены пароля нужен повторный вход.
+func (r *Repository) SetPassword(ctx context.Context, id int64, hash string) error {
 	return database.InTx(ctx, r.db, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `UPDATE app_user SET password_hash = $2 WHERE id = $1`, id, hash)
 		if err := database.Affected(tag, err, "user_not_found"); err != nil {
 			return err
 		}
-		return revokeSessions(ctx, tx, id, keepSid, "password_changed")
+		return revokeSessions(ctx, tx, id, "", "password_changed")
 	})
 }
 

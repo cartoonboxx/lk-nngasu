@@ -58,10 +58,13 @@ func Run(ctx context.Context, cfg config.Config) error {
 			Password: cfg.SMTP.Password, From: cfg.SMTP.From}
 	}
 
+	// Фоновая отправка писем из очереди mail_outbox; останавливается вместе с сервером.
+	go mail.NewWorker(pool, mailer).Run(ctx)
+
 	// Публичные маршруты авторизации: вход, CSRF, refresh, logout, активация.
 	authSvc := auth.Register(v1, pool, auth.Options{
 		Secret: secret, AccessTTL: cfg.AccessTTL, CookieSecure: cfg.CookieSecure,
-		AllowedOrigins: cfg.AllowedOrigins, AppURL: cfg.AppURL, Mail: mailer,
+		AllowedOrigins: cfg.AllowedOrigins, AppURL: cfg.AppURL,
 	}, limiter)
 
 	// Всё, что ниже, требует JWT действующей сессии.
@@ -88,6 +91,7 @@ func Run(ctx context.Context, cfg config.Config) error {
 		TermsVersion:  cfg.TermsVersion,
 		Inviter:       authSvc, // создание пользователя без пароля → письмо
 		RegisterLimit: limiter.Middleware("register", 10, 10*time.Minute),
+		PasswordLimit: limiter.Middleware("password", 5, 15*time.Minute),
 	})
 	profile.Register(protected, pool, "/api/v1/files/") // GET /auth/me
 

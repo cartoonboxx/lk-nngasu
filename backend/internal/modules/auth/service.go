@@ -18,7 +18,6 @@ import (
 
 	"university-api/internal/platform/apperr"
 	"university-api/internal/platform/database"
-	"university-api/internal/platform/mail"
 	"university-api/internal/platform/middleware"
 )
 
@@ -50,7 +49,6 @@ type Options struct {
 	CookieSecure   bool          // флаг Secure у refresh-cookie
 	AllowedOrigins []string      // дополнительные разрешённые Origin для refresh/logout
 	AppURL         string        // адрес фронтенда для ссылки активации
-	Mail           mail.Sender   // отправка писем-приглашений
 }
 
 // Service — вход, сессии и приглашения.

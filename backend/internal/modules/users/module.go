@@ -37,7 +37,11 @@ func Register(public, r *gin.RouterGroup, pool *pgxpool.Pool, files FileOwnershi
 	// Id берётся из сессии, так что чужой профиль через эти маршруты не изменить.
 	r.GET("/me", h.Me)
 	r.PATCH("/me", h.UpdateMe)
-	r.POST("/me/password", h.ChangePassword)
+	password := []gin.HandlerFunc{h.ChangePassword}
+	if opts.PasswordLimit != nil {
+		password = append([]gin.HandlerFunc{opts.PasswordLimit}, password...)
+	}
+	r.POST("/me/password", password...)
 	r.POST("/me/email", h.ChangeEmail)
 
 	// Управление пользователями: только администратор.
@@ -51,10 +55,11 @@ func Register(public, r *gin.RouterGroup, pool *pgxpool.Pool, files FileOwnershi
 	r.GET("/registration-requests/:id", admin, h.GetRegistration)              // одна заявка
 	r.POST("/registration-requests/:id/decision", admin, h.DecideRegistration) // одобрить или отклонить
 
-	// Просмотр карточки пользователя: преподаватели и администраторы.
-	// Студенты чужие карточки не видят.
-	r.GET("/users/:id", staff, h.Get)
+	// Полная карточка с паспортом и СНИЛС — только администратор.
+	// Преподаватель видит студентов через состав группы или курса, без документов.
+	r.GET("/users/:id", admin, h.Get)
 
-	// Состав группы: преподаватели и администраторы (журнал, ведомости).
+	// Состав группы: администратор — любая группа, преподаватель — группа,
+	// у которой он ведёт курс (проверяет сервис). Студентам недоступно.
 	r.GET("/groups/:id/students", staff, h.GroupStudents)
 }

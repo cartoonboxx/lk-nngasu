@@ -1,6 +1,9 @@
 package users
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 
 	"university-api/internal/platform/httpx"
@@ -66,7 +69,6 @@ type userPatchBody struct {
 	Teacher      Field[teacherWriteBody] `json:"teacher"`
 	AvatarFileID Field[int64]            `json:"avatar_file_id"`
 	IsActive     Field[bool]             `json:"is_active"`
-	IsAdmin      Field[bool]             `json:"is_admin"` // не описано в документации, оставлено для выдачи прав
 }
 
 // profilePatchBody — ProfilePatchInput (PATCH /me).
@@ -126,8 +128,7 @@ func (h *Handler) ChangePassword(c *gin.Context) {
 	if !httpx.Bind(c, &req) {
 		return
 	}
-	me := middleware.Me(c)
-	httpx.ReplyEmpty(c, h.svc.ChangePassword(c.Request.Context(), me.UserID, me.Sid, req.OldPassword, req.NewPassword))
+	httpx.ReplyEmpty(c, h.svc.ChangePassword(c.Request.Context(), middleware.Me(c).UserID, req.OldPassword, req.NewPassword))
 }
 
 // ChangeEmail меняет свой email после проверки пароля и возвращает профиль.
@@ -145,41 +146,112 @@ func (h *Handler) ChangeEmail(c *gin.Context) {
 // --- Работа с пользователями по id ---
 
 // List возвращает страницу UserSummary с фильтрами из query-параметров.
-// Некорректный group_id или department_id даёт 400 (ответ отправляют OptInt64).
+// Некорректный параметр — 400 invalid_query с details.fields.
 //
-// GET /users?role=&group_id=&department_id=&q=&limit=&offset=
+// GET /users?q=&role=&is_headman=&is_active=&is_admin=&group_id=&department_id=&sort=&limit=&offset=
 func (h *Handler) List(c *gin.Context) {
-	groupID, ok := httpx.OptInt64(c, "group_id")
+	f, ok := parseUserFilter(c)
 	if !ok {
 		return
 	}
-	deptID, ok := httpx.OptInt64(c, "department_id")
-	if !ok {
-		return
-	}
-	limit, offset := httpx.Page(c) // значения по умолчанию и верхний предел limit — в httpx.Page
-	list, total, err := h.svc.List(c.Request.Context(), ListFilter{
-		Role: c.Query("role"), GroupID: groupID, DepartmentID: deptID,
-		Q: c.Query("q"), Limit: limit, Offset: offset,
-	})
-	httpx.ReplyPage(c, list, httpx.Meta{Limit: limit, Offset: offset, Total: total}, err)
+	list, total, err := h.svc.List(c.Request.Context(), f)
+	httpx.ReplyPage(c, list, httpx.Meta{Limit: f.Limit, Offset: f.Offset, Total: total}, err)
 }
 
-// GroupStudents возвращает всех студентов группы одним списком (UserSummary), без пагинации.
-// Лимит 500 — защитная верхняя граница: в реальной группе студентов заведомо меньше.
+// parseUserFilter разбирает и проверяет query-параметры списка пользователей.
+// При ошибке ответ 400 уже отправлен.
+func parseUserFilter(c *gin.Context) (ListFilter, bool) {
+	f := ListFilter{Q: strings.TrimSpace(c.Query("q")), Role: c.Query("role"), Limit: 50}
+	switch f.Role {
+	case "", "student", "teacher":
+	default:
+		failQuery(c, "role", "must be student or teacher")
+		return f, false
+	}
+	for _, p := range []struct {
+		name string
+		dst  **bool
+	}{{"is_headman", &f.IsHeadman}, {"is_active", &f.IsActive}, {"is_admin", &f.IsAdmin}} {
+		raw := c.Query(p.name)
+		if raw == "" {
+			continue
+		}
+		v, err := strconv.ParseBool(raw)
+		if err != nil || (raw != "true" && raw != "false") {
+			failQuery(c, p.name, "must be true or false")
+			return f, false
+		}
+		*p.dst = &v
+	}
+	for _, p := range []struct {
+		name string
+		dst  **int64
+	}{{"group_id", &f.GroupID}, {"department_id", &f.DepartmentID}} {
+		raw := c.Query(p.name)
+		if raw == "" {
+			continue
+		}
+		v, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil || v <= 0 {
+			failQuery(c, p.name, "must be a positive integer")
+			return f, false
+		}
+		*p.dst = &v
+	}
+	switch c.Query("sort") {
+	case "", "full_name":
+	case "-full_name":
+		f.Desc = true
+	default:
+		failQuery(c, "sort", "must be full_name or -full_name")
+		return f, false
+	}
+	var ok bool
+	f.Limit, f.Offset, ok = parsePage(c)
+	return f, ok
+}
+
+// GroupStudents возвращает страницу состава группы (CourseStudent): только данные,
+// нужные для учебной работы, без email, документов и полной карточки.
+// Нет группы или нет доступа к ней — 404 group_not_found (не раскрываем, что группа есть).
 //
-// GET /groups/:id/students
+// GET /groups/:id/students?limit=&offset=
 func (h *Handler) GroupStudents(c *gin.Context) {
 	groupID, ok := httpx.ID(c, "id")
 	if !ok {
 		return
 	}
-	list, _, err := h.svc.List(c.Request.Context(), ListFilter{Role: "student", GroupID: &groupID, Limit: 500})
-	httpx.Reply(c, list, err)
+	limit, offset, ok := parsePage(c)
+	if !ok {
+		return
+	}
+	list, total, err := h.svc.GroupStudents(c.Request.Context(), middleware.Me(c), groupID, limit, offset)
+	httpx.ReplyPage(c, list, httpx.Meta{Limit: limit, Offset: offset, Total: total}, err)
 }
 
-// Get возвращает карточку пользователя. Администратор получает AdminUser
-// (с паспортом, СНИЛС и состоянием пароля), преподаватель — UserSummary без документов.
+// parsePage — limit (1–200, по умолчанию 50) и offset (>= 0). При ошибке 400 уже отправлен.
+func parsePage(c *gin.Context) (limit, offset int, ok bool) {
+	limit = 50
+	if raw := c.Query("limit"); raw != "" {
+		v, err := strconv.Atoi(raw)
+		if err != nil || v < 1 || v > 200 {
+			failQuery(c, "limit", "must be an integer from 1 to 200")
+			return 0, 0, false
+		}
+		limit = v
+	}
+	if raw := c.Query("offset"); raw != "" {
+		v, err := strconv.Atoi(raw)
+		if err != nil || v < 0 {
+			failQuery(c, "offset", "must be an integer >= 0")
+			return 0, 0, false
+		}
+		offset = v
+	}
+	return limit, offset, true
+}
+
+// Get возвращает полную карточку пользователя (AdminUser) — только администратору.
 //
 // GET /users/:id
 func (h *Handler) Get(c *gin.Context) {
@@ -188,12 +260,7 @@ func (h *Handler) Get(c *gin.Context) {
 		return
 	}
 	u, err := h.svc.Get(c.Request.Context(), id)
-	if err != nil || middleware.Me(c).IsAdmin() {
-		c.Header("Cache-Control", "no-store") // в ответе документы
-		httpx.Reply(c, u, err)
-		return
-	}
-	httpx.Reply(c, u.User, nil)
+	httpx.Reply(c, u, err)
 }
 
 // Create создаёт пользователя без пароля и отправляет ему приглашение.
@@ -264,7 +331,7 @@ func (h *Handler) AdminUpdate(c *gin.Context) {
 		Email: req.Email, Passport: req.Passport, Snils: req.Snils,
 		Student:      mapField(req.Student, studentWriteBody.role),
 		Teacher:      mapField(req.Teacher, teacherWriteBody.role),
-		AvatarFileID: req.AvatarFileID, IsActive: req.IsActive, IsAdmin: req.IsAdmin,
+		AvatarFileID: req.AvatarFileID, IsActive: req.IsActive,
 	}
 	c.Header("Cache-Control", "no-store")
 	u, err := h.svc.AdminUpdate(c.Request.Context(), middleware.Me(c), id, in)

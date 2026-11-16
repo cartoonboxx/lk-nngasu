@@ -100,7 +100,17 @@ type AdminUpdate struct {
 	Teacher             Field[TeacherRole] // то же
 	AvatarFileID        Field[int64]       // null убирает аватар
 	IsActive            Field[bool]        // блокировка / восстановление
-	IsAdmin             Field[bool]        // выдать / снять права администратора (в документации не описано)
+	// is_admin и пароль здесь не меняются: права администратора назначаются
+	// отдельной процедурой вне панели (cmd/createadmin).
+}
+
+// CourseStudent — строка состава группы или курса: только то, что нужно
+// для учебной работы (без email, документов и полной карточки).
+type CourseStudent struct {
+	StudentID        int64   `json:"student_id"`
+	FullName         string  `json:"full_name"`
+	RecordBookNumber *string `json:"record_book_number"`
+	IsHeadman        bool    `json:"is_headman"`
 }
 
 // InvitationReceipt — ответ на повторную отправку приглашения.
@@ -111,11 +121,18 @@ type InvitationReceipt struct {
 
 // ListFilter — параметры выборки списка пользователей.
 // Пустые/нулевые значения означают «без фильтра».
+//
+// Все фильтры объединяются через AND. «Староста» во фронте — это
+// role=student&is_headman=true: староста — признак студента, а не роль.
 type ListFilter struct {
-	Role         string // student | teacher | admin | "" (все)
+	Role         string // student | teacher | "" (все); совмещение ролей допустимо
+	IsHeadman    *bool  // true — только старосты, false — студенты без признака
+	IsActive     *bool  // активен / заблокирован
+	IsAdmin      *bool  // администраторы / не администраторы
 	GroupID      *int64 // только студенты этой группы
 	DepartmentID *int64 // только преподаватели этой кафедры
-	Q            string // поиск по подстроке в ФИО и email
-	Limit        int    // размер страницы
-	Offset       int    // сколько записей пропустить (пагинация)
+	Q            string // подстрока ФИО или email, без учёта регистра
+	Desc         bool   // sort=-full_name
+	Limit        int    // размер страницы, 1–200
+	Offset       int    // сколько записей пропустить
 }

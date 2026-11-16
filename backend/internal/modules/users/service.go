@@ -8,6 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gin-gonic/gin/binding"
 	"github.com/go-playground/validator/v10"
+	"github.com/jackc/pgx/v5"
 	"golang.org/x/crypto/bcrypt"
 
 	"university-api/internal/platform/apperr"
@@ -21,10 +22,13 @@ type FileOwnership interface {
 	OwnsFile(ctx context.Context, userID, fileID int64) error
 }
 
-// Inviter отправляет пользователю приглашение задать пароль (реализует auth.Service):
-// создаёт одноразовый токен и отправляет письмо со ссылкой на /activation.
+// Inviter создаёт приглашение задать пароль (реализует auth.Service):
+// одноразовый токен и письмо со ссылкой на /activation в очереди отправки.
 type Inviter interface {
+	// Invite — в своей транзакции (повторная отправка).
 	Invite(ctx context.Context, userID, invitedBy int64) error
+	// InviteTx — в транзакции вызывающего: создание пользователя и приглашение атомарны.
+	InviteTx(ctx context.Context, tx pgx.Tx, userID, invitedBy int64) error
 }
 
 // Options — настройки пакета из конфигурации приложения.
@@ -39,6 +43,10 @@ type Options struct {
 
 	// RegisterLimit — ограничение частоты подачи заявок (429 rate_limited); nil — без ограничения.
 	RegisterLimit gin.HandlerFunc
+
+	// PasswordLimit — ограничение попыток смены пароля (429 rate_limited): защита
+	// от подбора текущего пароля через украденную сессию; nil — без ограничения.
+	PasswordLimit gin.HandlerFunc
 }
 
 // Service — бизнес-правила пакета users: нормализация ФИО, email и документов,
@@ -122,8 +130,8 @@ func notNull[T any](field string, f Field[T]) error {
 	return nil
 }
 
-// errEmptyPatch — PATCH без единого известного ключа.
-var errEmptyPatch = apperr.NewInvalid("invalid_request", "at least one field is required")
+// errEmptyPatch — PATCH без единого известного ключа (400 empty_patch по документации).
+var errEmptyPatch = apperr.NewInvalid("empty_patch", "at least one field is required")
 
 // hashPassword хеширует пароль bcrypt со стандартной стоимостью.
 // Соль генерируется внутри bcrypt и хранится в самом хеше.
@@ -183,20 +191,19 @@ func (s *Service) Create(ctx context.Context, in CreateUser) (AdminUser, error) 
 		return AdminUser{}, err
 	}
 	if in.AvatarFileID != nil {
-		if err := s.files.OwnsFile(ctx, in.CreatedBy, *in.AvatarFileID); err != nil {
+		if err := s.repo.CheckAvatar(ctx, in.CreatedBy, *in.AvatarFileID); err != nil {
 			return AdminUser{}, err
 		}
 	}
 	in.Email = normEmail(in.Email)
 
-	// Пароль пустой: войти нельзя, пока пользователь не активирует приглашение.
-	id, err := s.repo.Create(ctx, in, "")
+	// Пароль пустой (credential_state = invited): войти нельзя, пока пользователь
+	// не активирует приглашение. Пользователь и письмо в очереди создаются
+	// одной транзакцией: если что-то не удалось, не остаётся ни того, ни другого.
+	id, err := s.repo.Create(ctx, in, "", func(tx pgx.Tx, id int64) error {
+		return s.opts.Inviter.InviteTx(ctx, tx, id, in.CreatedBy)
+	})
 	if err != nil {
-		return AdminUser{}, err
-	}
-	// Учётка уже создана. Если письмо не ушло — ошибка 503 invitation_not_sent,
-	// администратор может повторить отправку через POST /users/:id/invitation.
-	if err := s.opts.Inviter.Invite(ctx, id, in.CreatedBy); err != nil {
 		return AdminUser{}, err
 	}
 	return s.repo.Get(ctx, id)
@@ -222,13 +229,13 @@ func (s *Service) ResendInvitation(ctx context.Context, userID, adminID int64) (
 // Дополнительно администратор не может заблокировать себя или снять с себя права.
 func (s *Service) AdminUpdate(ctx context.Context, actor middleware.Principal, id int64, in AdminUpdate) (AdminUser, error) {
 	if !(in.LastName.Set || in.FirstName.Set || in.MiddleNames.Set || in.Email.Set || in.Passport.Set ||
-		in.Snils.Set || in.Student.Set || in.Teacher.Set || in.AvatarFileID.Set || in.IsActive.Set || in.IsAdmin.Set) {
+		in.Snils.Set || in.Student.Set || in.Teacher.Set || in.AvatarFileID.Set || in.IsActive.Set) {
 		return AdminUser{}, errEmptyPatch
 	}
 	for _, e := range []error{
 		notNull("last_name", in.LastName), notNull("first_name", in.FirstName), notNull("email", in.Email),
 		notNull("passport", in.Passport), notNull("snils", in.Snils),
-		notNull("is_active", in.IsActive), notNull("is_admin", in.IsAdmin),
+		notNull("is_active", in.IsActive),
 	} {
 		if e != nil {
 			return AdminUser{}, e
@@ -269,18 +276,32 @@ func (s *Service) AdminUpdate(ctx context.Context, actor middleware.Principal, i
 		return AdminUser{}, err
 	}
 	if in.AvatarFileID.Value != nil {
-		if err := s.files.OwnsFile(ctx, actor.UserID, *in.AvatarFileID.Value); err != nil {
+		if err := s.repo.CheckAvatar(ctx, actor.UserID, *in.AvatarFileID.Value); err != nil {
 			return AdminUser{}, err
 		}
 	}
-	if id == actor.UserID && ((in.IsActive.Value != nil && !*in.IsActive.Value) || (in.IsAdmin.Value != nil && !*in.IsAdmin.Value)) {
-		return AdminUser{}, apperr.NewConflict("self_lockout", "you cannot deactivate yourself or remove your own admin rights")
+	if id == actor.UserID && in.IsActive.Value != nil && !*in.IsActive.Value {
+		return AdminUser{}, apperr.NewConflict("self_lockout", "you cannot block yourself")
 	}
 
 	if err := s.repo.AdminUpdate(ctx, id, in); err != nil {
 		return AdminUser{}, err
 	}
 	return s.repo.Get(ctx, id)
+}
+
+// GroupStudents — состав группы. Администратору доступна любая группа,
+// преподавателю — только та, у которой он ведёт хотя бы один курс.
+// Иначе 404 group_not_found: по знанию id группу не открыть.
+func (s *Service) GroupStudents(ctx context.Context, p middleware.Principal, groupID int64, limit, offset int) ([]CourseStudent, int, error) {
+	ok, err := s.repo.GroupVisible(ctx, groupID, p.UserID, p.IsAdmin())
+	if err != nil {
+		return nil, 0, err
+	}
+	if !ok {
+		return nil, 0, apperr.NewNotFound("group_not_found")
+	}
+	return s.repo.GroupStudents(ctx, groupID, limit, offset)
 }
 
 // --- Свой профиль ---
@@ -313,7 +334,7 @@ func (s *Service) UpdateProfile(ctx context.Context, id int64, in UpdateProfile)
 		return User{}, err
 	}
 	if in.AvatarFileID.Value != nil {
-		if err := s.files.OwnsFile(ctx, id, *in.AvatarFileID.Value); err != nil {
+		if err := s.repo.CheckAvatar(ctx, id, *in.AvatarFileID.Value); err != nil {
 			return User{}, err
 		}
 	}
@@ -324,7 +345,8 @@ func (s *Service) UpdateProfile(ctx context.Context, id int64, in UpdateProfile)
 	return u.User, err
 }
 
-// verifyPassword сверяет пароль пользователя; неверный — 401 wrong_password.
+// verifyPassword сверяет пароль пользователя; неверный — 403 wrong_password.
+// 403, а не 401: сессия действительна, клиент не должен разлогинивать пользователя.
 // Используется как подтверждение перед чувствительными действиями
 // (смена пароля, смена email), даже при активной сессии.
 func (s *Service) verifyPassword(ctx context.Context, id int64, plain string) error {
@@ -335,16 +357,17 @@ func (s *Service) verifyPassword(ctx context.Context, id int64, plain string) er
 	// CompareHashAndPassword сравнивает за постоянное время,
 	// поэтому по времени ответа пароль не подобрать.
 	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(plain)) != nil {
-		return apperr.NewUnauthorized("wrong_password", "current password is incorrect")
+		return apperr.NewForbidden("wrong_password", "current password is incorrect")
 	}
 	return nil
 }
 
 // ChangePassword меняет пароль после проверки текущего (PasswordInput).
-// Новый пароль должен отличаться от старого. Все сессии, кроме текущей (sid), отзываются.
-func (s *Service) ChangePassword(ctx context.Context, id int64, sid, oldPass, newPass string) error {
+// Новый пароль должен отличаться от старого. После смены отзываются все сессии,
+// включая текущую: клиент очищает токен и открывает вход (документация /me/password).
+func (s *Service) ChangePassword(ctx context.Context, id int64, oldPass, newPass string) error {
 	if oldPass == newPass {
-		return fieldErr("new_password", "must differ from the current password")
+		return apperr.NewInvalid("password_unchanged", "new password must differ from the current one")
 	}
 	if err := s.verifyPassword(ctx, id, oldPass); err != nil {
 		return err
@@ -353,7 +376,7 @@ func (s *Service) ChangePassword(ctx context.Context, id int64, sid, oldPass, ne
 	if err != nil {
 		return err
 	}
-	return s.repo.SetPassword(ctx, id, hash, sid) // остальные сессии закрываются
+	return s.repo.SetPassword(ctx, id, hash)
 }
 
 // ChangeEmail меняет почту после подтверждения паролем. Подтверждения самой почты нет:
