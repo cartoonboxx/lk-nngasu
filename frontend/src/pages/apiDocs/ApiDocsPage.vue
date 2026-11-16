@@ -2,7 +2,7 @@
   <main :class="style.page">
     <header :class="style.header">
       <div>
-        <p :class="style.eyebrow">Личный кабинет ННГАСУ · проект контракта v1.1</p>
+        <p :class="style.eyebrow">Личный кабинет ННГАСУ · проект контракта v1.2</p>
         <h1>API проекта</h1>
         <p :class="style.lead">
           HTTP и WebSocket для сценариев приложения: от входа и учебных заданий до расписания и
@@ -53,12 +53,12 @@
         <section id="overview" :class="style.section">
           <div :class="style.sectionHeading">
             <h2>Правила контракта</h2>
-            <span>13 ноября 2026</span>
+            <span>16 ноября 2026</span>
           </div>
           <p :class="style.notice">
             Документация описывает целевое API. Она не отправляет запросы и не добавляет серверные
-            обработчики. Требования определяются сценариями приложения. Совместимость с текущим
-            бэкендом не требуется.
+            обработчики. Основание — активные поля и связи <code>scheme.dbml</code>. Вычисляемые
+            поля, расширения и противоречия схемы описаны отдельно.
           </p>
           <div :class="style.legend">
             <span
@@ -345,8 +345,8 @@
           <p :class="style.notice">
             Источник контрактов страницы: <code>src/pages/apiDocs/api-docs.endpoints.ts</code>,
             <code>api-docs.schemas.ts</code> , <code>api-docs.websocket.ts</code> и
-            <code>api-docs.overview.ts</code>. Их нужно менять вместе с согласованными решениями.
-            Эндпоинты в рамках этой задачи не реализованы.
+            <code>api-docs.overview.ts</code>. Их нужно сверять со <code>scheme.dbml</code> при
+            изменении модели данных. Эндпоинты в рамках этой задачи не реализованы.
           </p>
         </section>
       </div>

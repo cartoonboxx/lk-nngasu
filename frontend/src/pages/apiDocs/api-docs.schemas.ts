@@ -10,14 +10,14 @@ const personFields: ApiField[] = [
   ['email', 'string', true, 'Email до 255 символов, нормализованный в нижний регистр.'],
   ['avatar', 'FileInfo | null', true, 'Метаданные аватара; скачивание с авторизацией.'],
   ['is_active', 'boolean', true, 'Доступ к аккаунту.'],
-  ['is_admin', 'boolean', true, 'Независимый признак административного доступа.'],
-  ['student', 'StudentProfile | null', true, 'Учебная роль студента.'],
   [
-    'teacher',
-    'TeacherProfile | null',
+    'role',
+    '"student" | "teacher" | "admin"',
     true,
-    'Учебная роль преподавателя; может сочетаться со student.',
+    'Единственная роль из app_user.role; допустимые значения user_role.',
   ],
+  ['student', 'StudentProfile | null', true, 'Профиль студента при role=student; иначе null.'],
+  ['teacher', 'TeacherProfile | null', true, 'Профиль преподавателя при role=teacher; иначе null.'],
 ]
 const personExample = {
   id: 12,
@@ -28,7 +28,7 @@ const personExample = {
   email: 'anna@example.ru',
   avatar: null,
   is_active: true,
-  is_admin: false,
+  role: 'student',
   student: { group_id: 1, group_name: '24-ИСТ-1', record_book_number: '240001', is_headman: true },
   teacher: null,
 }
@@ -37,6 +37,12 @@ const userWriteFields: ApiField[] = [
   ['first_name', 'string', true, '1–50 символов после trim.'],
   ['middle_names', 'string | null', false, 'До 50 символов; null очищает отчество.'],
   ['email', 'string', true, 'Валидный уникальный email, до 255 символов.'],
+  [
+    'role',
+    '"student" | "teacher" | "admin"',
+    true,
+    'Одна роль; student/teacher согласованы с ней.',
+  ],
   [
     'passport',
     'string',
@@ -47,17 +53,22 @@ const userWriteFields: ApiField[] = [
     'snils',
     'string',
     true,
-    '11 цифр; допускается 112-233-445 95, сервер нормализует. Проверка формата, не подлинности.',
+    '11 цифр; допускается 112-233-445 95, сервер нормализует. Поле SNILS в DBML; ключ API snils.',
   ],
   [
     'student',
     'StudentWrite | null',
     true,
-    'null снимает роль; нельзя снять при связанных учебных данных.',
+    'Обязателен при role=student; при других ролях null. Смена роли запрещена при связанных учебных данных.',
   ],
-  ['teacher', 'TeacherWrite | null', true, 'null снимает роль; нельзя снять при наличии нагрузки.'],
   [
-    'avatar_file_id',
+    'teacher',
+    'TeacherWrite | null',
+    true,
+    'Обязателен при role=teacher; при других ролях null. Смена роли запрещена при наличии нагрузки.',
+  ],
+  [
+    'avatar',
     'integer | null',
     false,
     'Своя загрузка изображения администратором; null убирает аватар.',
@@ -70,14 +81,19 @@ const userWriteExample = {
   email: 'anna@example.ru',
   passport: '4509123456',
   snils: '11223344595',
+  role: 'student',
   student: { group_id: 1, record_book_number: '240001', is_headman: true },
   teacher: null,
-  avatar_file_id: null,
+  avatar: null,
 }
 const namedFields: ApiField[] = [
   ['id', 'integer', true, 'ID записи.'],
-  ['name', 'string', true, 'Название, 1–200 символов.'],
-  ['archived', 'boolean', true, 'Архивные записи исключены из списков выбора новых связей.'],
+  [
+    'name',
+    'string',
+    true,
+    'Кафедра до 150, дисциплина/направление до 200, группа до 50 символов; подпись семестра вычисляется.',
+  ],
 ]
 const courseFields: ApiField[] = [
   ['id', 'integer', true, 'ID назначения дисциплины группе в семестре (course_offering).'],
@@ -109,22 +125,16 @@ const assignmentFields: ApiField[] = [
   ['id', 'integer', true, 'ID задания.'],
   ['course_id', 'integer', true, 'ID курса.'],
   ['topic_id', 'integer', true, 'ID темы этого курса.'],
-  [
-    'created_by',
-    'integer',
-    true,
-    'Пользователь-автор: преподаватель курса либо администратор; берётся из сессии.',
-  ],
-  ['title', 'string', true, 'Название, 1–255 символов.'],
+  ['title', 'string', true, 'Название, 1–200 символов.'],
   ['description', 'string | null', true, 'Текст задания, до 20000 символов.'],
-  ['deadline_at', 'datetime', true, 'Дедлайн с часовым поясом.'],
+  ['deadline_at', 'datetime | null', true, 'Дедлайн с часовым поясом; null — без срока.'],
   [
     'published_at',
     'datetime',
     true,
     'Задания публикуются при создании; отдельного черновика задания в текущем UI нет.',
   ],
-  ['files', 'FileInfo[]', true, 'До 10 файлов; пустой массив, если файлов нет.'],
+  ['files', 'FileInfo[]', true, 'До 5 файлов; пустой массив, если файлов нет.'],
   [
     'mine',
     'SubmissionSummary | null',
@@ -142,7 +152,6 @@ const assignmentExample = {
   id: 51,
   course_id: 8,
   topic_id: 4,
-  created_by: 2,
   title: 'Практическая работа №1',
   description: 'Решите задачи и приложите решение.',
   deadline_at: '2026-11-20T20:59:00Z',
@@ -153,20 +162,14 @@ const assignmentExample = {
 }
 const newsFields: ApiField[] = [
   ['id', 'integer', true, 'ID новости.'],
-  ['title', 'string', true, 'Заголовок, 1–200 символов.'],
   ['excerpt', 'string', true, 'Анонс: первые 240 символов текста, вычисляет сервер.'],
-  ['cover', 'FileInfo | null', true, 'Необязательная обложка.'],
   ['author', 'PersonRef', true, 'ID и имя автора.'],
-  ['is_pinned', 'boolean', true, 'Закреплённая публикация идёт первой.'],
-  ['published_at', 'datetime', true, 'Дата первой публикации.'],
+  ['published_at', 'datetime', true, 'Дата текущей публикации; при снятии с публикации очищается.'],
 ]
 const newsExample = {
   id: 6,
-  title: 'Научная конференция',
   excerpt: 'Приглашаем студентов принять участие.',
-  cover: null,
   author: { id: 1, name: 'Анна Иванова' },
-  is_pinned: false,
   published_at: '2026-11-13T09:00:00Z',
 }
 
@@ -184,7 +187,7 @@ export const apiSchemas: ApiSchema[] = [
       ],
       ['token_type', '"Bearer"', true, 'Тип токена.'],
       ['expires_at', 'datetime', true, 'Момент истечения access-токена.'],
-      ['user', 'Profile', true, 'Профиль и независимые роли для построения меню.'],
+      ['user', 'Profile', true, 'Профиль и роль для построения меню.'],
     ],
     example: {
       access_token: '<access-token>',
@@ -219,7 +222,7 @@ export const apiSchemas: ApiSchema[] = [
   {
     name: 'RegistrationInput',
     description:
-      'Поля существующей формы регистрации; подтверждение пароля проверяется на клиенте.',
+      'Расширение вне текущей DBML. Поля существующей формы регистрации; подтверждение пароля проверяется на клиенте.',
     fields: [
       ['email', 'string', true, 'Email до 255 символов.'],
       [
@@ -249,7 +252,8 @@ export const apiSchemas: ApiSchema[] = [
   },
   {
     name: 'RegistrationReceipt',
-    description: 'Публичный ответ после регистрации: без документов, пароля и доступа в ЛК.',
+    description:
+      'Расширение вне текущей DBML. Публичный ответ после регистрации: без документов, пароля и доступа в ЛК.',
     fields: [
       ['id', 'integer', true, 'Номер заявки.'],
       ['status', '"pending"', true, 'Ожидает рассмотрения.'],
@@ -259,7 +263,8 @@ export const apiSchemas: ApiSchema[] = [
   },
   {
     name: 'Profile',
-    description: 'Единый профиль snake_case. Документы не выдаются в обычных ответах профиля.',
+    description:
+      'Единый профиль snake_case. avatar в ответе раскрывается в FileInfo из app_user.avatar; документы не выдаются.',
     fields: personFields,
     example: personExample,
   },
@@ -269,7 +274,12 @@ export const apiSchemas: ApiSchema[] = [
     fields: [
       ['group_id', 'integer', true, 'Действующая группа.'],
       ['group_name', 'string', true, 'Название группы.'],
-      ['record_book_number', 'string', true, 'Уникальный номер зачётной книжки до 50 символов.'],
+      [
+        'record_book_number',
+        'string | null',
+        true,
+        'Уникальный номер зачётной книжки до 50 символов.',
+      ],
       ['is_headman', 'boolean', true, 'Староста; не самостоятельная роль.'],
     ],
     example: personExample.student,
@@ -296,26 +306,19 @@ export const apiSchemas: ApiSchema[] = [
       ...personFields,
       ['passport', 'string', true, 'Нормализованные 10 цифр; не логировать.'],
       ['snils', 'string', true, 'Нормализованные 11 цифр; не логировать.'],
-      [
-        'credential_state',
-        '"active" | "invited"',
-        true,
-        'Пароль настроен / отправлено приглашение.',
-      ],
     ],
     example: {
       ...personExample,
       passport: '4509123456',
       snils: '11223344595',
-      credential_state: 'active',
     },
   },
   {
     name: 'StudentWrite',
     description: 'Полный объект роли при создании/замене; вычисляемые названия не передаются.',
     fields: [
-      ['group_id', 'integer', true, 'ID неархивной группы.'],
-      ['record_book_number', 'string', true, '1–50 символов, уникален.'],
+      ['group_id', 'integer', true, 'ID группы.'],
+      ['record_book_number', 'string | null', true, 'До 50 символов, уникален, если указан.'],
       [
         'is_headman',
         'boolean',
@@ -328,15 +331,17 @@ export const apiSchemas: ApiSchema[] = [
   {
     name: 'TeacherWrite',
     description: 'Полный объект роли преподавателя.',
-    fields: [['department_id', 'integer', true, 'ID неархивной кафедры.']],
+    fields: [['department_id', 'integer', true, 'ID кафедры.']],
     example: { department_id: 1 },
   },
   {
     name: 'UserCreateInput',
-    description:
-      'Создание в админке без поля пароля. Сервер отправляет одноразовое приглашение на email.',
-    fields: userWriteFields,
-    example: userWriteExample,
+    description: 'Создание пользователя с паролем; в app_user сохраняется только password_hash.',
+    fields: [
+      ...userWriteFields,
+      ['password', 'string', true, '8+ символов, до 72 байт UTF-8; хранить только хеш.'],
+    ],
+    example: { ...userWriteExample, password: '<password>' },
   },
   {
     name: 'UserPatchInput',
@@ -368,14 +373,9 @@ export const apiSchemas: ApiSchema[] = [
       ['last_name', 'string', false, '1–50 символов.'],
       ['first_name', 'string', false, '1–50 символов.'],
       ['middle_names', 'string | null', false, 'До 50 символов; null очищает.'],
-      [
-        'avatar_file_id',
-        'integer | null',
-        false,
-        'Свой загруженный аватар; null удаляет привязку.',
-      ],
+      ['avatar', 'integer | null', false, 'Свой загруженный аватар; null удаляет привязку.'],
     ],
-    example: { avatar_file_id: 102 },
+    example: { avatar: 102 },
   },
   {
     name: 'PasswordInput',
@@ -394,7 +394,7 @@ export const apiSchemas: ApiSchema[] = [
   {
     name: 'ActivationInput',
     description:
-      'Завершение приглашения. Требуется отдельная форма фронтенда; это не пароль из регистрации.',
+      'Расширение вне текущей DBML. Завершение приглашения. Требуется отдельная форма фронтенда; это не пароль из регистрации.',
     fields: [
       [
         'token',
@@ -408,7 +408,8 @@ export const apiSchemas: ApiSchema[] = [
   },
   {
     name: 'InvitationReceipt',
-    description: 'Повторная отправка приглашения пользователю без настроенного пароля.',
+    description:
+      'Расширение вне текущей DBML. Повторная отправка приглашения пользователю без настроенного пароля.',
     fields: [
       ['user_id', 'integer', true, 'ID пользователя.'],
       ['delivery_status', '"queued"', true, 'Письмо помещено в надёжную очередь отправки.'],
@@ -418,7 +419,7 @@ export const apiSchemas: ApiSchema[] = [
   {
     name: 'RegistrationRequest',
     description:
-      'Карточка заявки, только для администратора. ФИО может отсутствовать: его нет в форме регистрации.',
+      'Расширение вне текущей DBML. Карточка заявки, только для администратора. ФИО может отсутствовать: его нет в форме регистрации.',
     fields: [
       ['id', 'integer', true, 'ID заявки.'],
       ['email', 'string', true, 'Email заявителя.'],
@@ -457,7 +458,8 @@ export const apiSchemas: ApiSchema[] = [
   },
   {
     name: 'RegistrationDecision',
-    description: 'Решение по заявке: discriminated union. Для reject поле user запрещено.',
+    description:
+      'Расширение вне текущей DBML. Решение по заявке: discriminated union. Для reject поле user запрещено.',
     fields: [
       ['decision', '"approve" | "reject"', true, 'Итоговое решение.'],
       [
@@ -475,6 +477,7 @@ export const apiSchemas: ApiSchema[] = [
         middle_names: 'Сергеевна',
         passport: '4509123456',
         snils: '11223344595',
+        role: 'student',
         student: { group_id: 1, record_book_number: '240001', is_headman: false },
         teacher: null,
       },
@@ -482,14 +485,16 @@ export const apiSchemas: ApiSchema[] = [
   },
   {
     name: 'ApprovalUserInput',
-    description: 'Уточнённые данные администратором. Email и пароль берутся из заявки.',
-    fields: userWriteFields.filter(([name]) => !['email', 'avatar_file_id'].includes(name)),
+    description:
+      'Расширение вне текущей DBML. Уточнённые данные администратором. Email и пароль берутся из заявки.',
+    fields: userWriteFields.filter(([name]) => !['email', 'avatar'].includes(name)),
     example: {
       last_name: 'Иванова',
       first_name: 'Анна',
       middle_names: 'Сергеевна',
       passport: '4509123456',
       snils: '11223344595',
+      role: 'student',
       student: { group_id: 1, record_book_number: '240001', is_headman: false },
       teacher: null,
     },
@@ -507,12 +512,14 @@ export const apiSchemas: ApiSchema[] = [
     name: 'NamedCatalog',
     description: 'Кафедра или дисциплина; общая модель справочника.',
     fields: namedFields,
-    example: { id: 3, name: 'Математический анализ', archived: false },
+    example: { id: 3, name: 'Математический анализ' },
   },
   {
     name: 'NamedInput',
     description: 'Тело создания и полной замены кафедры/дисциплины.',
-    fields: [['name', 'string', true, '1–200 символов. Уникальность названия без учёта регистра.']],
+    fields: [
+      ['name', 'string', true, 'Уникальное название: кафедра до 150, дисциплина до 200 символов.'],
+    ],
     example: { name: 'Математический анализ' },
   },
   {
@@ -526,7 +533,6 @@ export const apiSchemas: ApiSchema[] = [
       id: 1,
       name: 'Информационные системы и технологии',
       code: '09.03.02',
-      archived: false,
     },
   },
   {
@@ -546,12 +552,11 @@ export const apiSchemas: ApiSchema[] = [
       ['specialization_id', 'integer', true, 'Направление подготовки.'],
       ['specialization_name', 'string', true, 'Название направления.'],
       ['specialization_code', 'string', true, 'Код направления.'],
-      ['admission_year', 'integer', true, 'Год набора, 2000–2100.'],
+      ['admission_year', 'integer', true, 'Год набора, 2000–32767.'],
     ],
     example: {
       id: 1,
       name: '24-ИСТ-1',
-      archived: false,
       specialization_id: 1,
       specialization_name: 'Информационные системы и технологии',
       specialization_code: '09.03.02',
@@ -562,9 +567,9 @@ export const apiSchemas: ApiSchema[] = [
     name: 'GroupInput',
     description: 'Создание/полная замена группы.',
     fields: [
-      ['name', 'string', true, '1–200 символов; уникально.'],
+      ['name', 'string', true, '1–50 символов; уникальна пара name/admission_year.'],
       ['specialization_id', 'integer', true, 'Действующее направление.'],
-      ['admission_year', 'integer', true, '2000–2100.'],
+      ['admission_year', 'integer', true, '2000–32767.'],
     ],
     example: { name: '24-ИСТ-1', specialization_id: 1, admission_year: 2024 },
   },
@@ -573,14 +578,13 @@ export const apiSchemas: ApiSchema[] = [
     description: 'Семестр учебного года. Это не номер семестра обучения студента (например 7).',
     fields: [
       ...namedFields,
-      ['academic_year_start', 'integer', true, '2000–2100.'],
+      ['academic_year_start', 'integer', true, '2000–32767.'],
       ['number', '1 | 2', true, '1 — осень, 2 — весна. Пара год/номер уникальна.'],
       ['is_current', 'boolean', true, 'Не более одного текущего семестра.'],
     ],
     example: {
       id: 1,
       name: '2026/27 · Осенний',
-      archived: false,
       academic_year_start: 2026,
       number: 1,
       is_current: true,
@@ -590,24 +594,25 @@ export const apiSchemas: ApiSchema[] = [
     name: 'SemesterInput',
     description: 'Создание/полная замена семестра. Текущий флаг переключается отдельной командой.',
     fields: [
-      ['name', 'string', true, '1–200 символов.'],
-      ['academic_year_start', 'integer', true, '2000–2100.'],
+      ['academic_year_start', 'integer', true, '2000–32767.'],
       ['number', '1 | 2', true, 'Осень / весна.'],
     ],
-    example: { name: '2026/27 · Осенний', academic_year_start: 2026, number: 1 },
+    example: { academic_year_start: 2026, number: 1 },
   },
   {
     name: 'Room',
-    description:
-      'Аудитория; name — обозначение, которое пользователь видит в справочнике и расписании.',
-    fields: namedFields,
-    example: { id: 5, name: 'Корпус А, ауд. 302', archived: false },
+    description: 'Аудитория из room; обозначение хранится в number.',
+    fields: [
+      ['id', 'integer', true, 'ID аудитории.'],
+      ['number', 'string', true, 'Уникальное обозначение до 30 символов.'],
+    ],
+    example: { id: 5, number: 'А-302' },
   },
   {
-    name: 'ArchiveInput',
-    description: 'Архивирование справочника; восстановление пока отсутствует в интерфейсе.',
-    fields: [['archived', 'true', true, 'Помечает запись архивной после проверки зависимостей.']],
-    example: { archived: true },
+    name: 'RoomInput',
+    description: 'Создание/полная замена аудитории.',
+    fields: [['number', 'string', true, 'Уникальное обозначение, 1–30 символов.']],
+    example: { number: 'А-302' },
   },
   {
     name: 'Course',
@@ -622,7 +627,7 @@ export const apiSchemas: ApiSchema[] = [
     fields: [
       ...courseFields,
       ['workloads', 'Workload[]', true, 'Преподаватели и виды занятий.'],
-      ['topics', 'TopicDetail[]', true, 'Упорядоченные темы с материалами и заданиями.'],
+      ['topics', 'TopicDetail[]', true, 'Темы по id ASC с материалами и заданием.'],
     ],
     example: { ...courseExample, workloads: [], topics: [] },
   },
@@ -650,7 +655,7 @@ export const apiSchemas: ApiSchema[] = [
     fields: [
       ['student_id', 'integer', true, 'ID студента.'],
       ['full_name', 'string', true, 'ФИО.'],
-      ['record_book_number', 'string', true, 'Номер зачётки.'],
+      ['record_book_number', 'string | null', true, 'Номер зачётки.'],
       ['is_headman', 'boolean', true, 'Староста.'],
     ],
     example: {
@@ -670,7 +675,12 @@ export const apiSchemas: ApiSchema[] = [
       ['teacher_id', 'integer', true, 'ID преподавателя.'],
       ['teacher_name', 'string', true, 'ФИО.'],
       ['lesson_type', 'LessonType', true, 'Вид занятия.'],
-      ['planned_hours', 'number', true, 'Неотрицательные академические часы, шаг 0.25.'],
+      [
+        'planned_hours',
+        'number | null',
+        true,
+        '0–99999.99, до двух знаков после запятой; null — не задано.',
+      ],
       [
         'scheduled_hours',
         'number',
@@ -694,7 +704,12 @@ export const apiSchemas: ApiSchema[] = [
     fields: [
       ['teacher_id', 'integer', true, 'Активный пользователь с ролью teacher.'],
       ['lesson_type', 'LessonType', true, 'lecture | practice | laboratory | consultation | exam.'],
-      ['planned_hours', 'number', true, '>= 0, шаг 0.25.'],
+      [
+        'planned_hours',
+        'number | null',
+        true,
+        '0–99999.99, до двух знаков после запятой; null допустим.',
+      ],
     ],
     example: { teacher_id: 2, lesson_type: 'lecture', planned_hours: 36 },
   },
@@ -741,7 +756,7 @@ export const apiSchemas: ApiSchema[] = [
       ['week_number', '1 | 2', true, 'Верхняя / нижняя.'],
       ['day_of_week', 'integer', true, '1–6, Пн–Сб.'],
       ['starts_at', 'time', true, 'Начало HH:mm.'],
-      ['ends_at', 'time', true, 'Окончание HH:mm; важно: последняя пара длится 80 минут.'],
+      ['ends_at', 'time', true, 'Вычисляется по starts_at и сетке звонков; в lesson не хранится.'],
       ['room_id', 'integer', true, 'Аудитория.'],
       ['room', 'string', true, 'Название аудитории.'],
       ['date', 'date | null', true, 'В режиме шаблона null, в календарном режиме дата.'],
@@ -774,15 +789,13 @@ export const apiSchemas: ApiSchema[] = [
       ['week_number', '1 | 2', true, 'Неделя.'],
       ['day_of_week', 'integer', true, '1–6.'],
       ['starts_at', 'time', true, 'Начало одной из 7 пар (см. правила).'],
-      ['ends_at', 'time', true, 'Окончание соответствующей пары.'],
-      ['room_id', 'integer', true, 'Неархивная аудитория.'],
+      ['room_id', 'integer', true, 'Аудитория.'],
     ],
     example: {
       workload_id: 21,
       week_number: 1,
       day_of_week: 5,
       starts_at: '08:00',
-      ends_at: '09:30',
       room_id: 5,
     },
   },
@@ -793,15 +806,9 @@ export const apiSchemas: ApiSchema[] = [
       ['week_number', '1 | 2', true, 'Неделя.'],
       ['day_of_week', 'integer', true, '1–6.'],
       ['starts_at', 'time', true, 'Начало пары.'],
-      [
-        'ends_at',
-        'time',
-        true,
-        'Конец пары. Для старых записей допускается неизменённый сохранённый интервал.',
-      ],
       ['room_id', 'integer', true, 'Действующая аудитория.'],
     ],
-    example: { week_number: 2, day_of_week: 5, starts_at: '18:35', ends_at: '19:55', room_id: 5 },
+    example: { week_number: 2, day_of_week: 5, starts_at: '18:35', room_id: 5 },
   },
   {
     name: 'LessonConflictInput',
@@ -813,7 +820,6 @@ export const apiSchemas: ApiSchema[] = [
       ['week_number', '1 | 2', true, 'Неделя.'],
       ['day_of_week', 'integer', true, '1–6.'],
       ['starts_at', 'time', true, 'Начало.'],
-      ['ends_at', 'time', true, 'Окончание.'],
       ['room_id', 'integer', true, 'Аудитория.'],
     ],
     example: {
@@ -821,7 +827,6 @@ export const apiSchemas: ApiSchema[] = [
       week_number: 1,
       day_of_week: 5,
       starts_at: '08:00',
-      ends_at: '09:30',
       room_id: 5,
     },
   },
@@ -847,13 +852,12 @@ export const apiSchemas: ApiSchema[] = [
   },
   {
     name: 'Topic',
-    description: 'Тема с материалами; порядок position затем id.',
+    description: 'Тема с материалами; порядок по id ASC.',
     fields: [
       ['id', 'integer', true, 'ID темы.'],
       ['course_id', 'integer', true, 'Курс.'],
       ['title', 'string', true, '1–200 символов.'],
       ['description', 'string | null', true, 'Описание до 20000 символов.'],
-      ['position', 'integer', true, 'Порядок >= 1.'],
       ['materials', 'Material[]', true, 'Упорядоченные материалы.'],
     ],
     example: {
@@ -861,7 +865,6 @@ export const apiSchemas: ApiSchema[] = [
       course_id: 8,
       title: 'Тема 1',
       description: 'Введение',
-      position: 1,
       materials: [],
     },
   },
@@ -873,18 +876,21 @@ export const apiSchemas: ApiSchema[] = [
       ['course_id', 'integer', true, 'Курс.'],
       ['title', 'string', true, 'Название.'],
       ['description', 'string | null', true, 'Описание.'],
-      ['position', 'integer', true, 'Порядок.'],
       ['materials', 'Material[]', true, 'Материалы.'],
-      ['assignments', 'Assignment[]', true, 'Задания этой темы.'],
+      [
+        'assignment',
+        'Assignment | null',
+        true,
+        'Не более одного задания: связь assignment.topic_id — topic.id один к одному.',
+      ],
     ],
     example: {
       id: 4,
       course_id: 8,
       title: 'Тема 1',
       description: 'Введение',
-      position: 1,
       materials: [],
-      assignments: [assignmentExample],
+      assignment: assignmentExample,
     },
   },
   {
@@ -898,14 +904,8 @@ export const apiSchemas: ApiSchema[] = [
         false,
         'До 20000 символов; при PUT отсутствие также очищает.',
       ],
-      [
-        'position',
-        'integer',
-        false,
-        '>= 1; при создании по умолчанию в конец, при PUT отсутствие сохраняет порядок.',
-      ],
     ],
-    example: { title: 'Тема 1', description: 'Введение', position: 1 },
+    example: { title: 'Тема 1', description: 'Введение' },
   },
   {
     name: 'Material',
@@ -913,29 +913,20 @@ export const apiSchemas: ApiSchema[] = [
     fields: [
       ['id', 'integer', true, 'ID материала.'],
       ['topic_id', 'integer', true, 'Тема.'],
-      ['title', 'string', true, 'Название.'],
       ['file', 'FileInfo | null', true, 'Привязанный файл.'],
       ['external_url', 'string | null', true, 'Только http/https.'],
-      ['position', 'integer', true, 'Порядок >= 1.'],
-      ['created_by', 'integer', true, 'ID пользователя-автора материала.'],
-      ['created_at', 'datetime', true, 'Дата добавления.'],
     ],
     example: {
       id: 10,
       topic_id: 4,
-      title: 'Лекция 1',
       file: null,
       external_url: 'https://lms.nngasu.ru/',
-      position: 1,
-      created_by: 2,
-      created_at: '2026-11-13T10:00:00Z',
     },
   },
   {
     name: 'MaterialInput',
     description: 'Нужен file_id или external_url, можно оба. PUT заменяет источники целиком.',
     fields: [
-      ['title', 'string', true, '1–200 символов.'],
       [
         'file_id',
         'integer | null',
@@ -948,9 +939,8 @@ export const apiSchemas: ApiSchema[] = [
         false,
         'URL http/https, до 2048 символов; отсутствие при PUT очищает.',
       ],
-      ['position', 'integer', false, '>= 1; как у TopicInput.'],
     ],
-    example: { title: 'Лекция 1', file_id: 102, external_url: null, position: 1 },
+    example: { file_id: 102, external_url: null },
   },
   {
     name: 'Assignment',
@@ -977,14 +967,14 @@ export const apiSchemas: ApiSchema[] = [
     description: 'Создание/полная замена задания преподавателем.',
     fields: [
       ['topic_id', 'integer', true, 'Тема того же курса.'],
-      ['title', 'string', true, '1–255 символов.'],
+      ['title', 'string', true, '1–200 символов.'],
       ['description', 'string | null', true, 'До 20000 символов.'],
-      ['deadline_at', 'datetime', true, 'Явный дедлайн с часовым поясом.'],
+      ['deadline_at', 'datetime | null', true, 'Дедлайн; null — без срока.'],
       [
         'file_ids',
         'integer[]',
         true,
-        'До 10 уникальных ID собственных файлов или уже привязанных к этому заданию.',
+        'До 5 уникальных ID собственных файлов или уже привязанных к этому заданию.',
       ],
     ],
     example: {
@@ -1002,7 +992,7 @@ export const apiSchemas: ApiSchema[] = [
     fields: [
       ['status', 'SubmissionStatus', true, 'not_submitted | missing | submitted | reviewed.'],
       ['submitted_at', 'datetime | null', true, 'Время последней отправки.'],
-      ['is_late', 'boolean', true, 'Позже deadline_at.'],
+      ['is_late', 'boolean', true, 'submitted_at > deadline_at; false без срока или отправки.'],
       ['grade', 'number | null', true, '0–5, шаг 0.1; null до проверки.'],
     ],
     example: {
@@ -1025,7 +1015,7 @@ export const apiSchemas: ApiSchema[] = [
   {
     name: 'Submission',
     description:
-      'Полный ответ. Черновик хранит status=not_submitted; missing остаётся вычисляемым состоянием.',
+      'Полный ответ. Черновик явно сохраняется с status=not_submitted (в БД default=submitted); missing остаётся вычисляемым состоянием.',
     fields: [
       ['id', 'integer', true, 'ID ответа.'],
       ['assignment_id', 'integer', true, 'Задание.'],
@@ -1034,12 +1024,17 @@ export const apiSchemas: ApiSchema[] = [
       ['student_name', 'string', true, 'ФИО.'],
       ['status', '"not_submitted" | "submitted" | "reviewed"', true, 'Хранимый статус.'],
       ['answer_text', 'string | null', true, 'Комментарий/ответ до 2000 символов.'],
-      ['files', 'FileInfo[]', true, 'До 10 файлов.'],
+      ['files', 'FileInfo[]', true, 'До 5 файлов.'],
       ['submitted_at', 'datetime | null', true, 'Серверное время отправки.'],
       ['is_late', 'boolean', true, 'Опоздание.'],
       ['grade', 'number | null', true, '0–5, шаг 0.1.'],
       ['review_comment', 'string | null', true, 'Комментарий преподавателя до 4000 символов.'],
-      ['reviewed_by', 'integer | null', true, 'Преподаватель, выставивший оценку.'],
+      [
+        'reviewed_by',
+        'integer | null',
+        true,
+        'teacher.user_id преподавателя курса, выставившего оценку.',
+      ],
       ['reviewed_at', 'datetime | null', true, 'Время проверки.'],
     ],
     example: {
@@ -1070,7 +1065,7 @@ export const apiSchemas: ApiSchema[] = [
         true,
         'До 2000 символов. При submit=true нужен непустой текст или файлы.',
       ],
-      ['file_ids', 'integer[]', true, 'До 10 уникальных файлов.'],
+      ['file_ids', 'integer[]', true, 'До 5 уникальных файлов.'],
       [
         'submit',
         'boolean',
@@ -1086,7 +1081,7 @@ export const apiSchemas: ApiSchema[] = [
     fields: [
       ['student_id', 'integer', true, 'ID студента.'],
       ['student_name', 'string', true, 'ФИО.'],
-      ['record_book_number', 'string', true, 'Номер зачётки.'],
+      ['record_book_number', 'string | null', true, 'Номер зачётки.'],
       ['submission_id', 'integer | null', true, 'ID существующего ответа.'],
       ['status', 'SubmissionStatus', true, 'Четыре серверных статуса.'],
       ['submitted_at', 'datetime | null', true, 'Время отправки.'],
@@ -1154,7 +1149,7 @@ export const apiSchemas: ApiSchema[] = [
   {
     name: 'FileInfo',
     description:
-      'Метаданные файла. Контент получать с Bearer через GET /files/:id; не помещать JWT в URL.',
+      'file хранит только id/storage_key; name, mime_type и size_bytes сервер получает из файлового хранилища. storage_key не выдаётся. Контент получать с Bearer через GET /files/:id; не помещать JWT в URL.',
     fields: [
       ['id', 'integer', true, 'ID файла.'],
       ['name', 'string', true, 'Очищенное имя до 150 символов.'],
@@ -1168,12 +1163,12 @@ export const apiSchemas: ApiSchema[] = [
     description:
       'multipart/form-data; boundary устанавливает браузер, не задавать Content-Type вручную.',
     fields: [
-      ['file', 'binary', true, 'Один файл. attachment: до 20 MiB; avatar/news_cover: до 2 MiB.'],
+      ['file', 'binary', true, 'Один файл. attachment: до 20 MiB; avatar: до 2 MiB.'],
       [
         'purpose',
-        '"attachment" | "avatar" | "news_cover"',
+        '"attachment" | "avatar"',
         true,
-        'Назначение; news_cover доступно только администратору.',
+        'Назначение загрузки; не является колонкой file.',
       ],
     ],
     example: { file: '<binary>', purpose: 'attachment' },
@@ -1203,7 +1198,12 @@ export const apiSchemas: ApiSchema[] = [
       ...newsFields.filter(([name]) => name !== 'published_at'),
       ['body', 'string', true, 'Обычный текст.'],
       ['status', '"draft" | "published" | "archived"', true, 'Состояние.'],
-      ['published_at', 'datetime | null', true, 'null, пока не публиковалась.'],
+      [
+        'published_at',
+        'datetime | null',
+        true,
+        'null у draft и archived; обязательно при published.',
+      ],
       ['created_at', 'datetime', true, 'Создание.'],
       ['updated_at', 'datetime', true, 'Последнее изменение.'],
     ],
@@ -1220,10 +1220,7 @@ export const apiSchemas: ApiSchema[] = [
     name: 'NewsInput',
     description: 'Создание/полная замена новости. ID автора и даты определяет сервер.',
     fields: [
-      ['title', 'string', true, '1–200 символов.'],
       ['body', 'string', true, '1–50000 символов обычного текста.'],
-      ['cover_file_id', 'integer | null', true, 'Файл purpose=news_cover или null.'],
-      ['is_pinned', 'boolean', true, 'Закрепление.'],
       [
         'status',
         '"draft" | "published"',
@@ -1232,10 +1229,7 @@ export const apiSchemas: ApiSchema[] = [
       ],
     ],
     example: {
-      title: 'Научная конференция',
       body: 'Приглашаем студентов принять участие.',
-      cover_file_id: null,
-      is_pinned: false,
       status: 'published',
     },
   },
@@ -1275,9 +1269,8 @@ export const apiSchemas: ApiSchema[] = [
       ['id', 'integer', true, 'ID сообщения.'],
       ['sender_id', 'integer', true, 'Отправитель.'],
       ['sender_name', 'string', true, 'ФИО.'],
-      ['body', 'string', true, 'Текст, пустой у удалённого сообщения.'],
+      ['body', 'string', true, 'Текст; пустой у сообщения только с файлами.'],
       ['has_files', 'boolean', true, 'Есть вложения.'],
-      ['deleted', 'boolean', true, 'Сообщение удалено.'],
       ['created_at', 'datetime', true, 'Отправка.'],
     ],
     example: {
@@ -1286,7 +1279,6 @@ export const apiSchemas: ApiSchema[] = [
       sender_name: 'Петров Алексей Викторович',
       body: 'Занятие состоится по расписанию.',
       has_files: false,
-      deleted: false,
       created_at: '2026-11-13T09:00:00Z',
     },
   },
@@ -1295,28 +1287,21 @@ export const apiSchemas: ApiSchema[] = [
     description: 'Диалог глазами текущего участника.',
     fields: [
       ['id', 'integer', true, 'ID чата.'],
-      [
-        'view_version',
-        'integer',
-        true,
-        'Монотонная версия карточки для этого пользователя, включая unread. При объединении REST/WS сохранять новую.',
-      ],
       ['kind', '"direct" | "group"', true, 'Личный / учебной группы.'],
       ['title', 'string', true, 'Имя собеседника или группа.'],
       ['group_id', 'integer | null', true, 'Только у группового чата.'],
       ['peer', 'PersonRef | null', true, 'Только у личного.'],
+      ['created_at', 'datetime', true, 'Время создания chat.'],
       ['last_message', 'MessagePreview | null', true, 'Последнее сообщение.'],
-      ['unread', 'integer', true, 'Чужие непрочитанные сообщения >= 0.'],
     ],
     example: {
       id: 44,
-      view_version: 8,
       kind: 'direct',
       title: 'Петров Алексей Викторович',
       group_id: null,
       peer: { id: 2, name: 'Петров Алексей Викторович' },
+      created_at: '2026-11-13T09:00:00Z',
       last_message: null,
-      unread: 0,
     },
   },
   {
@@ -1324,31 +1309,16 @@ export const apiSchemas: ApiSchema[] = [
     description: 'Сообщение чата. own вычисляется клиентом по sender_id и /me.id.',
     fields: [
       ['id', 'integer', true, 'ID; порядок по id.'],
-      [
-        'client_message_id',
-        'UUID',
-        true,
-        'Стабильный ID отправки; связывает оптимистичную запись, ack и событие.',
-      ],
-      ['version', 'integer', true, 'Версия сообщения, начинается с 1, растёт при правке/удалении.'],
       ['chat_id', 'integer', true, 'Чат.'],
       ['sender_id', 'integer', true, 'Отправитель из сессии.'],
       ['sender_name', 'string', true, 'ФИО.'],
-      [
-        'body',
-        'string',
-        true,
-        'До 4000 символов; пустой для сообщения только с файлами или удалённого.',
-      ],
+      ['body', 'string', true, 'До 4000 символов; пустой для сообщения только с файлами.'],
       ['files', 'FileInfo[]', true, 'До 5 вложений.'],
       ['created_at', 'datetime', true, 'Отправка.'],
       ['edited_at', 'datetime | null', true, 'Последняя правка.'],
-      ['deleted', 'boolean', true, 'Мягкое удаление, тело и файлы скрыты.'],
     ],
     example: {
       id: 300,
-      client_message_id: 'bd53ed5a-1c8e-42b9-87b0-ae30e6a84412',
-      version: 1,
       chat_id: 44,
       sender_id: 2,
       sender_name: 'Петров Алексей Викторович',
@@ -1356,7 +1326,6 @@ export const apiSchemas: ApiSchema[] = [
       files: [],
       created_at: '2026-11-13T09:00:00Z',
       edited_at: null,
-      deleted: false,
     },
   },
   {
@@ -1376,12 +1345,7 @@ export const apiSchemas: ApiSchema[] = [
     description:
       'История для открытия чата и прокрутки вверх. Новые сообщения поступают через WebSocket; offset-пагинация не используется.',
     fields: [
-      [
-        'items',
-        'Message[]',
-        true,
-        'Всегда по id по возрастанию, включая tombstone удалённых сообщений.',
-      ],
+      ['items', 'Message[]', true, 'Всегда по id по возрастанию.'],
       ['has_more', 'boolean', true, 'Есть следующая порция в выбранном направлении.'],
       [
         'next_before',
@@ -1452,18 +1416,16 @@ export const apiSchemas: ApiSchema[] = [
       ],
       ['chats', 'Chat[]', true, 'До 5 последних доступных чатов.'],
       [
-        'unread',
-        'UnreadState',
+        'news',
+        'NewsSummary[]',
         true,
-        'Версионированная сумма непрочитанных по всем доступным чатам; применяется и к событиям WebSocket.',
+        'До 5 опубликованных новостей по published_at DESC, id DESC.',
       ],
-      ['news', 'NewsSummary[]', true, 'До 5 опубликованных новостей с учётом закрепления.'],
     ],
     example: {
       week: { date: '2026-11-13', week_number: 1, position: 'upper', day_of_week: 5 },
       lessons: [],
       chats: [],
-      unread: { total: 0, version: 1 },
       news: [newsExample],
     },
   },

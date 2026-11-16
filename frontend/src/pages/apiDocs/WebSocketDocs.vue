@@ -15,9 +15,7 @@
         >Получение ticket и Upgrade</RouterLink
       >
       ·
-      <RouterLink :to="{ name: 'api-docs', hash: '#chat' }"
-        >HTTP-снимок, список чатов и история</RouterLink
-      >
+      <RouterLink :to="{ name: 'api-docs', hash: '#chat' }">Список чатов и история</RouterLink>
     </p>
     <details v-for="rule in rules" :key="rule.title" :class="style.rule" open>
       <summary>{{ rule.title }}</summary>
@@ -43,8 +41,8 @@
               item.direction === 'command'
                 ? 'Команда клиента с request_id.'
                 : item.direction === 'event'
-                  ? 'Событие сервера с event_id и occurred_at; подлежит воспроизведению.'
-                  : 'Служебный кадр сервера; без event_id и без воспроизведения.'
+                  ? 'Событие сервера с occurred_at; без воспроизведения после обрыва.'
+                  : 'Служебный кадр сервера.'
             }}
           </p>
           <p>
@@ -105,9 +103,8 @@
       ><code>{{ JSON.stringify(schemas.find((schema) => schema.name === 'WsError')?.example, null, 2) }}</code></pre>
       <p>
         Общие ошибки команд: <code>invalid_payload</code>, <code>unknown_command</code>,
-        <code>stream_not_ready</code>, <code>request_id_reused</code>, <code>rate_limited</code>,
-        <code>internal_error</code>. Ошибка одной команды не закрывает исправное соединение; отзыв
-        сессии закрывает.
+        <code>rate_limited</code>, <code>internal_error</code>. Ошибка одной команды не закрывает
+        исправное соединение; отзыв сессии закрывает.
       </p>
       <h3>Коды закрытия соединения</h3>
       <div :class="style.tableScroll">
@@ -190,9 +187,7 @@ export default defineComponent({
               ...(item.direction === 'command'
                 ? { request_id: '7aa2e6f7-7869-41be-8506-b2b6e5c17615' }
                 : {}),
-              ...(item.direction === 'event'
-                ? { event_id: '781', occurred_at: '2026-11-13T10:00:00Z' }
-                : {}),
+              ...(item.direction === 'event' ? { occurred_at: '2026-11-13T10:00:00Z' } : {}),
               data: byName.get(item.dataSchema)?.example,
             },
             null,

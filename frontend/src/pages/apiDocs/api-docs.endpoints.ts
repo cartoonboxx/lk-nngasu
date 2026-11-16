@@ -6,7 +6,8 @@ export const apiGroups: ApiGroup[] = [
     title: 'Авторизация и сессия',
     description:
       'Вход, заявка на регистрацию и жизненный цикл сессии. Новые команды — проектное решение, а не реализованное API.',
-    source: 'frontend/src/pages/auth; сценарии входа, регистрации и активации аккаунта',
+    source:
+      'scheme.dbml; frontend/src/pages/auth; сценарии входа, регистрации и активации аккаунта',
     endpoints: [
       {
         method: 'POST',
@@ -27,7 +28,7 @@ export const apiGroups: ApiGroup[] = [
         notes: [
           'Проверять пароль до выдачи причины недоступности аккаунта. Не определять роль по email.',
           'Целевой ответ Set-Cookie: refresh_token=<opaque>; HttpOnly; Secure; SameSite=Strict; Path=/api/v1/auth. TTL 1/30 суток зависит от remember_me.',
-          'Профиль в ответе содержит независимые student, teacher и is_admin; фронтенд не должен выбирать права по одной приоритетной роли.',
+          'Профиль в ответе содержит role и соответствующий профиль student/teacher; меню определяется одной ролью.',
         ],
       },
       {
@@ -35,7 +36,7 @@ export const apiGroups: ApiGroup[] = [
         path: '/auth/register',
         title: 'Подать заявку на регистрацию',
         access: 'public',
-        stage: 'core',
+        stage: 'extension',
         body: 'RegistrationInput',
         response: {
           status: 201,
@@ -43,6 +44,7 @@ export const apiGroups: ApiGroup[] = [
         },
         errors: ['409 registration_exists / email_exists', '429 rate_limited'],
         notes: [
+          'Расширение: scheme.dbml не содержит заявок, приглашений и их состояний; требуется отдельное хранилище.',
           'Создать pending-заявку с хешем пароля; аккаунт и сессию до одобрения не создавать.',
           'Паспорт и СНИЛС доступны только администраторам заявки. Повторная подача разрешена после reject, если активного аккаунта нет.',
           'При одобрении использовать пароль из этой заявки. confirmPassword не передаётся. ФИО в форме регистрации нет: его уточняет администратор.',
@@ -136,7 +138,7 @@ export const apiGroups: ApiGroup[] = [
         path: '/auth/activate',
         title: 'Настроить пароль по приглашению администратора',
         access: 'public',
-        stage: 'core',
+        stage: 'extension',
         body: 'ActivationInput',
         response: {
           status: 204,
@@ -148,6 +150,7 @@ export const apiGroups: ApiGroup[] = [
           '429 rate_limited',
         ],
         notes: [
+          'Расширение: scheme.dbml не содержит заявок, приглашений и их состояний; требуется отдельное хранилище.',
           'Поддерживает создание пользователя из админки, где сейчас нет поля пароля. После успешной активации предложить обычный вход.',
           'Новое решение: нужна форма /activation на фронтенде и почтовая отправка. Здесь документируется только API; форму активации эта задача не реализует.',
         ],
@@ -158,7 +161,7 @@ export const apiGroups: ApiGroup[] = [
     id: 'profile',
     title: 'Профиль и настройки',
     description: 'Единый текущий профиль и изменение собственных данных.',
-    source: 'frontend/src/pages/settings; карточка аккаунта в навигации',
+    source: 'scheme.dbml; frontend/src/pages/settings; карточка аккаунта в навигации',
     endpoints: [
       {
         method: 'GET',
@@ -172,7 +175,7 @@ export const apiGroups: ApiGroup[] = [
         },
         notes: [
           'Пользователь определяется по JWT, user_id в query не принимается.',
-          'Возвращать независимые student/teacher/is_admin. Паспорт и СНИЛС не выдавать в обычном профиле.',
+          'Возвращать role и соответствующий student/teacher. Паспорт и СНИЛС не выдавать в обычном профиле.',
         ],
       },
       {
@@ -188,8 +191,8 @@ export const apiGroups: ApiGroup[] = [
         },
         errors: ['400 empty_patch / invalid_file', '404 file_not_found'],
         notes: [
-          'Хотя бы один разрешённый ключ. Различать отсутствующий avatar_file_id и null: не менять / удалить.',
-          'Файлы загружаются отдельным запросом. Роль, группа, кафедра, документы и is_admin здесь запрещены.',
+          'Хотя бы один разрешённый ключ. Различать отсутствующий avatar и null: не менять / удалить.',
+          'Файлы загружаются отдельным запросом. Роль, группа, кафедра, документы здесь запрещены.',
         ],
       },
       {
@@ -214,14 +217,14 @@ export const apiGroups: ApiGroup[] = [
     id: 'requests',
     title: 'Заявки на регистрацию',
     description: 'Административная очередь заявок и атомарное решение по ним.',
-    source: 'frontend/src/pages/admin/RequestsPage.vue; сценарий рассмотрения заявки',
+    source: 'scheme.dbml; frontend/src/pages/admin/RequestsPage.vue; сценарий рассмотрения заявки',
     endpoints: [
       {
         method: 'GET',
         path: '/registration-requests',
         title: 'Список заявок',
         access: 'admin',
-        stage: 'core',
+        stage: 'extension',
         query: [
           [
             'q',
@@ -250,6 +253,7 @@ export const apiGroups: ApiGroup[] = [
           page: true,
         },
         notes: [
+          'Расширение: scheme.dbml не содержит заявок, приглашений и их состояний; требуется отдельное хранилище.',
           'В списке возвращается та же административная схема; не отдавать хеш пароля и технические секреты.',
           'Пагинация и фильтрация на сервере; total считается после фильтрации. Доступ и ответы Cache-Control: no-store.',
         ],
@@ -259,12 +263,13 @@ export const apiGroups: ApiGroup[] = [
         path: '/registration-requests/:id',
         title: 'Просмотр заявки',
         access: 'admin',
-        stage: 'core',
+        stage: 'extension',
         response: {
           status: 200,
           schema: 'RegistrationRequest',
         },
         notes: [
+          'Расширение: scheme.dbml не содержит заявок, приглашений и их состояний; требуется отдельное хранилище.',
           'Включить документы и сведения о решении; reviewed_by — безопасная ссылка PersonRef.',
         ],
       },
@@ -273,7 +278,7 @@ export const apiGroups: ApiGroup[] = [
         path: '/registration-requests/:id/decision',
         title: 'Одобрить с созданием аккаунта или отклонить',
         access: 'admin',
-        stage: 'core',
+        stage: 'extension',
         body: 'RegistrationDecision',
         response: {
           status: 200,
@@ -284,8 +289,9 @@ export const apiGroups: ApiGroup[] = [
           '400 invalid_role / invalid_reference',
         ],
         notes: [
+          'Расширение: scheme.dbml не содержит заявок, приглашений и их состояний; требуется отдельное хранилище.',
           'Одна транзакция и блокировка заявки: pending → approved/rejected. Approve создаёт пользователя с паролем из заявки и привязывает user_id.',
-          'При approve ровно одна учебная роль и is_admin=false; email берётся из заявки, документы можно уточнить. Reject: body только {decision:"reject"}; причина в текущем UI не запрашивается.',
+          'При approve ровно одна учебная роль и role=student либо role=teacher; email берётся из заявки, документы можно уточнить. Reject: body только {decision:"reject"}; причина в текущем UI не запрашивается.',
           'Повторное решение — 409 с актуальным request_id, без создания второго аккаунта. После reject требуется новая заявка.',
         ],
       },
@@ -295,7 +301,7 @@ export const apiGroups: ApiGroup[] = [
     id: 'users',
     title: 'Пользователи и учебные роли',
     description: 'Поиск, фильтры, создание, редактирование, блокировка и состав группы.',
-    source: 'frontend/src/pages/admin/UsersPage.vue; components/UserFields.vue',
+    source: 'scheme.dbml; frontend/src/pages/admin/UsersPage.vue; components/UserFields.vue',
     endpoints: [
       {
         method: 'GET',
@@ -307,9 +313,9 @@ export const apiGroups: ApiGroup[] = [
           ['q', 'string', false, 'ФИО или email, trim и поиск без учёта регистра.'],
           [
             'role',
-            '"student" | "teacher"',
+            '"student" | "teacher" | "admin"',
             false,
-            'Учебная роль. Студенты включают старост; совмещение ролей допустимо.',
+            'Единственная роль app_user.role. Студенты включают старост.',
           ],
           [
             'is_headman',
@@ -318,7 +324,6 @@ export const apiGroups: ApiGroup[] = [
             'true — только старосты. false — только студенты без признака; не пользователи без student.',
           ],
           ['is_active', 'boolean', false, 'Активен / заблокирован.'],
-          ['is_admin', 'boolean', false, 'Независимый фильтр администратора.'],
           ['group_id', 'integer', false, 'Студенты выбранной группы.'],
           ['department_id', 'integer', false, 'Преподаватели выбранной кафедры.'],
           ['sort', '"full_name" | "-full_name"', false, 'По умолчанию full_name, затем id.'],
@@ -338,7 +343,7 @@ export const apiGroups: ApiGroup[] = [
       {
         method: 'POST',
         path: '/users',
-        title: 'Создать пользователя и поставить приглашение в очередь',
+        title: 'Создать пользователя',
         access: 'admin',
         stage: 'core',
         body: 'UserCreateInput',
@@ -348,8 +353,7 @@ export const apiGroups: ApiGroup[] = [
         },
         errors: ['409 email_exists / record_book_exists', '400 invalid_reference'],
         notes: [
-          'Роли student и teacher независимы; обе могут быть null. is_admin сервером фиксируется false, менять его из этого интерфейса нельзя.',
-          'Форма создания пользователя не запрашивает пароль. Создать credential_state=invited и поставить письмо приглашения в очередь атомарно.',
+          'role — одно из student/teacher/admin; профиль student или teacher обязателен только для соответствующей роли, другой равен null. Администратору оба профиля null. Пароль хешируется сервером.',
         ],
       },
       {
@@ -370,7 +374,7 @@ export const apiGroups: ApiGroup[] = [
       {
         method: 'PATCH',
         path: '/users/:id',
-        title: 'Изменить карточку, роли или доступ',
+        title: 'Изменить карточку, роль или доступ',
         access: 'admin',
         stage: 'core',
         body: 'UserPatchInput',
@@ -380,9 +384,7 @@ export const apiGroups: ApiGroup[] = [
         },
         errors: ['409 last_active_admin / role_in_use / email_exists / record_book_exists'],
         notes: [
-          'student/teacher: отсутствие — не менять, объект — заменить данные роли, null — снять. Для обычных полей запретить null кроме явно nullable.',
-          'Запретить снятие роли с зависимостями. При блокировке/изменении прав отозвать сессии и перепроверять активность на каждом запросе.',
-          'В этой версии is_admin и password в PATCH не принимаются. Назначение административных прав — отдельная внепанельная процедура.',
+          'Смена role и замена student/teacher атомарны. Запретить снятие профиля при связанных данных и блокировку/смену роли последнего активного администратора. Пароль через этот метод не меняется.',
         ],
       },
       {
@@ -390,7 +392,7 @@ export const apiGroups: ApiGroup[] = [
         path: '/users/:id/invitations',
         title: 'Повторно отправить приглашение',
         access: 'admin',
-        stage: 'core',
+        stage: 'extension',
         response: {
           status: 202,
           schema: 'InvitationReceipt',
@@ -427,8 +429,8 @@ export const apiGroups: ApiGroup[] = [
     id: 'catalogs',
     title: 'Учебная структура',
     description:
-      'Шесть конкретных справочников с одинаковой моделью списка. Каждый маршрут ниже описан отдельно.',
-    source: 'frontend/src/pages/admin/StructurePage.vue',
+      'Шесть справочников из DBML без archived: создание, изменение и удаление неиспользуемых записей. У room обозначение number, имя semester вычисляется.',
+    source: 'scheme.dbml; frontend/src/pages/admin/StructurePage.vue',
     endpoints: [
       {
         method: 'GET',
@@ -443,18 +445,6 @@ export const apiGroups: ApiGroup[] = [
             false,
             'Поиск по названию без учёта регистра; только у направлений также по коду.',
           ],
-          [
-            'archived',
-            'boolean',
-            false,
-            'По умолчанию false; true — архив; отсутствие не означает все. Для всех передать include_archived=true.',
-          ],
-          [
-            'include_archived',
-            'boolean',
-            false,
-            'По умолчанию false. true возвращает оба состояния; нельзя сочетать с archived.',
-          ],
           ['limit', 'integer', false, 'Размер страницы: 50 по умолчанию, 1–200.'],
           ['offset', 'integer', false, 'Смещение >= 0, по умолчанию 0.'],
         ],
@@ -464,8 +454,8 @@ export const apiGroups: ApiGroup[] = [
           page: true,
         },
         notes: [
-          'По умолчанию только действующие. Порядок name ASC, id ASC; для семестров academic_year_start DESC, number DESC, id ASC.',
-          'Поиск, архивное состояние и пагинация вычисляются сервером. /catalog/subjects — справочник, /courses — назначения дисциплины группе на семестр.',
+          'Все записи справочника. Порядок name ASC, id ASC; семестры — academic_year_start DESC, number DESC, id ASC; аудитории — number ASC, id ASC.',
+          'Поиск и пагинация выполняются сервером. Архивного состояния нет. /catalog/subjects — справочник, /courses — назначения дисциплины группе на семестр.',
         ],
       },
       {
@@ -481,7 +471,7 @@ export const apiGroups: ApiGroup[] = [
         },
         errors: ['409 catalog_entry_exists', '400 invalid_reference'],
         notes: [
-          'archived=false задаёт сервер. В новых связях разрешены только действующие справочники.',
+          'Создать запись справочника; архивное состояние в scheme.dbml отсутствует.',
           'Поле name — подпись, которую видит пользователь в справочнике и списках выбора.',
         ],
       },
@@ -498,26 +488,23 @@ export const apiGroups: ApiGroup[] = [
         },
         errors: ['409 catalog_entry_exists', '400 invalid_reference'],
         notes: [
-          'Полная замена редактируемых полей. id, archived и is_current из body не принимаются.',
+          'Полная замена редактируемых полей. id и is_current из body не принимаются.',
           'Переименование сохраняет все ссылки. Изменение группы или семестра не должно молча переносить связанные назначения в другой контекст.',
         ],
       },
       {
-        method: 'PATCH',
+        method: 'DELETE',
         path: '/departments/:id',
-        title: 'Кафедры: архивировать',
+        title: 'Кафедры: удалить',
         access: 'admin',
         stage: 'core',
-        body: 'ArchiveInput',
         response: {
-          status: 200,
-          schema: 'NamedCatalog',
+          status: 204,
         },
         errors: ['409 catalog_in_use / current_semester_in_use'],
         notes: [
-          'Соответствует кнопке «В архив». Учитывать зависимости и у заблокированных пользователей: блокировка аккаунта не снимает учебные связи.',
+          'Физическое удаление: archived в схеме отсутствует. При существующих ссылках вернуть 409 catalog_in_use; удаление и проверка зависимостей атомарны. Кнопку архивации UI нужно согласовать с этим поведением.',
           'Блокирует любой teacher с этой department_id.',
-          'Операция повторно над архивной записью возвращает её же с 200. Архив не удаляет данные; проверка и изменение в одной транзакции.',
         ],
       },
       {
@@ -533,18 +520,6 @@ export const apiGroups: ApiGroup[] = [
             false,
             'Поиск по названию без учёта регистра; только у направлений также по коду.',
           ],
-          [
-            'archived',
-            'boolean',
-            false,
-            'По умолчанию false; true — архив; отсутствие не означает все. Для всех передать include_archived=true.',
-          ],
-          [
-            'include_archived',
-            'boolean',
-            false,
-            'По умолчанию false. true возвращает оба состояния; нельзя сочетать с archived.',
-          ],
           ['limit', 'integer', false, 'Размер страницы: 50 по умолчанию, 1–200.'],
           ['offset', 'integer', false, 'Смещение >= 0, по умолчанию 0.'],
         ],
@@ -554,8 +529,8 @@ export const apiGroups: ApiGroup[] = [
           page: true,
         },
         notes: [
-          'По умолчанию только действующие. Порядок name ASC, id ASC; для семестров academic_year_start DESC, number DESC, id ASC.',
-          'Поиск, архивное состояние и пагинация вычисляются сервером. /catalog/subjects — справочник, /courses — назначения дисциплины группе на семестр.',
+          'Все записи справочника. Порядок name ASC, id ASC; семестры — academic_year_start DESC, number DESC, id ASC; аудитории — number ASC, id ASC.',
+          'Поиск и пагинация выполняются сервером. Архивного состояния нет. /catalog/subjects — справочник, /courses — назначения дисциплины группе на семестр.',
         ],
       },
       {
@@ -571,7 +546,7 @@ export const apiGroups: ApiGroup[] = [
         },
         errors: ['409 catalog_entry_exists', '400 invalid_reference'],
         notes: [
-          'archived=false задаёт сервер. В новых связях разрешены только действующие справочники.',
+          'Создать запись справочника; архивное состояние в scheme.dbml отсутствует.',
           'Поле name — подпись, которую видит пользователь в справочнике и списках выбора.',
         ],
       },
@@ -588,26 +563,23 @@ export const apiGroups: ApiGroup[] = [
         },
         errors: ['409 catalog_entry_exists', '400 invalid_reference'],
         notes: [
-          'Полная замена редактируемых полей. id, archived и is_current из body не принимаются.',
+          'Полная замена редактируемых полей. id и is_current из body не принимаются.',
           'Переименование сохраняет все ссылки. Изменение группы или семестра не должно молча переносить связанные назначения в другой контекст.',
         ],
       },
       {
-        method: 'PATCH',
+        method: 'DELETE',
         path: '/catalog/subjects/:id',
-        title: 'Дисциплины: архивировать',
+        title: 'Дисциплины: удалить',
         access: 'admin',
         stage: 'core',
-        body: 'ArchiveInput',
         response: {
-          status: 200,
-          schema: 'NamedCatalog',
+          status: 204,
         },
         errors: ['409 catalog_in_use / current_semester_in_use'],
         notes: [
-          'Соответствует кнопке «В архив». Учитывать зависимости и у заблокированных пользователей: блокировка аккаунта не снимает учебные связи.',
+          'Физическое удаление: archived в схеме отсутствует. При существующих ссылках вернуть 409 catalog_in_use; удаление и проверка зависимостей атомарны. Кнопку архивации UI нужно согласовать с этим поведением.',
           'Блокирует любой course_offering с этой subject_id.',
-          'Операция повторно над архивной записью возвращает её же с 200. Архив не удаляет данные; проверка и изменение в одной транзакции.',
         ],
       },
       {
@@ -623,18 +595,6 @@ export const apiGroups: ApiGroup[] = [
             false,
             'Поиск по названию без учёта регистра; только у направлений также по коду.',
           ],
-          [
-            'archived',
-            'boolean',
-            false,
-            'По умолчанию false; true — архив; отсутствие не означает все. Для всех передать include_archived=true.',
-          ],
-          [
-            'include_archived',
-            'boolean',
-            false,
-            'По умолчанию false. true возвращает оба состояния; нельзя сочетать с archived.',
-          ],
           ['limit', 'integer', false, 'Размер страницы: 50 по умолчанию, 1–200.'],
           ['offset', 'integer', false, 'Смещение >= 0, по умолчанию 0.'],
         ],
@@ -644,8 +604,8 @@ export const apiGroups: ApiGroup[] = [
           page: true,
         },
         notes: [
-          'По умолчанию только действующие. Порядок name ASC, id ASC; для семестров academic_year_start DESC, number DESC, id ASC.',
-          'Поиск, архивное состояние и пагинация вычисляются сервером. /catalog/subjects — справочник, /courses — назначения дисциплины группе на семестр.',
+          'Все записи справочника. Порядок name ASC, id ASC; семестры — academic_year_start DESC, number DESC, id ASC; аудитории — number ASC, id ASC.',
+          'Поиск и пагинация выполняются сервером. Архивного состояния нет. /catalog/subjects — справочник, /courses — назначения дисциплины группе на семестр.',
         ],
       },
       {
@@ -661,7 +621,7 @@ export const apiGroups: ApiGroup[] = [
         },
         errors: ['409 catalog_entry_exists', '400 invalid_reference'],
         notes: [
-          'archived=false задаёт сервер. В новых связях разрешены только действующие справочники.',
+          'Создать запись справочника; архивное состояние в scheme.dbml отсутствует.',
           'Поле name — подпись, которую видит пользователь в справочнике и списках выбора.',
         ],
       },
@@ -678,26 +638,23 @@ export const apiGroups: ApiGroup[] = [
         },
         errors: ['409 catalog_entry_exists', '400 invalid_reference'],
         notes: [
-          'Полная замена редактируемых полей. id, archived и is_current из body не принимаются.',
+          'Полная замена редактируемых полей. id и is_current из body не принимаются.',
           'Переименование сохраняет все ссылки. Изменение группы или семестра не должно молча переносить связанные назначения в другой контекст.',
         ],
       },
       {
-        method: 'PATCH',
+        method: 'DELETE',
         path: '/specializations/:id',
-        title: 'Направления: архивировать',
+        title: 'Направления: удалить',
         access: 'admin',
         stage: 'core',
-        body: 'ArchiveInput',
         response: {
-          status: 200,
-          schema: 'Specialization',
+          status: 204,
         },
         errors: ['409 catalog_in_use / current_semester_in_use'],
         notes: [
-          'Соответствует кнопке «В архив». Учитывать зависимости и у заблокированных пользователей: блокировка аккаунта не снимает учебные связи.',
-          'Блокирует неархивная учебная группа этого направления.',
-          'Операция повторно над архивной записью возвращает её же с 200. Архив не удаляет данные; проверка и изменение в одной транзакции.',
+          'Физическое удаление: archived в схеме отсутствует. При существующих ссылках вернуть 409 catalog_in_use; удаление и проверка зависимостей атомарны. Кнопку архивации UI нужно согласовать с этим поведением.',
+          'Блокирует любая учебная группа этого направления.',
         ],
       },
       {
@@ -713,18 +670,6 @@ export const apiGroups: ApiGroup[] = [
             false,
             'Поиск по названию без учёта регистра; только у направлений также по коду.',
           ],
-          [
-            'archived',
-            'boolean',
-            false,
-            'По умолчанию false; true — архив; отсутствие не означает все. Для всех передать include_archived=true.',
-          ],
-          [
-            'include_archived',
-            'boolean',
-            false,
-            'По умолчанию false. true возвращает оба состояния; нельзя сочетать с archived.',
-          ],
           ['limit', 'integer', false, 'Размер страницы: 50 по умолчанию, 1–200.'],
           ['offset', 'integer', false, 'Смещение >= 0, по умолчанию 0.'],
           ['specialization_id', 'integer', false, 'ID направления.'],
@@ -736,8 +681,8 @@ export const apiGroups: ApiGroup[] = [
           page: true,
         },
         notes: [
-          'По умолчанию только действующие. Порядок name ASC, id ASC; для семестров academic_year_start DESC, number DESC, id ASC.',
-          'Поиск, архивное состояние и пагинация вычисляются сервером. /catalog/subjects — справочник, /courses — назначения дисциплины группе на семестр.',
+          'Все записи справочника. Порядок name ASC, id ASC; семестры — academic_year_start DESC, number DESC, id ASC; аудитории — number ASC, id ASC.',
+          'Поиск и пагинация выполняются сервером. Архивного состояния нет. /catalog/subjects — справочник, /courses — назначения дисциплины группе на семестр.',
         ],
       },
       {
@@ -753,7 +698,7 @@ export const apiGroups: ApiGroup[] = [
         },
         errors: ['409 catalog_entry_exists', '400 invalid_reference'],
         notes: [
-          'archived=false задаёт сервер. В новых связях разрешены только действующие справочники.',
+          'Создать запись справочника; архивное состояние в scheme.dbml отсутствует.',
           'Поле name — подпись, которую видит пользователь в справочнике и списках выбора.',
         ],
       },
@@ -770,26 +715,23 @@ export const apiGroups: ApiGroup[] = [
         },
         errors: ['409 catalog_entry_exists', '400 invalid_reference'],
         notes: [
-          'Полная замена редактируемых полей. id, archived и is_current из body не принимаются.',
+          'Полная замена редактируемых полей. id и is_current из body не принимаются.',
           'Переименование сохраняет все ссылки. Изменение группы или семестра не должно молча переносить связанные назначения в другой контекст.',
         ],
       },
       {
-        method: 'PATCH',
+        method: 'DELETE',
         path: '/groups/:id',
-        title: 'Учебные группы: архивировать',
+        title: 'Учебные группы: удалить',
         access: 'admin',
         stage: 'core',
-        body: 'ArchiveInput',
         response: {
-          status: 200,
-          schema: 'Group',
+          status: 204,
         },
         errors: ['409 catalog_in_use / current_semester_in_use'],
         notes: [
-          'Соответствует кнопке «В архив». Учитывать зависимости и у заблокированных пользователей: блокировка аккаунта не снимает учебные связи.',
+          'Физическое удаление: archived в схеме отсутствует. При существующих ссылках вернуть 409 catalog_in_use; удаление и проверка зависимостей атомарны. Кнопку архивации UI нужно согласовать с этим поведением.',
           'Блокирует любой student или course_offering этой группы.',
-          'Операция повторно над архивной записью возвращает её же с 200. Архив не удаляет данные; проверка и изменение в одной транзакции.',
         ],
       },
       {
@@ -805,18 +747,6 @@ export const apiGroups: ApiGroup[] = [
             false,
             'Поиск по названию без учёта регистра; только у направлений также по коду.',
           ],
-          [
-            'archived',
-            'boolean',
-            false,
-            'По умолчанию false; true — архив; отсутствие не означает все. Для всех передать include_archived=true.',
-          ],
-          [
-            'include_archived',
-            'boolean',
-            false,
-            'По умолчанию false. true возвращает оба состояния; нельзя сочетать с archived.',
-          ],
           ['limit', 'integer', false, 'Размер страницы: 50 по умолчанию, 1–200.'],
           ['offset', 'integer', false, 'Смещение >= 0, по умолчанию 0.'],
         ],
@@ -826,8 +756,8 @@ export const apiGroups: ApiGroup[] = [
           page: true,
         },
         notes: [
-          'По умолчанию только действующие. Порядок name ASC, id ASC; для семестров academic_year_start DESC, number DESC, id ASC.',
-          'Поиск, архивное состояние и пагинация вычисляются сервером. /catalog/subjects — справочник, /courses — назначения дисциплины группе на семестр.',
+          'Все записи справочника. Порядок name ASC, id ASC; семестры — academic_year_start DESC, number DESC, id ASC; аудитории — number ASC, id ASC.',
+          'Поиск и пагинация выполняются сервером. Архивного состояния нет. /catalog/subjects — справочник, /courses — назначения дисциплины группе на семестр.',
         ],
       },
       {
@@ -843,8 +773,8 @@ export const apiGroups: ApiGroup[] = [
         },
         errors: ['409 catalog_entry_exists', '400 invalid_reference'],
         notes: [
-          'archived=false задаёт сервер. В новых связях разрешены только действующие справочники.',
-          'Поле name — подпись, которую видит пользователь в справочнике и списках выбора.',
+          'Создать запись справочника; архивное состояние в scheme.dbml отсутствует.',
+          'Подпись name вычисляется из academic_year_start/number и не принимается в body.',
         ],
       },
       {
@@ -860,26 +790,23 @@ export const apiGroups: ApiGroup[] = [
         },
         errors: ['409 catalog_entry_exists', '400 invalid_reference'],
         notes: [
-          'Полная замена редактируемых полей. id, archived и is_current из body не принимаются.',
+          'Полная замена редактируемых полей. id и is_current из body не принимаются.',
           'Переименование сохраняет все ссылки. Изменение группы или семестра не должно молча переносить связанные назначения в другой контекст.',
         ],
       },
       {
-        method: 'PATCH',
+        method: 'DELETE',
         path: '/semesters/:id',
-        title: 'Семестры: архивировать',
+        title: 'Семестры: удалить',
         access: 'admin',
         stage: 'core',
-        body: 'ArchiveInput',
         response: {
-          status: 200,
-          schema: 'Semester',
+          status: 204,
         },
         errors: ['409 catalog_in_use / current_semester_in_use'],
         notes: [
-          'Соответствует кнопке «В архив». Учитывать зависимости и у заблокированных пользователей: блокировка аккаунта не снимает учебные связи.',
+          'Физическое удаление: archived в схеме отсутствует. При существующих ссылках вернуть 409 catalog_in_use; удаление и проверка зависимостей атомарны. Кнопку архивации UI нужно согласовать с этим поведением.',
           'Блокирует любой course_offering этого семестра или is_current=true.',
-          'Операция повторно над архивной записью возвращает её же с 200. Архив не удаляет данные; проверка и изменение в одной транзакции.',
         ],
       },
       {
@@ -895,18 +822,6 @@ export const apiGroups: ApiGroup[] = [
             false,
             'Поиск по названию без учёта регистра; только у направлений также по коду.',
           ],
-          [
-            'archived',
-            'boolean',
-            false,
-            'По умолчанию false; true — архив; отсутствие не означает все. Для всех передать include_archived=true.',
-          ],
-          [
-            'include_archived',
-            'boolean',
-            false,
-            'По умолчанию false. true возвращает оба состояния; нельзя сочетать с archived.',
-          ],
           ['limit', 'integer', false, 'Размер страницы: 50 по умолчанию, 1–200.'],
           ['offset', 'integer', false, 'Смещение >= 0, по умолчанию 0.'],
         ],
@@ -916,8 +831,8 @@ export const apiGroups: ApiGroup[] = [
           page: true,
         },
         notes: [
-          'По умолчанию только действующие. Порядок name ASC, id ASC; для семестров academic_year_start DESC, number DESC, id ASC.',
-          'Поиск, архивное состояние и пагинация вычисляются сервером. /catalog/subjects — справочник, /courses — назначения дисциплины группе на семестр.',
+          'Все записи справочника. Порядок name ASC, id ASC; семестры — academic_year_start DESC, number DESC, id ASC; аудитории — number ASC, id ASC.',
+          'Поиск и пагинация выполняются сервером. Архивного состояния нет. /catalog/subjects — справочник, /courses — назначения дисциплины группе на семестр.',
         ],
       },
       {
@@ -926,15 +841,15 @@ export const apiGroups: ApiGroup[] = [
         title: 'Аудитории: создать',
         access: 'admin',
         stage: 'core',
-        body: 'NamedInput',
+        body: 'RoomInput',
         response: {
           status: 201,
           schema: 'Room',
         },
         errors: ['409 catalog_entry_exists', '400 invalid_reference'],
         notes: [
-          'archived=false задаёт сервер. В новых связях разрешены только действующие справочники.',
-          'Поле name — подпись, которую видит пользователь в справочнике и списках выбора.',
+          'Создать запись справочника; архивное состояние в scheme.dbml отсутствует.',
+          'number — уникальное обозначение аудитории до 30 символов.',
         ],
       },
       {
@@ -943,33 +858,30 @@ export const apiGroups: ApiGroup[] = [
         title: 'Аудитории: изменить',
         access: 'admin',
         stage: 'core',
-        body: 'NamedInput',
+        body: 'RoomInput',
         response: {
           status: 200,
           schema: 'Room',
         },
         errors: ['409 catalog_entry_exists', '400 invalid_reference'],
         notes: [
-          'Полная замена редактируемых полей. id, archived и is_current из body не принимаются.',
+          'Полная замена редактируемых полей. id и is_current из body не принимаются.',
           'Переименование сохраняет все ссылки. Изменение группы или семестра не должно молча переносить связанные назначения в другой контекст.',
         ],
       },
       {
-        method: 'PATCH',
+        method: 'DELETE',
         path: '/rooms/:id',
-        title: 'Аудитории: архивировать',
+        title: 'Аудитории: удалить',
         access: 'admin',
         stage: 'core',
-        body: 'ArchiveInput',
         response: {
-          status: 200,
-          schema: 'Room',
+          status: 204,
         },
         errors: ['409 catalog_in_use / current_semester_in_use'],
         notes: [
-          'Соответствует кнопке «В архив». Учитывать зависимости и у заблокированных пользователей: блокировка аккаунта не снимает учебные связи.',
+          'Физическое удаление: archived в схеме отсутствует. При существующих ссылках вернуть 409 catalog_in_use; удаление и проверка зависимостей атомарны. Кнопку архивации UI нужно согласовать с этим поведением.',
           'Блокирует любое занятие lesson с этой room_id.',
-          'Операция повторно над архивной записью возвращает её же с 200. Архив не удаляет данные; проверка и изменение в одной транзакции.',
         ],
       },
       {
@@ -982,7 +894,7 @@ export const apiGroups: ApiGroup[] = [
           status: 200,
           schema: 'Group',
         },
-        notes: ['Возвращать актуальные сведения группы, направление и архивное состояние.'],
+        notes: ['Возвращать актуальные сведения группы и направление.'],
       },
       {
         method: 'GET',
@@ -1009,10 +921,9 @@ export const apiGroups: ApiGroup[] = [
           status: 200,
           schema: 'Semester',
         },
-        errors: ['409 semester_archived'],
+        errors: [],
         notes: [
-          'Атомарно снять флаг с прежнего и выставить новому; запрещён архивный семестр. В админском UI кнопки пока нет.',
-          'Вернуть обновлённый Semester. Архивный семестр нельзя назначить текущим.',
+          'В транзакции снять is_current у остальных семестров и установить у выбранного. Схема не задаёт уникальность текущего семестра, её обеспечивает сервер.',
         ],
       },
     ],
@@ -1022,7 +933,7 @@ export const apiGroups: ApiGroup[] = [
     title: 'Дисциплины и нагрузка',
     description:
       'Назначения дисциплин группам; преподаватели и типы занятий меняются с сохранением расписания.',
-    source: 'frontend/src/pages/admin/CoursesPage.vue; frontend/src/pages/subjects',
+    source: 'scheme.dbml; frontend/src/pages/admin/CoursesPage.vue; frontend/src/pages/subjects',
     endpoints: [
       {
         method: 'GET',
@@ -1048,7 +959,7 @@ export const apiGroups: ApiGroup[] = [
           page: true,
         },
         notes: [
-          'Студент — группа студента, преподаватель — курсы его нагрузки, администратор — любые. При совмещении учебных ролей объединить доступные курсы без дублей.',
+          'При role=student — курсы группы студента, при teacher — курсы его нагрузки, при admin — любые.',
           'Страница «Предметы» использует current=true. Админка передаёт group_id и semester_id. Названия приходят с сервера.',
         ],
       },
@@ -1206,7 +1117,8 @@ export const apiGroups: ApiGroup[] = [
     id: 'schedule',
     title: 'Расписание',
     description: 'Публичное чтение, личный календарь и административный двухнедельный шаблон.',
-    source: 'frontend/src/pages/schedule; frontend/src/pages/admin/AdminSchedulePage.vue',
+    source:
+      'scheme.dbml; frontend/src/pages/schedule; frontend/src/pages/admin/AdminSchedulePage.vue',
     endpoints: [
       {
         method: 'GET',
@@ -1389,6 +1301,7 @@ export const apiGroups: ApiGroup[] = [
         notes: [
           'Пустой массив — конфликтов нет. Проверка ничего не записывает; даже при её успехе POST/PUT повторяют проверку в транзакции.',
           'Конфликт: одна неделя, день и семестр, пересечение полуоткрытых интервалов [start,end), совпадает группа, преподаватель или аудитория. Касание границ допустимо.',
+          'Принимается только starts_at; ends_at вычисляется по сетке звонков для проверки пересечений и в lesson не сохраняется.',
         ],
       },
       {
@@ -1406,6 +1319,7 @@ export const apiGroups: ApiGroup[] = [
         notes: [
           'Семестр и группа определяются нагрузкой. Сохранение и проверка всех ресурсов атомарны, включая конкурирующие запросы.',
           'Принимать начало и окончание выбранной пары: седьмая пара 18:35–19:55 длится 80 минут и не должна сдвигаться.',
+          'Принимается только starts_at; ends_at вычисляется по сетке звонков для проверки пересечений и в lesson не сохраняется.',
         ],
       },
       {
@@ -1423,6 +1337,7 @@ export const apiGroups: ApiGroup[] = [
         notes: [
           'Исключить текущее занятие из проверки пересечений. Не изменять workload_id; преподаватель/тип меняются в PUT /workloads/:id.',
           'Для ранее сохранённого нестандартного времени разрешить тот же интервал при правке аудитории, не сдвигать его автоматически.',
+          'Принимается только starts_at; ends_at вычисляется по сетке звонков для проверки пересечений и в lesson не сохраняется.',
         ],
       },
       {
@@ -1444,7 +1359,7 @@ export const apiGroups: ApiGroup[] = [
     id: 'content',
     title: 'Темы и учебные материалы',
     description: 'Просмотр курса студентом и управление содержимым преподавателем курса.',
-    source: 'frontend/src/pages/subjects/course; учебные сценарии преподавателя',
+    source: 'scheme.dbml; frontend/src/pages/subjects/course; учебные сценарии преподавателя',
     endpoints: [
       {
         method: 'GET',
@@ -1490,7 +1405,7 @@ export const apiGroups: ApiGroup[] = [
         },
         errors: ['403 course_forbidden'],
         notes: [
-          'Доступ через курс темы. Полная замена текста; position при отсутствии остаётся прежним.',
+          'Полная замена title и description. position в схеме отсутствует; порядок тем по id ASC.',
         ],
       },
       {
@@ -1521,8 +1436,7 @@ export const apiGroups: ApiGroup[] = [
         },
         errors: ['400 material_source_required', '404 file_not_found', '403 course_forbidden'],
         notes: [
-          'Материалы создаёт преподаватель курса либо администратор. created_by — ID фактического пользователя-автора; структура таблиц не должна ограничивать этот сценарий.',
-          'Сначала POST /files, затем file_id. Ответ содержит полный FileInfo для имени, размера и скачивания.',
+          'Сохранить file_id и/или external_url. Название, порядок, автор и время добавления материала в схеме отсутствуют.',
         ],
       },
       {
@@ -1561,7 +1475,7 @@ export const apiGroups: ApiGroup[] = [
     description:
       'Публикация задания, отправка работы, исправления до проверки и выставление оценки.',
     source:
-      'frontend/src/pages/subjects/course/components/AssignmentModal; сценарии сдачи и проверки',
+      'scheme.dbml; frontend/src/pages/subjects/course/components/AssignmentModal; сценарии сдачи и проверки',
     endpoints: [
       {
         method: 'GET',
@@ -1595,9 +1509,11 @@ export const apiGroups: ApiGroup[] = [
           '400 topic_course_mismatch / too_many_files',
           '403 course_forbidden',
           '404 file_not_found',
+          '409 topic_assignment_exists',
         ],
         notes: [
-          'created_by и published_at задаёт сервер. Создание доступно преподавателю курса и администратору; студенты не создают задания.',
+          'published_at задаёт сервер. Создание доступно преподавателю курса и администратору; студенты не создают задания.',
+          'Одна тема содержит не более одного задания по связи один к одному assignment.topic_id — topic.id; повтор — 409 topic_assignment_exists. deadline_at=null допустим.',
         ],
       },
       {
@@ -1626,10 +1542,15 @@ export const apiGroups: ApiGroup[] = [
           status: 200,
           schema: 'Assignment',
         },
-        errors: ['400 topic_course_mismatch / too_many_files', '403 course_forbidden'],
+        errors: [
+          '400 topic_course_mismatch / too_many_files',
+          '403 course_forbidden',
+          '409 topic_assignment_exists',
+        ],
         notes: [
           'Преподаватель курса или администратор. topic_id обязан оставаться в том же курсе.',
           'Изменение дедлайна пересчитывает is_late по submitted_at; существующие работы, оценки и даты отправки не стираются.',
+          'Одна тема содержит не более одного задания по связи один к одному assignment.topic_id — topic.id; повтор — 409 topic_assignment_exists. deadline_at=null допустим.',
         ],
       },
       {
@@ -1682,7 +1603,7 @@ export const apiGroups: ApiGroup[] = [
         notes: [
           'Upsert: одна работа на assignment_id/student_id, сохранять id. При submit=true сервер ставит submitted_at и is_late; повторную отправку до проверки разрешить.',
           'Дедлайн не блокирует сдачу, только помечает опоздание. После reviewed любые изменения ответа запрещены.',
-          'Пустой черновик допустим; отправленный ответ нельзя вернуть в черновик submit=false. До 10 файлов, 20 MiB каждый.',
+          'Пустой черновик допустим; отправленный ответ нельзя вернуть в черновик submit=false. До 5 файлов, 20 MiB каждый.',
         ],
       },
       {
@@ -1803,7 +1724,7 @@ export const apiGroups: ApiGroup[] = [
     id: 'grades',
     title: 'Оценки',
     description: 'Полная страница результатов и отдельные выборки выставленных оценок.',
-    source: 'frontend/src/pages/grades; сценарии проверки работ преподавателем',
+    source: 'scheme.dbml; frontend/src/pages/grades; сценарии проверки работ преподавателем',
     endpoints: [
       {
         method: 'GET',
@@ -1868,8 +1789,10 @@ export const apiGroups: ApiGroup[] = [
   {
     id: 'files',
     title: 'Файлы и изображения',
-    description: 'Загрузка отделена от привязки к профилю, новости, материалу, заданию или ответу.',
-    source: 'формы заданий и ответов; настройки аватара; admin/components/AdminImage.vue',
+    description:
+      'Загрузка отделена от привязки к аватару, материалу, заданию, ответу или сообщению.',
+    source:
+      'scheme.dbml; формы заданий и ответов; настройки аватара; admin/components/AdminImage.vue',
     endpoints: [
       {
         method: 'POST',
@@ -1884,8 +1807,7 @@ export const apiGroups: ApiGroup[] = [
         },
         errors: ['413 file_too_large', '415 unsupported_file_type', '400 invalid_file_signature'],
         notes: [
-          'attachment: PDF, DOCX, PPTX, XLS/XLSX, ZIP, RAR; до 20 MiB. avatar/news_cover: JPEG, PNG, WebP до 2 MiB. Проверять расширение, MIME и сигнатуру.',
-          'news_cover разрешён только admin. При превышении размера вернуть 413, неподдерживаемом типе — 415. Изображения хранить как файлы, не data URL в сущностях.',
+          'attachment: PDF, DOCX, PPTX, XLS/XLSX, ZIP, RAR; до 20 MiB. avatar: JPEG, PNG, WebP до 2 MiB. Проверять расширение, MIME и сигнатуру.',
           'Успешная загрузка ещё не означает привязку; после неё отправить id в команду соответствующей сущности.',
         ],
       },
@@ -1919,7 +1841,6 @@ export const apiGroups: ApiGroup[] = [
         errors: ['404 file_not_found'],
         notes: [
           'Без JSON-конверта. Для аватара/приватного изображения fetch с Authorization → Blob → object URL; прямой img src не передаст Bearer.',
-          'Опубликованные обложки новостей выдаются отдельным публичным маршрутом /news/:id/cover, не открывать весь /files публично.',
         ],
       },
       {
@@ -1943,7 +1864,7 @@ export const apiGroups: ApiGroup[] = [
     id: 'news',
     title: 'Новости и публикации',
     description: 'Публичная лента и административный жизненный цикл публикации.',
-    source: 'frontend/src/pages/news; frontend/src/pages/admin/AdminNewsPage.vue',
+    source: 'scheme.dbml; frontend/src/pages/news; frontend/src/pages/admin/AdminNewsPage.vue',
     endpoints: [
       {
         method: 'GET',
@@ -1952,7 +1873,7 @@ export const apiGroups: ApiGroup[] = [
         access: 'public',
         stage: 'core',
         query: [
-          ['q', 'string', false, 'Поиск по заголовку и тексту без учёта регистра.'],
+          ['q', 'string', false, 'Поиск по тексту без учёта регистра.'],
           ['limit', 'integer', false, 'Размер страницы: 50 по умолчанию, 1–200.'],
           ['offset', 'integer', false, 'Смещение >= 0, по умолчанию 0.'],
         ],
@@ -1962,8 +1883,7 @@ export const apiGroups: ApiGroup[] = [
           page: true,
         },
         notes: [
-          'Только published с published_at <= now. Порядок is_pinned DESC, published_at DESC, id DESC. offset считается вместе с закреплёнными, дубли не появляются.',
-          'Параметры status/author/is_admin от гостя не могут открыть черновики. Фронтенд строит URL /news/:id по id, сервер не возвращает адрес Vue-страницы.',
+          'Только status=published и published_at <= now; порядок published_at DESC, id DESC. q ищет по body. Заголовок, обложка и закрепление в активных полях news отсутствуют.',
         ],
       },
       {
@@ -1983,34 +1903,16 @@ export const apiGroups: ApiGroup[] = [
       },
       {
         method: 'GET',
-        path: '/news/:id/cover',
-        title: 'Публичная обложка опубликованной новости',
-        access: 'public',
-        stage: 'core',
-        response: {
-          status: 200,
-          binary: 'image/jpeg | image/png | image/webp',
-          description:
-            'Проверенное изображение; Content-Disposition: inline. Можно использовать в img src без JWT.',
-        },
-        errors: ['404 news_not_found / cover_not_found'],
-        notes: [
-          'Проверять published при каждом чтении. Не выдавать по этому маршруту произвольный file_id.',
-          'Cache-Control: no-cache для повторной проверки доступности после снятия публикации. URL строится по news.id.',
-        ],
-      },
-      {
-        method: 'GET',
         path: '/admin/news',
         title: 'Административный список новостей',
         access: 'admin',
         stage: 'core',
         query: [
-          ['q', 'string', false, 'Поиск по заголовку.'],
+          ['q', 'string', false, 'Поиск по тексту.'],
           ['status', '"draft" | "published" | "archived"', false, 'Без параметра — все.'],
           [
             'sort',
-            '"updated_at" | "-updated_at" | "published_at" | "-published_at" | "title" | "-title"',
+            '"updated_at" | "-updated_at" | "published_at" | "-published_at"',
             false,
             'По умолчанию -updated_at; null published_at идут последними, затем id.',
           ],
@@ -2049,15 +1951,15 @@ export const apiGroups: ApiGroup[] = [
           status: 201,
           schema: 'AdminNews',
         },
-        errors: ['404 file_not_found'],
+        errors: [],
         notes: [
-          'author.id из сессии администратора. published_at задаётся сервером при первой публикации, у черновика null.',
+          'author_id и даты задаёт сервер. Входные поля — body и status. При переходе в published установить published_at=now(); у draft/archived published_at=null по news_published_at_valid. Правка текста без смены published сохраняет дату.',
         ],
       },
       {
         method: 'PUT',
         path: '/admin/news/:id',
-        title: 'Сохранить текст, обложку и параметры публикации',
+        title: 'Сохранить текст и статус новости',
         access: 'admin',
         stage: 'core',
         body: 'NewsInput',
@@ -2065,10 +1967,9 @@ export const apiGroups: ApiGroup[] = [
           status: 200,
           schema: 'AdminNews',
         },
-        errors: ['409 news_archived', '404 file_not_found'],
+        errors: ['409 news_archived'],
         notes: [
-          'Оригинальный автор и created_at сохраняются. При правке опубликованной новости published_at не сдвигается.',
-          'Перед правкой архивной новости сначала сменить статус на draft. Обложка через file_id, а не base64 или внешний URL.',
+          'author_id и даты задаёт сервер. Входные поля — body и status. При переходе в published установить published_at=now(); у draft/archived published_at=null по news_published_at_valid. Правка текста без смены published сохраняет дату.',
         ],
       },
       {
@@ -2083,8 +1984,8 @@ export const apiGroups: ApiGroup[] = [
           schema: 'AdminNews',
         },
         notes: [
-          'draft↔published, published/draft→archived, archived→draft/published. При повторной публикации сохранять дату первой публикации.',
-          'Архив и черновик немедленно исчезают из публичной ленты и /dashboard.',
+          'draft↔published, published/draft→archived, archived→draft/published. При выходе из published очистить published_at; при повторной публикации установить новую дату согласно CHECK схемы.',
+          'Черновик и архив недоступны в публичной ленте и /dashboard.',
         ],
       },
       {
@@ -2098,7 +1999,7 @@ export const apiGroups: ApiGroup[] = [
         },
         errors: ['409 news_is_published'],
         notes: [
-          'Опубликованную новость сначала снять с публикации/архивировать, как в текущем UI. Освободить неиспользуемую обложку.',
+          'Опубликованную новость сначала снять с публикации или архивировать. Удаление физическое.',
         ],
       },
     ],
@@ -2107,33 +2008,10 @@ export const apiGroups: ApiGroup[] = [
     id: 'chat',
     title: 'Сообщения и чаты',
     description:
-      'HTTP отвечает за список чатов, поиск собеседников, открытие диалога и начальную историю. Отправка, непрочитанные и изменения доставляются через WebSocket.',
-    source: 'frontend/src/pages/messages; виджет главной; счётчики сообщений в навигации',
+      'Чаты, участники, сообщения и вложения основаны на chat/chat_participant/message/message_file. HTTP загружает список и историю, WebSocket доставляет изменения без долговечного replay.',
+    source:
+      'scheme.dbml; frontend/src/pages/messages; виджет главной; счётчики сообщений в навигации',
     endpoints: [
-      {
-        method: 'GET',
-        path: '/messaging/snapshot',
-        title: 'Согласованный снимок мессенджера для старта и восстановления',
-        access: 'session',
-        stage: 'core',
-        query: [
-          [
-            'limit',
-            'integer',
-            false,
-            'Чатов на первой странице: по умолчанию 50, 1–200. offset всегда 0.',
-          ],
-        ],
-        response: {
-          status: 200,
-          schema: 'MessagingSnapshot',
-        },
-        notes: [
-          'Одним согласованным чтением вернуть первую страницу чатов, общий счётчик непрочитанных и курсор пользовательского потока событий.',
-          'После снимка клиент отправляет stream.resume с resume_after_event_id; события между снимком и подключением будут воспроизведены. Остальные страницы списка — GET /chats, история активного диалога — GET /chats/:id/messages.',
-          'Не заменяет поток событий и не вызывается по таймеру. Нужен на первом запуске и после ошибки resume_required.',
-        ],
-      },
       {
         method: 'GET',
         path: '/contacts',
@@ -2172,8 +2050,8 @@ export const apiGroups: ApiGroup[] = [
           page: true,
         },
         notes: [
-          'Без полной истории. Порядок last_message.created_at DESC NULLS LAST, id DESC. Непрочитанные вычисляются по персональному указателю прочтения.',
-          'Групповой состав динамический: студенты группы и ведущие её преподаватели. Администратор не получает доступ к чужим личным диалогам.',
+          'Без полной истории. Порядок last_message.created_at DESC NULLS LAST, id DESC. last_message вычисляется по максимальному message.id; поля last_message_id в chat нет.',
+          'Участники хранятся в chat_participant. Изменения учебных связей синхронизируют состав группового чата в транзакции. Администратор не получает доступ к чужим личным диалогам.',
         ],
       },
       {
@@ -2190,6 +2068,7 @@ export const apiGroups: ApiGroup[] = [
         errors: ['400 self_chat', '403 contact_not_allowed', '404 user_not_found'],
         notes: [
           'Идемпотентно: на неупорядоченную пару людей один чат; вернуть существующий или создать. 200 в обоих случаях. Событие chat.created доставляется участникам через WebSocket.',
+          'У direct group_id=null, заголовок вычисляется по ФИО собеседника; оба участника записываются в chat_participant. Уникальность пары участников проверяется сервером в транзакции, в DBML её нет.',
         ],
       },
       {
@@ -2206,6 +2085,7 @@ export const apiGroups: ApiGroup[] = [
         errors: ['403 group_forbidden'],
         notes: [
           'Один чат на group_id. Администратор любой группы, остальные — только участники по учебным связям.',
+          'kind=group требует group_id; title до 150 символов. Единственность чата группы не закреплена UNIQUE в DBML — обеспечить транзакционную проверку. Состав хранить в chat_participant.',
         ],
       },
       {
@@ -2220,7 +2100,7 @@ export const apiGroups: ApiGroup[] = [
         },
         errors: ['404 chat_not_found'],
         notes: [
-          'Участие проверяется сервером: у личного чата два участника, у группового — актуальные учебные связи. Название чата не является доказательством доступа.',
+          'Участие проверяется сервером: у личного чата два участника, у группового — записи chat_participant, согласованные с учебными связями. Название чата не является доказательством доступа.',
         ],
       },
       {
@@ -2244,9 +2124,8 @@ export const apiGroups: ApiGroup[] = [
         },
         errors: ['400 invalid_cursor', '404 chat_not_found'],
         notes: [
-          'Используется при открытии чата и прокрутке вверх. Новые сообщения, изменения и прочтение поступают через WebSocket, без периодического HTTP-опроса.',
-          'Внутри порции порядок id ASC. Курсор before — минимальный id полученной страницы. Чтение истории само по себе не помечает её прочитанной.',
-          'Message.version защищает от устаревшего HTTP-ответа, пришедшего после WebSocket-события. Клиент объединяет по message.id, сохраняя максимальную версию.',
+          'Используется при открытии чата и прокрутке вверх. Новые сообщения и изменения поступают через WebSocket, без периодического HTTP-опроса.',
+          'Внутри порции порядок id ASC. Курсор before — минимальный id полученной страницы. Указателя чтения и счётчиков непрочитанных в активной схеме нет.',
         ],
       },
     ],
@@ -2256,7 +2135,8 @@ export const apiGroups: ApiGroup[] = [
     title: 'Подключение WebSocket',
     description:
       'HTTP-рукопожатие и одноразовый допуск к единому потоку чатов пользователя. Формат команд и событий — в разделе WebSocket-протокола.',
-    source: 'сценарии отправки, повторной отправки и синхронизации сообщений между устройствами',
+    source:
+      'scheme.dbml; сценарии отправки, повторной отправки и синхронизации сообщений между устройствами',
     endpoints: [
       {
         method: 'POST',
@@ -2302,8 +2182,8 @@ export const apiGroups: ApiGroup[] = [
         notes: [
           'URL wss://<тот же хост>/api/v1/realtime?ticket=<ticket>; в локальной HTTP-разработке ws://. Subprotocol: lk-chat.v1.',
           'Один сокет на вкладку/устройство получает события всех доступных чатов, включая неактивные, для виджета главной и бейджа навигации. Подписка на один активный чат не требуется.',
-          'После session.ready передать stream.resume; до завершения возобновления сообщения не отправлять. Проверять актуальную сессию и членство при каждой команде и доставке.',
           'Upgrade/Connection и таймауты прокси должны поддерживать долгоживущее соединение. Сам endpoint и клиент в этой задаче не реализуются.',
+          'После session.ready можно отправлять команды. После обрыва заново загрузить список чатов и историю: долговечного replay и unread в текущей схеме нет.',
         ],
       },
     ],
@@ -2313,7 +2193,7 @@ export const apiGroups: ApiGroup[] = [
     title: 'Главная, ресурсы и служебные методы',
     description:
       'Сборные ответы под страницы; действия браузера и локальная тема не требуют отдельных endpoint.',
-    source: 'frontend/src/pages/dashboard; frontend/src/pages/resources',
+    source: 'scheme.dbml; frontend/src/pages/dashboard; frontend/src/pages/resources',
     endpoints: [
       {
         method: 'GET',
@@ -2327,7 +2207,7 @@ export const apiGroups: ApiGroup[] = [
         },
         notes: [
           'Серверная дата Europe/Moscow. Включить реальные новости и чаты вместо нынешней news=[].',
-          'Аккаунт без учебной роли получает lessons=[], а не 403. При совмещении ролей объединять свои пары без дублей. Счётчики чатов далее обновляются через WebSocket.',
+          'Администратор получает lessons=[], а не 403. Для student — пары группы, для teacher — пары нагрузки. Карточки чатов обновляются по событиям WebSocket; unread в текущей схеме нет.',
         ],
       },
       {
