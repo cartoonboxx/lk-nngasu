@@ -119,7 +119,7 @@ func grades(cs *courses.Service, as *assignments.Service) gin.HandlerFunc {
 		ctx, p := c.Request.Context(), middleware.Me(c)
 
 		// Для студента List сам ограничит курсы его группой.
-		list, err := cs.List(ctx, p, courses.CourseFilter{CurrentSemester: true})
+		list, _, err := cs.List(ctx, p, courses.CourseFilter{CurrentSemester: true, Limit: 200})
 		if err != nil {
 			httpx.Fail(c, err)
 			return

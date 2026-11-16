@@ -201,22 +201,36 @@ func (r *Repository) Create(ctx context.Context, in CreateUser, passwordHash str
 
 // referencesExist проверяет группу и кафедру заранее, чтобы ответить
 // 400 invalid_reference, а не общей ошибкой внешнего ключа.
-func referencesExist(ctx context.Context, tx pgx.Tx, st *StudentRole, te *TeacherRole) error {
-	var ok bool
+//
+// Новая связь — только с действующей (неархивной) группой или кафедрой.
+// Если у пользователя userID роль уже ссылается на эту группу или кафедру,
+// её можно оставить и после архивации (например, поменять только is_headman).
+// FOR SHARE не даёт заархивировать запись параллельно с этой транзакцией.
+func referencesExist(ctx context.Context, tx pgx.Tx, userID int64, st *StudentRole, te *TeacherRole) error {
+	var exists, usable bool
 	if st != nil {
-		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM study_group WHERE id = $1)`, st.GroupID).Scan(&ok); err != nil {
+		err := tx.QueryRow(ctx, `
+			SELECT true, NOT archived OR EXISTS (SELECT 1 FROM student WHERE user_id = $2 AND group_id = g.id)
+			FROM study_group g WHERE id = $1 FOR SHARE`, st.GroupID, userID).Scan(&exists, &usable)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return database.Translate(err)
 		}
-		if !ok {
-			return errBadReference.WithDetails(map[string]any{"fields": map[string][]string{"student.group_id": {"group does not exist"}}})
+		if !exists || !usable {
+			return errBadReference.WithDetails(map[string]any{"fields": map[string][]string{
+				"student.group_id": {"group does not exist or is archived"}}})
 		}
 	}
+	exists, usable = false, false
 	if te != nil {
-		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM department WHERE id = $1)`, te.DepartmentID).Scan(&ok); err != nil {
+		err := tx.QueryRow(ctx, `
+			SELECT true, NOT archived OR EXISTS (SELECT 1 FROM teacher WHERE user_id = $2 AND department_id = d.id)
+			FROM department d WHERE id = $1 FOR SHARE`, te.DepartmentID, userID).Scan(&exists, &usable)
+		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 			return database.Translate(err)
 		}
-		if !ok {
-			return errBadReference.WithDetails(map[string]any{"fields": map[string][]string{"teacher.department_id": {"department does not exist"}}})
+		if !exists || !usable {
+			return errBadReference.WithDetails(map[string]any{"fields": map[string][]string{
+				"teacher.department_id": {"department does not exist or is archived"}}})
 		}
 	}
 	return nil
@@ -227,7 +241,7 @@ func referencesExist(ctx context.Context, tx pgx.Tx, st *StudentRole, te *Teache
 // чтобы создать пользователя и закрыть заявку одной транзакцией.
 // Пароль приходит уже хешированным; пустая строка — пользователь приглашён.
 func createUserTx(ctx context.Context, tx pgx.Tx, in CreateUser, passwordHash string) (int64, error) {
-	if err := referencesExist(ctx, tx, in.Student, in.Teacher); err != nil {
+	if err := referencesExist(ctx, tx, 0, in.Student, in.Teacher); err != nil {
 		return 0, err
 	}
 	var id int64
@@ -343,7 +357,7 @@ func (r *Repository) AdminUpdate(ctx context.Context, id int64, in AdminUpdate) 
 		}
 
 		// 4. Роли: объект задаёт или заменяет роль, null снимает.
-		if err := referencesExist(ctx, tx, in.Student.Value, in.Teacher.Value); err != nil {
+		if err := referencesExist(ctx, tx, id, in.Student.Value, in.Teacher.Value); err != nil {
 			return err
 		}
 		switch {

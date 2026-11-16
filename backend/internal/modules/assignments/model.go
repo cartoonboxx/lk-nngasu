@@ -44,11 +44,11 @@ type Assignment struct {
 	CreatedBy   int64         `json:"created_by"`
 	Title       string        `json:"title"`
 	Description *string       `json:"description"`
-	DeadlineAt  *time.Time    `json:"deadline_at"`
+	DeadlineAt  *time.Time    `json:"deadline_at"` // обязателен при создании; null только у старых записей
 	PublishedAt time.Time     `json:"published_at"`
 	Files       []FileRef     `json:"files"`
-	Mine        *MySubmission `json:"mine,omitempty"`  // только для студента
-	Stats       *Stats        `json:"stats,omitempty"` // только для преподавателя и админа
+	Mine        *MySubmission `json:"mine"`  // свой статус студента; null для преподавателя и админа
+	Stats       *Stats        `json:"stats"` // агрегаты для преподавателя курса и админа; иначе null
 
 	// Submission — полный ответ студента (текст, файлы, комментарий преподавателя).
 	// Заполняется только в GET /assignments/:id для студента, если ответ уже есть;

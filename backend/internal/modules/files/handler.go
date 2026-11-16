@@ -159,7 +159,7 @@ func (h *Handler) Upload(c *gin.Context) {
 
 	// Сначала диск, потом БД. Если запись в БД не удалась — удаляем файл с диска,
 	// чтобы не оставлять файлов без записи.
-	id, err := h.repo.Insert(c.Request.Context(), key)
+	id, err := h.repo.Insert(c.Request.Context(), key, ft.mime, size)
 	if err != nil {
 		_ = h.storage.Remove(key)
 		httpx.Fail(c, err)

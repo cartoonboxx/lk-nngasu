@@ -85,9 +85,16 @@ func describe(fe validator.FieldError) string {
 		return "required"
 	case "email":
 		return "must be a valid email"
+	// Для строк min/max — длина, для чисел — значение.
 	case "min":
+		if isNumber(fe.Kind()) {
+			return "must be at least " + fe.Param()
+		}
 		return "must be at least " + fe.Param() + " characters"
 	case "max":
+		if isNumber(fe.Kind()) {
+			return "must be at most " + fe.Param()
+		}
 		return "must be at most " + fe.Param() + " characters"
 	case "oneof":
 		return "must be one of: " + strings.ReplaceAll(fe.Param(), " ", ", ")
@@ -96,4 +103,15 @@ func describe(fe validator.FieldError) string {
 	default:
 		return "invalid value"
 	}
+}
+
+// isNumber — числовое поле (для текста ошибок min/max).
+func isNumber(k reflect.Kind) bool {
+	switch k {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64:
+		return true
+	}
+	return false
 }

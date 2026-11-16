@@ -14,9 +14,9 @@ type Handler struct{ svc *Service }
 type assignmentRequest struct {
 	TopicID     int64     `json:"topic_id" binding:"required,gt=0"`
 	Title       string    `json:"title" binding:"required,max=255"`
-	Description *string   `json:"description"`
+	Description *string   `json:"description" binding:"omitempty,max=20000"`
 	DeadlineAt  time.Time `json:"deadline_at" binding:"required"`
-	FileIDs     []int64   `json:"file_ids" binding:"max=5,dive,gt=0"`
+	FileIDs     []int64   `json:"file_ids" binding:"max=10,dive,gt=0"` // до 10 файлов по контракту
 }
 
 func (r assignmentRequest) input() AssignmentInput {

@@ -71,7 +71,11 @@ func Run(ctx context.Context, cfg config.Config) error {
 	protected := v1.Group("", middleware.Auth(secret, authSvc))
 	checker := access.NewChecker(pool)
 
-	cal := schedule.NewCalendar(cfg.Location, cfg.WeekOneDate, cfg.LessonDuration)
+	bells := make([]schedule.Bell, 0, len(cfg.LessonBells))
+	for _, b := range cfg.LessonBells {
+		bells = append(bells, schedule.Bell{Start: b[0], End: b[1]})
+	}
+	cal := schedule.NewCalendar(cfg.Location, cfg.WeekOneDate, cfg.LessonDuration).WithBells(bells)
 
 	// Каждый модуль регистрируется ровно один раз: повторная регистрация
 	// тех же путей роняет gin при старте ("handlers are already registered").
@@ -80,13 +84,13 @@ func Run(ctx context.Context, cfg config.Config) error {
 	// content и assignments — раньше courses: courses получает от них загрузчик тем.
 	contentSvc := content.Register(protected, pool, checker, storage)
 	assignSvc := assignments.Register(protected, pool, checker, storage)
-	coursesSvc := courses.Register(protected, pool, checker, courseTopics(contentSvc, assignSvc))
+	coursesSvc := courses.Register(protected, pool, checker, courseTopics(contentSvc, assignSvc), int(cfg.LessonDuration.Minutes()))
 	schedule.Register(v1, protected, pool, cal)
 
 	// Остальные модули.
 	chat.Register(protected, pool, checker, storage)
 	files.Register(protected, pool, storage, cfg.MaxUploadBytes)
-	structure.Register(v1, protected, pool)                     // v1 — публичные списки кафедр и групп для регистрации
+	structure.Register(protected, pool)                         // v1 — публичные списки кафедр и групп для регистрации
 	users.Register(v1, protected, pool, checker, users.Options{ // v1 — POST /auth/register
 		TermsVersion:  cfg.TermsVersion,
 		Inviter:       authSvc, // создание пользователя без пароля → письмо

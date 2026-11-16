@@ -15,8 +15,10 @@ import (
 )
 
 var (
-	errForbidden   = apperr.NewForbidden("forbidden", "no access to this resource")
-	errInvalidFile = apperr.NewInvalid("invalid_file", "file does not exist or is not yours")
+	errForbidden = apperr.NewForbidden("forbidden", "no access to this resource")
+	// errCourseForbidden — нет доступа к курсу (403 course_forbidden по контракту).
+	errCourseForbidden = apperr.NewForbidden("course_forbidden", "no access to this course")
+	errInvalidFile     = apperr.NewInvalid("invalid_file", "file does not exist or is not yours")
 )
 
 type Checker struct{ db *pgxpool.Pool }
@@ -35,7 +37,7 @@ func (k *Checker) IsCourseTeacher(ctx context.Context, userID, courseID int64) (
 		courseID, userID)
 }
 
-// StudentOfCourse — студент учится в группе, у которой идёт этот курс.
+// StudentOfCourse: студент учится в группе этого курса.
 func (k *Checker) StudentOfCourse(ctx context.Context, studentID, courseID int64) (bool, error) {
 	return k.exists(ctx,
 		`SELECT EXISTS (SELECT 1 FROM course_offering c
@@ -44,39 +46,39 @@ func (k *Checker) StudentOfCourse(ctx context.Context, studentID, courseID int64
 		courseID, studentID)
 }
 
-// CourseView: админ, преподаватель курса или студент группы курса.
+// Права определяются возможностями пользователя, а не единственной ролью из токена:
+// студент-преподаватель видит и курсы своей группы, и курсы своей нагрузки.
+// Проверки идут по актуальным данным БД (строки student и workload).
+
+// CourseView: администратор, преподаватель курса или студент группы курса.
+// Нет доступа (или курса нет) — 403 course_forbidden.
 func (k *Checker) CourseView(ctx context.Context, p middleware.Principal, courseID int64) error {
 	if p.IsAdmin() {
 		return nil
 	}
-	var ok bool
-	var err error
-	if p.IsTeacher() {
-		ok, err = k.IsCourseTeacher(ctx, p.UserID, courseID)
-	} else {
-		ok, err = k.StudentOfCourse(ctx, p.UserID, courseID)
-	}
+	ok, err := k.exists(ctx, `
+		SELECT EXISTS (SELECT 1 FROM workload WHERE course_id = $1 AND teacher_id = $2)
+		    OR EXISTS (SELECT 1 FROM course_offering c JOIN student s ON s.group_id = c.group_id
+		               WHERE c.id = $1 AND s.user_id = $2)`, courseID, p.UserID)
 	if err != nil {
 		return err
 	}
 	if !ok {
-		return errForbidden
+		return errCourseForbidden
 	}
 	return nil
 }
 
-// CourseTeacher: только преподаватель этого курса. Нужен там, где в БД стоит FK на teacher
-// (created_by, reviewed_by) — администратор такие записи создавать не может.
+// CourseTeacher: пользователь ведёт этот курс (есть его нагрузка). Роль из токена
+// не важна: преподаватель, который ещё и студент, проходит проверку.
+// Нужна для оценивания: его выполняет только преподаватель курса, не администратор.
 func (k *Checker) CourseTeacher(ctx context.Context, p middleware.Principal, courseID int64) error {
-	if !p.IsTeacher() {
-		return errForbidden
-	}
 	ok, err := k.IsCourseTeacher(ctx, p.UserID, courseID)
 	if err != nil {
 		return err
 	}
 	if !ok {
-		return errForbidden
+		return errCourseForbidden
 	}
 	return nil
 }

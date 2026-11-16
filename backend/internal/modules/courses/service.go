@@ -22,16 +22,21 @@ func NewService(repo *Repository, checker *access.Checker, topics TopicsLoader) 
 	return &Service{repo: repo, access: checker, topics: topics}
 }
 
-// List возвращает курсы, видимые пользователю: студент — своей группы, преподаватель — где он ведёт,
-// админ — все.
-func (s *Service) List(ctx context.Context, p middleware.Principal, f CourseFilter) ([]Course, error) {
-	switch {
-	case p.IsStudent():
-		f.ForStudent = &p.UserID
-	case p.IsTeacher():
-		f.ForTeacher = &p.UserID
+// List возвращает курсы, видимые пользователю: администратору — все; остальным —
+// курсы своей группы и курсы своей нагрузки (роли объединяются, без дублей).
+func (s *Service) List(ctx context.Context, p middleware.Principal, f CourseFilter) ([]Course, int, error) {
+	if !p.IsAdmin() {
+		f.Viewer = &p.UserID
 	}
 	return s.repo.ListCourses(ctx, f)
+}
+
+// Workloads — нагрузка курса (тот же список, что CourseDetail.workloads).
+func (s *Service) Workloads(ctx context.Context, p middleware.Principal, courseID int64) ([]Workload, error) {
+	if err := s.access.CourseView(ctx, p, courseID); err != nil {
+		return nil, err
+	}
+	return s.repo.ListWorkloads(ctx, courseID)
 }
 
 func (s *Service) Get(ctx context.Context, p middleware.Principal, id int64) (CourseDetail, error) {
@@ -55,9 +60,10 @@ func (s *Service) Get(ctx context.Context, p middleware.Principal, id int64) (Co
 	return d, nil
 }
 
-// Students — состав курса; студентам список не отдаётся.
+// Students — состав группы курса: всем, у кого есть доступ к курсу.
+// Без документов, email и оценок — только CourseStudent.
 func (s *Service) Students(ctx context.Context, p middleware.Principal, courseID int64) ([]CourseStudent, error) {
-	if err := s.access.CourseManage(ctx, p, courseID); err != nil {
+	if err := s.access.CourseView(ctx, p, courseID); err != nil {
 		return nil, err
 	}
 	return s.repo.ListCourseStudents(ctx, courseID)

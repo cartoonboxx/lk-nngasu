@@ -1,37 +1,48 @@
 // Package structure владеет справочниками и оргструктурой вуза:
-// кафедры, направления, учебные группы, дисциплины, семестры, аудитории.
-// Бизнес-правил здесь почти нет, поэтому сервисного слоя нет: хендлеры ходят в репозиторий.
-// Появится логика — вынесите её в service.go.
+// кафедры, дисциплины, направления, учебные группы, семестры, аудитории.
+//
+// Все справочники можно архивировать: архивная запись остаётся в списках
+// (с archived = true), на неё продолжают ссылаться старые данные, но новые
+// связи (группа → направление, студент → группа, курс → дисциплина…) с ней
+// создать нельзя. Восстановления из архива пока нет.
 package structure
 
-// Named — запись справочника «id + название» (кафедры, дисциплины).
-// Общая модель для всех таких справочников, их обслуживает catalogHandlers.
+// ListQuery — общие параметры списков справочников.
+// Archived: false — только действующие (по умолчанию), true — только архив,
+// nil — оба состояния (include_archived=true).
+type ListQuery struct {
+	Q             string
+	Archived      *bool
+	Limit, Offset int
+}
+
+// Named — NamedCatalog: кафедра или дисциплина.
 type Named struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+	ID       int64  `json:"id"`
+	Name     string `json:"name"`
+	Archived bool   `json:"archived"`
 }
 
 // Specialization — направление подготовки.
 type Specialization struct {
-	ID   int64  `json:"id"`
-	Code string `json:"code"` // шифр направления по ФГОС, например «09.03.04»
-	Name string `json:"name"`
+	ID       int64  `json:"id"`
+	Name     string `json:"name"`
+	Code     string `json:"code"` // шифр по ФГОС, например «09.03.02»
+	Archived bool   `json:"archived"`
 }
 
-// Group — учебная группа в том виде, в каком отдаётся наружу.
+// Group — учебная группа. Название и код направления подтягиваются JOIN-ом.
 type Group struct {
-	ID               int64  `json:"id"`
-	Name             string `json:"name"` // например «ПРИ-23»
-	SpecializationID int64  `json:"specialization_id"`
-	// SpecializationName подтягивается JOIN-ом для отображения,
-	// в таблице группы не хранится.
+	ID                 int64  `json:"id"`
+	Name               string `json:"name"` // например «24-ИСТ-1»
+	Archived           bool   `json:"archived"`
+	SpecializationID   int64  `json:"specialization_id"`
 	SpecializationName string `json:"specialization_name"`
-	AdmissionYear      int    `json:"admission_year"` // год набора; курс вычисляется от него и текущего учебного года
+	SpecializationCode string `json:"specialization_code"`
+	AdmissionYear      int    `json:"admission_year"` // год набора, 2000–2100
 }
 
-// GroupInput — данные для создания и изменения группы.
-// Поля должны совпадать с groupRequest в handler.go один в один:
-// хендлеры конвертируют GroupInput(req) напрямую.
+// GroupInput — данные для создания и полной замены группы (GroupInput).
 type GroupInput struct {
 	Name             string
 	SpecializationID int64
@@ -40,24 +51,33 @@ type GroupInput struct {
 
 // GroupFilter — необязательные фильтры списка групп; nil — без фильтра.
 type GroupFilter struct {
+	ListQuery
 	SpecializationID *int64
-	AdmissionYear    *int64 // int64, а не int: так значение приходит из httpx.OptInt64
+	AdmissionYear    *int64
 }
 
-// Semester — семестр учебного года.
-// {AcademicYearStart: 2026, Number: 1} — осенний семестр 2026/27,
-// {2026, 2} — весенний семестр того же учебного года.
+// Semester — семестр учебного года (не номер семестра обучения студента).
+// {AcademicYearStart: 2026, Number: 1} — осенний семестр 2026/27.
 type Semester struct {
-	ID                int64 `json:"id"`
-	AcademicYearStart int   `json:"academic_year_start"` // год начала учебного года
-	Number            int   `json:"number"`              // 1 — осенний, 2 — весенний
-	// IsCurrent — семестр, отмеченный текущим; такой может быть только один.
-	// Меняется только через SetCurrentSemester, а не через обычное обновление.
+	ID                int64  `json:"id"`
+	Name              string `json:"name"` // например «2026/27 · Осенний»
+	Archived          bool   `json:"archived"`
+	AcademicYearStart int    `json:"academic_year_start"`
+	Number            int    `json:"number"` // 1 — осень, 2 — весна
+	// IsCurrent — не более одного текущего семестра; меняется отдельной командой.
 	IsCurrent bool `json:"is_current"`
 }
 
-// Room — аудитория. Номер строкой: бывают «301а», «Б-12», «спортзал».
+// SemesterInput — создание и полная замена семестра; флаг текущего здесь не меняется.
+type SemesterInput struct {
+	Name              string
+	AcademicYearStart int
+	Number            int
+}
+
+// Room — аудитория; name — обозначение, которое видят в справочнике и расписании.
 type Room struct {
-	ID     int64  `json:"id"`
-	Number string `json:"number"`
+	ID       int64  `json:"id"`
+	Name     string `json:"name"` // например «Корпус А, ауд. 302»
+	Archived bool   `json:"archived"`
 }

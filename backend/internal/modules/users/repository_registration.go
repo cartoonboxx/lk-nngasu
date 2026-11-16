@@ -14,7 +14,7 @@ import (
 var (
 	errRequestNotFound = apperr.NewNotFound("registration_request_not_found")
 	errRequestPending  = apperr.NewConflict("registration_exists", "a registration request with this email is already waiting for review")
-	errBadReference    = apperr.NewInvalid("invalid_reference", "group or department does not exist")
+	errBadReference    = apperr.NewInvalid("invalid_reference", "group or department does not exist or is archived")
 )
 
 // errAlreadyReviewed — 409 при повторном решении; в details — актуальное состояние заявки.

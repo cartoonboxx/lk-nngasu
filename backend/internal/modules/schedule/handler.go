@@ -1,8 +1,12 @@
 package schedule
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 
+	"university-api/internal/platform/apperr"
 	"university-api/internal/platform/httpx"
 	"university-api/internal/platform/middleware"
 )
@@ -19,8 +23,9 @@ type Handler struct{ svc *Service }
 type lessonRequest struct {
 	WeekNumber int    `json:"week_number" binding:"required,oneof=1 2"`   // 1 — верхняя, 2 — нижняя неделя
 	DayOfWeek  int    `json:"day_of_week" binding:"required,min=1,max=6"` // 1 — понедельник … 6 — суббота
-	StartsAt   string `json:"starts_at" binding:"required"`               // время начала пары, "08:30"
-	RoomID     int64  `json:"room_id" binding:"required"`
+	StartsAt   string `json:"starts_at" binding:"required"`               // начало пары по сетке звонков, "08:00"
+	EndsAt     string `json:"ends_at" binding:"required"`                 // конец той же пары, "09:30"
+	RoomID     int64  `json:"room_id" binding:"required,gt=0"`            // действующая аудитория
 }
 
 // createLessonRequest — тело POST /schedule/lessons.
@@ -29,13 +34,20 @@ type lessonRequest struct {
 // Встроенная структура раскрывается в JSON на верхний уровень,
 // её теги binding тоже проверяются.
 type createLessonRequest struct {
-	WorkloadID int64 `json:"workload_id" binding:"required"`
+	WorkloadID int64 `json:"workload_id" binding:"required,gt=0"`
 	lessonRequest
+}
+
+// conflictRequest — LessonConflictInput: проверка без записи.
+// lesson_id — редактируемое занятие, оно исключается из сравнения.
+type conflictRequest struct {
+	LessonID *int64 `json:"lesson_id" binding:"omitempty,gt=0"`
+	createLessonRequest
 }
 
 // input переводит тело запроса в тип сервиса.
 func (r lessonRequest) input() LessonInput {
-	return LessonInput{WeekNumber: r.WeekNumber, DayOfWeek: r.DayOfWeek, StartsAt: r.StartsAt, RoomID: r.RoomID}
+	return LessonInput{WeekNumber: r.WeekNumber, DayOfWeek: r.DayOfWeek, StartsAt: r.StartsAt, EndsAt: r.EndsAt, RoomID: r.RoomID}
 }
 
 // parseQuery читает временной срез: ?week=1|2 &day=1..6 либо ?from=YYYY-MM-DD&to=YYYY-MM-DD.
@@ -74,10 +86,55 @@ func parseQuery(c *gin.Context) (Query, bool) {
 	return q, true
 }
 
+// failQuery — 400 invalid_query с указанием параметра.
+func failQuery(c *gin.Context, name, problem string) {
+	httpx.Fail(c, apperr.NewInvalid("invalid_query", "invalid query parameters").
+		WithDetails(map[string]any{"fields": map[string][]string{name: {problem}}}))
+}
+
+// optID — необязательный id в query: положительное безопасное целое.
+func optID(c *gin.Context, name string) (*int64, bool) {
+	v, ok := httpx.OptInt64(c, name)
+	if !ok {
+		return nil, false
+	}
+	if v != nil && (*v <= 0 || *v > 1<<53-1) {
+		failQuery(c, name, "must be a positive integer")
+		return nil, false
+	}
+	return v, true
+}
+
+// parseRefQuery читает q, limit (1–200, по умолчанию 50) и offset (>= 0).
+func parseRefQuery(c *gin.Context) (RefQuery, bool) {
+	q := RefQuery{Q: strings.TrimSpace(c.Query("q")), Limit: 50}
+	if len([]rune(q.Q)) > 200 {
+		failQuery(c, "q", "must be at most 200 characters")
+		return q, false
+	}
+	if raw := c.Query("limit"); raw != "" {
+		v, err := strconv.Atoi(raw)
+		if err != nil || v < 1 || v > 200 {
+			failQuery(c, "limit", "must be an integer from 1 to 200")
+			return q, false
+		}
+		q.Limit = v
+	}
+	if raw := c.Query("offset"); raw != "" {
+		v, err := strconv.Atoi(raw)
+		if err != nil || v < 0 {
+			failQuery(c, "offset", "must be an integer >= 0")
+			return q, false
+		}
+		q.Offset = v
+	}
+	return q, true
+}
+
 // ---- публичный просмотр ----
 
 // Week сообщает, верхняя или нижняя неделя на заданную дату (по умолчанию сегодня).
-// Ошибки нет: ответ вычисляется календарём без обращения к БД.
+// Без WEEK_ONE_DATE — 409 academic_calendar_not_configured.
 //
 // GET /schedule/week?date=YYYY-MM-DD
 func (h *Handler) Week(c *gin.Context) {
@@ -85,24 +142,33 @@ func (h *Handler) Week(c *gin.Context) {
 	if !ok {
 		return
 	}
-	httpx.OK(c, h.svc.Week(date))
+	w, err := h.svc.Week(date)
+	httpx.Reply(c, w, err)
 }
 
-// Groups — список групп для выбора расписания на сайте. Публичный.
+// Groups — страница действующих групп для выбора расписания. Публичный.
 //
-// GET /schedule/groups
+// GET /schedule/groups?q=&limit=&offset=
 func (h *Handler) Groups(c *gin.Context) {
-	list, err := h.svc.Groups(c.Request.Context())
-	httpx.Reply(c, list, err)
+	q, ok := parseRefQuery(c)
+	if !ok {
+		return
+	}
+	list, total, err := h.svc.Groups(c.Request.Context(), q)
+	httpx.ReplyPage(c, list, httpx.Meta{Limit: q.Limit, Offset: q.Offset, Total: total}, err)
 }
 
-// Teachers — список преподавателей для выбора расписания на сайте. Публичный,
-// поэтому в ответе должны быть только данные, которые не страшно показать гостю.
+// Teachers — страница преподавателей для выбора расписания. Публичный,
+// поэтому в ответе только id, ФИО и кафедра.
 //
-// GET /schedule/teachers
+// GET /schedule/teachers?q=&limit=&offset=
 func (h *Handler) Teachers(c *gin.Context) {
-	list, err := h.svc.Teachers(c.Request.Context())
-	httpx.Reply(c, list, err)
+	q, ok := parseRefQuery(c)
+	if !ok {
+		return
+	}
+	list, total, err := h.svc.Teachers(c.Request.Context(), q)
+	httpx.ReplyPage(c, list, httpx.Meta{Limit: q.Limit, Offset: q.Offset, Total: total}, err)
 }
 
 // ByGroup — расписание группы.
@@ -113,7 +179,12 @@ func (h *Handler) ByGroup(c *gin.Context) {
 	if !ok {
 		return
 	}
-	h.list(c, LessonFilter{GroupID: &id})
+	f, q, ok := h.filterAndQuery(c)
+	if !ok {
+		return
+	}
+	list, err := h.svc.GroupLessons(c.Request.Context(), id, f, q)
+	httpx.Reply(c, list, err)
 }
 
 // ByTeacher — расписание преподавателя. Параметры те же, что у ByGroup.
@@ -124,18 +195,22 @@ func (h *Handler) ByTeacher(c *gin.Context) {
 	if !ok {
 		return
 	}
-	h.list(c, LessonFilter{TeacherID: &id})
+	f, q, ok := h.filterAndQuery(c)
+	if !ok {
+		return
+	}
+	list, err := h.svc.TeacherLessons(c.Request.Context(), id, f, q)
+	httpx.Reply(c, list, err)
 }
 
 // ---- личное расписание ----
 
 // Mine — расписание текущего пользователя: студенту — его группы,
-// преподавателю — его занятия. Кто есть кто, сервис решает по middleware.Me,
-// поэтому фильтр стартует пустым и группа/преподаватель в нём не задаются.
+// преподавателю — его занятия (по JWT). Параметры те же, что у ByGroup.
 //
 // GET /schedule/me?semester_id=&week=&day=&from=&to=
 func (h *Handler) Mine(c *gin.Context) {
-	f, q, ok := h.filterAndQuery(c, LessonFilter{})
+	f, q, ok := h.filterAndQuery(c)
 	if !ok {
 		return
 	}
@@ -143,14 +218,17 @@ func (h *Handler) Mine(c *gin.Context) {
 	httpx.Reply(c, list, err)
 }
 
-// Overview — страница расписания ЛК.
-// Без group_id — своё расписание (студенту — группы, преподавателю — его занятия),
-// с group_id — расписание любой группы. Всегда по датам: без date_from/date_to —
-// текущая неделя, с одной границей — неделя от неё.
+// Overview — календарная страница расписания ЛК.
+// Без group_id — своё расписание, с group_id — любой группы.
+// Всегда по датам: date_from и date_to вместе (до 62 дней), без них — текущая неделя Пн–Вс.
 //
-// GET /schedule?group_id=&date_from=YYYY-MM-DD&date_to=YYYY-MM-DD
+// GET /schedule?group_id=&semester_id=&date_from=YYYY-MM-DD&date_to=YYYY-MM-DD
 func (h *Handler) Overview(c *gin.Context) {
-	groupID, ok := httpx.OptInt64(c, "group_id")
+	groupID, ok := optID(c, "group_id")
+	if !ok {
+		return
+	}
+	semID, ok := optID(c, "semester_id")
 	if !ok {
 		return
 	}
@@ -162,42 +240,55 @@ func (h *Handler) Overview(c *gin.Context) {
 	if !ok {
 		return
 	}
-	from, to = h.svc.WeekRange(from, to)
-	q := Query{From: from, To: to}
-
-	// Чужую группу — тем же путём, что публичный ByGroup; своё — через Mine (по JWT).
-	if groupID != nil {
-		list, err := h.svc.Lessons(c.Request.Context(), LessonFilter{GroupID: groupID}, q)
-		httpx.Reply(c, list, err)
-		return
-	}
-	list, err := h.svc.Mine(c.Request.Context(), middleware.Me(c), LessonFilter{}, q)
+	list, err := h.svc.Overview(c.Request.Context(), middleware.Me(c), groupID, semID, from, to)
 	httpx.Reply(c, list, err)
 }
 
-// list — общий хвост ByGroup и ByTeacher: дочитать параметры и отдать занятия.
-func (h *Handler) list(c *gin.Context, base LessonFilter) {
-	f, q, ok := h.filterAndQuery(c, base)
+// filterAndQuery читает semester_id (без него — текущий семестр) и временной срез.
+func (h *Handler) filterAndQuery(c *gin.Context) (LessonFilter, Query, bool) {
+	sem, ok := optID(c, "semester_id")
 	if !ok {
-		return
+		return LessonFilter{}, Query{}, false
 	}
-	list, err := h.svc.Lessons(c.Request.Context(), f, q)
-	httpx.Reply(c, list, err)
-}
-
-// filterAndQuery дополняет базовый фильтр семестром (semester_id; если не задан,
-// выбор семестра остаётся за сервисом) и читает временной срез.
-func (h *Handler) filterAndQuery(c *gin.Context, f LessonFilter) (LessonFilter, Query, bool) {
-	sem, ok := httpx.OptInt64(c, "semester_id")
-	if !ok {
-		return f, Query{}, false
-	}
-	f.SemesterID = sem
 	q, ok := parseQuery(c)
-	return f, q, ok
+	return LessonFilter{SemesterID: sem}, q, ok
 }
 
 // ---- управление расписанием (администратор) ----
+
+// Lessons — шаблон семестра для административного редактора: массив без пагинации.
+// semester_id обязателен; week, group_id, teacher_id, room_id — фильтры через AND.
+//
+// GET /schedule/lessons?semester_id=&week=&group_id=&teacher_id=&room_id=
+func (h *Handler) Lessons(c *gin.Context) {
+	var f LessonFilter
+	ids := []struct {
+		name string
+		dst  **int64
+	}{{"semester_id", &f.SemesterID}, {"group_id", &f.GroupID}, {"teacher_id", &f.TeacherID}, {"room_id", &f.RoomID}}
+	for _, p := range ids {
+		v, ok := optID(c, p.name)
+		if !ok {
+			return
+		}
+		*p.dst = v
+	}
+	if f.SemesterID == nil {
+		failQuery(c, "semester_id", "is required")
+		return
+	}
+	week, ok := httpx.OptInt64(c, "week")
+	if !ok {
+		return
+	}
+	var w *int
+	if week != nil {
+		v := int(*week)
+		w = &v
+	}
+	list, err := h.svc.Editor(c.Request.Context(), f, w)
+	httpx.Reply(c, list, err)
+}
 
 // CreateLesson ставит занятие из строки нагрузки в сетку расписания.
 //
@@ -227,6 +318,20 @@ func (h *Handler) UpdateLesson(c *gin.Context) {
 	}
 	l, err := h.svc.Update(c.Request.Context(), id, req.input())
 	httpx.Reply(c, l, err)
+}
+
+// CheckConflicts — предварительная проверка пересечений без записи.
+// Ответ — {data: ScheduleConflict[]}, пустой массив — пересечений нет.
+// Окончательная проверка всё равно выполняется при сохранении (409 schedule_conflict).
+//
+// POST /schedule/lessons/conflicts
+func (h *Handler) CheckConflicts(c *gin.Context) {
+	var req conflictRequest
+	if !httpx.Bind(c, &req) {
+		return
+	}
+	list, err := h.svc.Conflicts(c.Request.Context(), req.WorkloadID, req.input(), req.LessonID)
+	httpx.Reply(c, list, err)
 }
 
 // DeleteLesson удаляет занятие из расписания.

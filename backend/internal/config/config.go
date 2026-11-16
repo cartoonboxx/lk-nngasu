@@ -26,8 +26,11 @@ type Config struct {
 	SMTP           SMTP     // отправка писем; пустой Host — ссылки пишутся в лог сервера
 
 	Location       *time.Location // часовой пояс вуза
-	WeekOneDate    time.Time      // любая дата первой (верхней) недели; нулевая — чётность по ISO-неделям
-	LessonDuration time.Duration  // длительность пары (в БД хранится только время начала)
+	WeekOneDate    time.Time      // любая дата первой (верхней) недели; нулевая — календарь не настроен (409)
+	LessonDuration time.Duration  // длительность пары: для расчёта часов нагрузки и старых записей
+	// LessonBells — сетка звонков из LESSON_BELLS ("08:00-09:30,09:45-11:15,…"):
+	// занятие можно поставить только на одну из этих пар. Пусто — не проверяется.
+	LessonBells [][2]string
 }
 
 // SMTP — почтовый сервер для писем-приглашений (порт 587, STARTTLS).
@@ -93,6 +96,20 @@ func Load() (Config, error) {
 		return Config{}, errors.New("LESSON_MINUTES must be between 1 and 600")
 	}
 	cfg.LessonDuration = time.Duration(mins) * time.Minute
+	if raw := strings.TrimSpace(os.Getenv("LESSON_BELLS")); raw != "" {
+		for _, pair := range strings.Split(raw, ",") {
+			se := strings.Split(strings.TrimSpace(pair), "-")
+			if len(se) != 2 {
+				return Config{}, errors.New("LESSON_BELLS must look like 08:00-09:30,09:45-11:15")
+			}
+			start, err1 := time.Parse("15:04", strings.TrimSpace(se[0]))
+			end, err2 := time.Parse("15:04", strings.TrimSpace(se[1]))
+			if err1 != nil || err2 != nil || !end.After(start) {
+				return Config{}, errors.New("LESSON_BELLS: bad pair " + pair)
+			}
+			cfg.LessonBells = append(cfg.LessonBells, [2]string{start.Format("15:04"), end.Format("15:04")})
+		}
+	}
 	return cfg, nil
 }
 

@@ -1,88 +1,211 @@
 package structure
 
 import (
+	"strconv"
+	"strings"
+	"unicode/utf8"
+
 	"github.com/gin-gonic/gin"
 
+	"university-api/internal/platform/apperr"
 	"university-api/internal/platform/httpx"
 )
 
 // Handler — HTTP-слой справочников. Сервисного слоя нет: правила простые
-// (уникальность, ссылочная целостность) и обеспечиваются ограничениями БД,
-// поэтому хендлеры вызывают репозиторий напрямую.
+// (уникальность, ссылочная целостность, архив) и обеспечиваются БД и репозиторием.
 // Права доступа (правка — только admin) навешиваются в Register.
 type Handler struct{ repo *Repository }
 
 // --- Тела запросов ---
 //
-// Все изменения через PUT: клиент присылает объект целиком,
-// поэтому поля здесь обычные значения, а не указатели.
+// Создание — POST, полная замена — PUT, архивирование — PATCH с {"archived": true}.
+// Длины названий проверяются после trim в normText: тег max считал бы и пробелы.
 
-// nameRequest — тело создания и переименования для справочников «id + название»
-// (кафедры, дисциплины).
-type nameRequest struct {
-	Name string `json:"name" binding:"required,max=150"`
+// namedBody — NamedInput: кафедра или дисциплина.
+type namedBody struct {
+	Name string `json:"name" binding:"required"`
 }
 
-// specializationRequest — специальность: шифр направления
-// (например, «09.03.04») и название.
-type specializationRequest struct {
-	Code string `json:"code" binding:"required,max=20"`
-	Name string `json:"name" binding:"required,max=200"`
+// specializationBody — SpecializationInput.
+type specializationBody struct {
+	Name string `json:"name" binding:"required"`
+	Code string `json:"code" binding:"required"`
 }
 
-// groupRequest — учебная группа.
-// Поля должны совпадать с GroupInput один в один: хендлеры конвертируют
-// GroupInput(req) напрямую, и при расхождении код не скомпилируется.
-type groupRequest struct {
-	Name             string `json:"name" binding:"required,max=50"`
-	SpecializationID int64  `json:"specialization_id" binding:"required"`
-	AdmissionYear    int    `json:"admission_year" binding:"required,min=2000,max=2100"` // год набора
+// groupBody — GroupInput.
+type groupBody struct {
+	Name             string `json:"name" binding:"required"`
+	SpecializationID int64  `json:"specialization_id" binding:"required,gt=0"`
+	AdmissionYear    int    `json:"admission_year" binding:"required,min=2000,max=2100"`
 }
 
-// semesterRequest — семестр задаётся учебным годом и номером в нём:
-// {2026, 1} — осенний семестр 2026/27, {2026, 2} — весенний.
-type semesterRequest struct {
-	AcademicYearStart int `json:"academic_year_start" binding:"required,min=2000,max=2100"` // год начала учебного года
-	Number            int `json:"number" binding:"required,oneof=1 2"`
+// semesterBody — SemesterInput. is_current меняется отдельной командой.
+type semesterBody struct {
+	Name              string `json:"name" binding:"required"`
+	AcademicYearStart int    `json:"academic_year_start" binding:"required,min=2000,max=2100"`
+	Number            int    `json:"number" binding:"required,oneof=1 2"`
 }
 
-// roomRequest — аудитория. Номер строкой: бывают «301а», «Б-12», «спортзал».
-type roomRequest struct {
-	Number string `json:"number" binding:"required,max=30"`
+// roomBody — аудитория: обозначение, которое видят в расписании.
+type roomBody struct {
+	Name string `json:"name" binding:"required"`
 }
 
-// catalogHandlers строит четыре хендлера для справочника «id + название».
-// Хендлеры замыкаются на cat, так что один код обслуживает любую таблицу
-// такого вида (см. registerCatalog).
-func catalogHandlers(cat catalog) (list, create, update, remove gin.HandlerFunc) {
-	// GET path?q= — список; q — необязательный поиск по названию.
-	list = func(c *gin.Context) {
-		items, err := cat.list(c.Request.Context(), c.Query("q"))
-		httpx.Reply(c, items, err)
+// archiveBody — ArchiveInput. Допустимо только true: восстановления пока нет.
+type archiveBody struct {
+	Archived *bool `json:"archived" binding:"required"`
+}
+
+// normText обрезает пробелы и проверяет длину 1–max символов.
+func normText(field, s string, max int) (string, error) {
+	s = strings.TrimSpace(s)
+	if s == "" || utf8.RuneCountInString(s) > max {
+		return "", apperr.NewInvalid("invalid_request", "request body is invalid").
+			WithDetails(map[string]any{"fields": map[string][]string{field: {"must be 1-" + strconv.Itoa(max) + " characters after trim"}}})
 	}
-	// POST path — создать, ответ 201 с созданной записью.
-	create = func(c *gin.Context) {
-		var req nameRequest
-		if !httpx.Bind(c, &req) {
-			return // ответ с ошибкой валидации уже отправлен в Bind
+	return s, nil
+}
+
+// failQuery — 400 invalid_query с указанием параметра.
+func failQuery(c *gin.Context, name, problem string) {
+	httpx.Fail(c, apperr.NewInvalid("invalid_query", "invalid query parameters").
+		WithDetails(map[string]any{"fields": map[string][]string{name: {problem}}}))
+}
+
+// optBool читает "true"/"false"; пусто — nil. Другое значение — 400.
+func optBool(c *gin.Context, name string) (*bool, bool) {
+	switch c.Query(name) {
+	case "":
+		return nil, true
+	case "true":
+		v := true
+		return &v, true
+	case "false":
+		v := false
+		return &v, true
+	}
+	failQuery(c, name, "must be true or false")
+	return nil, false
+}
+
+// parseList читает общие параметры списков: q, archived, include_archived, limit, offset.
+//
+// По умолчанию — только действующие записи. archived=true — только архив,
+// include_archived=true — оба состояния; сочетать archived и include_archived нельзя.
+func parseList(c *gin.Context) (ListQuery, bool) {
+	lq := ListQuery{Q: strings.TrimSpace(c.Query("q")), Limit: 50}
+	archived, ok := optBool(c, "archived")
+	if !ok {
+		return lq, false
+	}
+	include, ok := optBool(c, "include_archived")
+	if !ok {
+		return lq, false
+	}
+	switch {
+	case archived != nil && include != nil:
+		failQuery(c, "include_archived", "cannot be combined with archived")
+		return lq, false
+	case include != nil && *include:
+		lq.Archived = nil // оба состояния
+	case archived != nil:
+		lq.Archived = archived
+	default:
+		f := false
+		lq.Archived = &f
+	}
+	if raw := c.Query("limit"); raw != "" {
+		v, err := strconv.Atoi(raw)
+		if err != nil || v < 1 || v > 200 {
+			failQuery(c, "limit", "must be an integer from 1 to 200")
+			return lq, false
 		}
-		n, err := cat.create(c.Request.Context(), req.Name)
+		lq.Limit = v
+	}
+	if raw := c.Query("offset"); raw != "" {
+		v, err := strconv.Atoi(raw)
+		if err != nil || v < 0 {
+			failQuery(c, "offset", "must be an integer >= 0")
+			return lq, false
+		}
+		lq.Offset = v
+	}
+	return lq, true
+}
+
+// replyPage — ответ Page<T> с meta по ListQuery.
+func replyPage[T any](c *gin.Context, list []T, total int, lq ListQuery, err error) {
+	httpx.ReplyPage(c, list, httpx.Meta{Limit: lq.Limit, Offset: lq.Offset, Total: total}, err)
+}
+
+// bindArchive разбирает ArchiveInput; false — 400 (восстановление не поддерживается).
+func bindArchive(c *gin.Context) bool {
+	var req archiveBody
+	if !httpx.Bind(c, &req) {
+		return false
+	}
+	if !*req.Archived {
+		httpx.Fail(c, apperr.NewInvalid("invalid_request", "request body is invalid").
+			WithDetails(map[string]any{"fields": map[string][]string{"archived": {"only true is supported: restoring is not available"}}}))
+		return false
+	}
+	return true
+}
+
+// catalogHandlers строит хендлеры для справочника «id + название + archived».
+// Хендлеры замыкаются на cat, так что один код обслуживает любую таблицу такого вида.
+func catalogHandlers(cat catalog) (list, create, update, arch, remove gin.HandlerFunc) {
+	// GET path?q=&archived=&include_archived=&limit=&offset= — страница NamedCatalog.
+	list = func(c *gin.Context) {
+		lq, ok := parseList(c)
+		if !ok {
+			return
+		}
+		items, total, err := cat.list(c.Request.Context(), lq)
+		replyPage(c, items, total, lq, err)
+	}
+	// POST path — создать (201).
+	create = func(c *gin.Context) {
+		var req namedBody
+		if !httpx.Bind(c, &req) {
+			return
+		}
+		name, err := normText("name", req.Name, 200)
+		if err != nil {
+			httpx.Fail(c, err)
+			return
+		}
+		n, err := cat.create(c.Request.Context(), name)
 		httpx.ReplyCreated(c, n, err)
 	}
-	// PUT path/:id — переименовать.
+	// PUT path/:id — полная замена (переименование).
 	update = func(c *gin.Context) {
 		id, ok := httpx.ID(c, "id")
 		if !ok {
 			return
 		}
-		var req nameRequest
+		var req namedBody
 		if !httpx.Bind(c, &req) {
 			return
 		}
-		n, err := cat.update(c.Request.Context(), id, req.Name)
+		name, err := normText("name", req.Name, 200)
+		if err != nil {
+			httpx.Fail(c, err)
+			return
+		}
+		n, err := cat.update(c.Request.Context(), id, name)
 		httpx.Reply(c, n, err)
 	}
-	// DELETE path/:id — удалить, ответ без тела.
+	// PATCH path/:id {"archived": true} — в архив.
+	arch = func(c *gin.Context) {
+		id, ok := httpx.ID(c, "id")
+		if !ok || !bindArchive(c) {
+			return
+		}
+		n, err := cat.archive(c.Request.Context(), id)
+		httpx.Reply(c, n, err)
+	}
+	// DELETE path/:id — удалить (204); используемую запись не удалить.
 	remove = func(c *gin.Context) {
 		id, ok := httpx.ID(c, "id")
 		if !ok {
@@ -95,47 +218,62 @@ func catalogHandlers(cat catalog) (list, create, update, remove gin.HandlerFunc)
 
 // ---- specializations ----
 
-// ListSpecializations возвращает все специальности, без фильтров и пагинации:
-// справочник небольшой.
-//
-// GET /specializations
 func (h *Handler) ListSpecializations(c *gin.Context) {
-	list, err := h.repo.ListSpecializations(c.Request.Context())
-	httpx.Reply(c, list, err)
-}
-
-// CreateSpecialization создаёт специальность.
-//
-// POST /specializations
-func (h *Handler) CreateSpecialization(c *gin.Context) {
-	var req specializationRequest
-	if !httpx.Bind(c, &req) {
+	lq, ok := parseList(c)
+	if !ok {
 		return
 	}
-	s, err := h.repo.CreateSpecialization(c.Request.Context(), req.Code, req.Name)
+	list, total, err := h.repo.ListSpecializations(c.Request.Context(), lq)
+	replyPage(c, list, total, lq, err)
+}
+
+func (h *Handler) bindSpecialization(c *gin.Context) (code, name string, ok bool) {
+	var req specializationBody
+	if !httpx.Bind(c, &req) {
+		return "", "", false
+	}
+	var err error
+	if name, err = normText("name", req.Name, 200); err == nil {
+		code, err = normText("code", req.Code, 20)
+	}
+	if err != nil {
+		httpx.Fail(c, err)
+		return "", "", false
+	}
+	return code, name, true
+}
+
+func (h *Handler) CreateSpecialization(c *gin.Context) {
+	code, name, ok := h.bindSpecialization(c)
+	if !ok {
+		return
+	}
+	s, err := h.repo.CreateSpecialization(c.Request.Context(), code, name)
 	httpx.ReplyCreated(c, s, err)
 }
 
-// UpdateSpecialization заменяет шифр и название специальности.
-//
-// PUT /specializations/:id
 func (h *Handler) UpdateSpecialization(c *gin.Context) {
 	id, ok := httpx.ID(c, "id")
 	if !ok {
 		return
 	}
-	var req specializationRequest
-	if !httpx.Bind(c, &req) {
+	code, name, ok := h.bindSpecialization(c)
+	if !ok {
 		return
 	}
-	s, err := h.repo.UpdateSpecialization(c.Request.Context(), id, req.Code, req.Name)
+	s, err := h.repo.UpdateSpecialization(c.Request.Context(), id, code, name)
 	httpx.Reply(c, s, err)
 }
 
-// DeleteSpecialization удаляет специальность. Если на неё ссылаются группы,
-// удаление упрётся во внешний ключ.
-//
-// DELETE /specializations/:id
+func (h *Handler) ArchiveSpecialization(c *gin.Context) {
+	id, ok := httpx.ID(c, "id")
+	if !ok || !bindArchive(c) {
+		return
+	}
+	s, err := h.repo.ArchiveSpecialization(c.Request.Context(), id)
+	httpx.Reply(c, s, err)
+}
+
 func (h *Handler) DeleteSpecialization(c *gin.Context) {
 	id, ok := httpx.ID(c, "id")
 	if !ok {
@@ -146,11 +284,14 @@ func (h *Handler) DeleteSpecialization(c *gin.Context) {
 
 // ---- groups ----
 
-// ListGroups возвращает группы с необязательными фильтрами
-// по специальности и году набора.
+// ListGroups — страница групп (по умолчанию только действующие).
 //
-// GET /groups?specialization_id=&admission_year=
+// GET /groups?q=&archived=&include_archived=&specialization_id=&admission_year=&limit=&offset=
 func (h *Handler) ListGroups(c *gin.Context) {
+	lq, ok := parseList(c)
+	if !ok {
+		return
+	}
 	spec, ok := httpx.OptInt64(c, "specialization_id")
 	if !ok {
 		return
@@ -159,13 +300,10 @@ func (h *Handler) ListGroups(c *gin.Context) {
 	if !ok {
 		return
 	}
-	list, err := h.repo.ListGroups(c.Request.Context(), GroupFilter{SpecializationID: spec, AdmissionYear: year})
-	httpx.Reply(c, list, err)
+	list, total, err := h.repo.ListGroups(c.Request.Context(), GroupFilter{ListQuery: lq, SpecializationID: spec, AdmissionYear: year})
+	replyPage(c, list, total, lq, err)
 }
 
-// GetGroup возвращает группу по id.
-//
-// GET /groups/:id
 func (h *Handler) GetGroup(c *gin.Context) {
 	id, ok := httpx.ID(c, "id")
 	if !ok {
@@ -175,16 +313,26 @@ func (h *Handler) GetGroup(c *gin.Context) {
 	httpx.Reply(c, g, err)
 }
 
-// CreateGroup создаёт группу и возвращает её перечитанной через GetGroup,
-// чтобы в ответе были вычисляемые поля (например, название специальности).
-//
-// POST /groups
-func (h *Handler) CreateGroup(c *gin.Context) {
-	var req groupRequest
+func bindGroup(c *gin.Context) (GroupInput, bool) {
+	var req groupBody
 	if !httpx.Bind(c, &req) {
+		return GroupInput{}, false
+	}
+	name, err := normText("name", req.Name, 200)
+	if err != nil {
+		httpx.Fail(c, err)
+		return GroupInput{}, false
+	}
+	return GroupInput{Name: name, SpecializationID: req.SpecializationID, AdmissionYear: req.AdmissionYear}, true
+}
+
+// CreateGroup — направление должно быть действующим (иначе 400 invalid_reference).
+func (h *Handler) CreateGroup(c *gin.Context) {
+	in, ok := bindGroup(c)
+	if !ok {
 		return
 	}
-	id, err := h.repo.CreateGroup(c.Request.Context(), GroupInput(req))
+	id, err := h.repo.CreateGroup(c.Request.Context(), in)
 	if err != nil {
 		httpx.Fail(c, err)
 		return
@@ -193,19 +341,17 @@ func (h *Handler) CreateGroup(c *gin.Context) {
 	httpx.ReplyCreated(c, g, err)
 }
 
-// UpdateGroup заменяет данные группы и возвращает её перечитанной.
-//
-// PUT /groups/:id
+// UpdateGroup — полная замена; оставить прежнее направление можно, даже если оно в архиве.
 func (h *Handler) UpdateGroup(c *gin.Context) {
 	id, ok := httpx.ID(c, "id")
 	if !ok {
 		return
 	}
-	var req groupRequest
-	if !httpx.Bind(c, &req) {
+	in, ok := bindGroup(c)
+	if !ok {
 		return
 	}
-	if err := h.repo.UpdateGroup(c.Request.Context(), id, GroupInput(req)); err != nil {
+	if err := h.repo.UpdateGroup(c.Request.Context(), id, in); err != nil {
 		httpx.Fail(c, err)
 		return
 	}
@@ -213,10 +359,15 @@ func (h *Handler) UpdateGroup(c *gin.Context) {
 	httpx.Reply(c, g, err)
 }
 
-// DeleteGroup удаляет группу. Если в группе есть студенты,
-// удаление упрётся во внешний ключ.
-//
-// DELETE /groups/:id
+func (h *Handler) ArchiveGroup(c *gin.Context) {
+	id, ok := httpx.ID(c, "id")
+	if !ok || !bindArchive(c) {
+		return
+	}
+	g, err := h.repo.ArchiveGroup(c.Request.Context(), id)
+	httpx.Reply(c, g, err)
+}
+
 func (h *Handler) DeleteGroup(c *gin.Context) {
 	id, ok := httpx.ID(c, "id")
 	if !ok {
@@ -227,33 +378,39 @@ func (h *Handler) DeleteGroup(c *gin.Context) {
 
 // ---- semesters ----
 
-// ListSemesters возвращает все семестры.
-//
-// GET /semesters
 func (h *Handler) ListSemesters(c *gin.Context) {
-	list, err := h.repo.ListSemesters(c.Request.Context())
-	httpx.Reply(c, list, err)
+	lq, ok := parseList(c)
+	if !ok {
+		return
+	}
+	list, total, err := h.repo.ListSemesters(c.Request.Context(), lq)
+	replyPage(c, list, total, lq, err)
 }
 
-// CurrentSemester возвращает семестр, отмеченный текущим.
-// Если текущий не выбран — «не найдено».
-//
-// GET /semesters/current
 func (h *Handler) CurrentSemester(c *gin.Context) {
 	s, err := h.repo.CurrentSemester(c.Request.Context())
 	httpx.Reply(c, s, err)
 }
 
-// CreateSemester создаёт семестр (текущим он не становится)
-// и возвращает его перечитанным.
-//
-// POST /semesters
-func (h *Handler) CreateSemester(c *gin.Context) {
-	var req semesterRequest
+func bindSemester(c *gin.Context) (SemesterInput, bool) {
+	var req semesterBody
 	if !httpx.Bind(c, &req) {
+		return SemesterInput{}, false
+	}
+	name, err := normText("name", req.Name, 200)
+	if err != nil {
+		httpx.Fail(c, err)
+		return SemesterInput{}, false
+	}
+	return SemesterInput{Name: name, AcademicYearStart: req.AcademicYearStart, Number: req.Number}, true
+}
+
+func (h *Handler) CreateSemester(c *gin.Context) {
+	in, ok := bindSemester(c)
+	if !ok {
 		return
 	}
-	id, err := h.repo.CreateSemester(c.Request.Context(), req.AcademicYearStart, req.Number)
+	id, err := h.repo.CreateSemester(c.Request.Context(), in)
 	if err != nil {
 		httpx.Fail(c, err)
 		return
@@ -262,20 +419,16 @@ func (h *Handler) CreateSemester(c *gin.Context) {
 	httpx.ReplyCreated(c, s, err)
 }
 
-// UpdateSemester меняет учебный год и номер семестра.
-// Признак «текущий» здесь не меняется, для этого есть SetCurrentSemester.
-//
-// PUT /semesters/:id
 func (h *Handler) UpdateSemester(c *gin.Context) {
 	id, ok := httpx.ID(c, "id")
 	if !ok {
 		return
 	}
-	var req semesterRequest
-	if !httpx.Bind(c, &req) {
+	in, ok := bindSemester(c)
+	if !ok {
 		return
 	}
-	if err := h.repo.UpdateSemester(c.Request.Context(), id, req.AcademicYearStart, req.Number); err != nil {
+	if err := h.repo.UpdateSemester(c.Request.Context(), id, in); err != nil {
 		httpx.Fail(c, err)
 		return
 	}
@@ -283,10 +436,17 @@ func (h *Handler) UpdateSemester(c *gin.Context) {
 	httpx.Reply(c, s, err)
 }
 
-// SetCurrentSemester делает семестр текущим; с прежнего текущего флаг снимается.
-// Тела запроса нет, в ответе — обновлённый семестр.
-//
-// POST /semesters/:id/current
+// ArchiveSemester — текущий семестр архивировать нельзя (409 current_semester_in_use).
+func (h *Handler) ArchiveSemester(c *gin.Context) {
+	id, ok := httpx.ID(c, "id")
+	if !ok || !bindArchive(c) {
+		return
+	}
+	s, err := h.repo.ArchiveSemester(c.Request.Context(), id)
+	httpx.Reply(c, s, err)
+}
+
+// SetCurrentSemester — отдельная команда: снять флаг с прежнего и поставить на новый атомарно.
 func (h *Handler) SetCurrentSemester(c *gin.Context) {
 	id, ok := httpx.ID(c, "id")
 	if !ok {
@@ -300,10 +460,6 @@ func (h *Handler) SetCurrentSemester(c *gin.Context) {
 	httpx.Reply(c, s, err)
 }
 
-// DeleteSemester удаляет семестр. Если удалить текущий,
-// GET /semesters/current начнёт отвечать «не найдено».
-//
-// DELETE /semesters/:id
 func (h *Handler) DeleteSemester(c *gin.Context) {
 	id, ok := httpx.ID(c, "id")
 	if !ok {
@@ -314,45 +470,59 @@ func (h *Handler) DeleteSemester(c *gin.Context) {
 
 // ---- rooms ----
 
-// ListRooms возвращает все аудитории.
-//
-// GET /rooms
 func (h *Handler) ListRooms(c *gin.Context) {
-	list, err := h.repo.ListRooms(c.Request.Context())
-	httpx.Reply(c, list, err)
-}
-
-// CreateRoom создаёт аудиторию.
-//
-// POST /rooms
-func (h *Handler) CreateRoom(c *gin.Context) {
-	var req roomRequest
-	if !httpx.Bind(c, &req) {
+	lq, ok := parseList(c)
+	if !ok {
 		return
 	}
-	rm, err := h.repo.CreateRoom(c.Request.Context(), req.Number)
+	list, total, err := h.repo.ListRooms(c.Request.Context(), lq)
+	replyPage(c, list, total, lq, err)
+}
+
+func bindRoom(c *gin.Context) (string, bool) {
+	var req roomBody
+	if !httpx.Bind(c, &req) {
+		return "", false
+	}
+	name, err := normText("name", req.Name, 200)
+	if err != nil {
+		httpx.Fail(c, err)
+		return "", false
+	}
+	return name, true
+}
+
+func (h *Handler) CreateRoom(c *gin.Context) {
+	name, ok := bindRoom(c)
+	if !ok {
+		return
+	}
+	rm, err := h.repo.CreateRoom(c.Request.Context(), name)
 	httpx.ReplyCreated(c, rm, err)
 }
 
-// UpdateRoom меняет номер аудитории.
-//
-// PUT /rooms/:id
 func (h *Handler) UpdateRoom(c *gin.Context) {
 	id, ok := httpx.ID(c, "id")
 	if !ok {
 		return
 	}
-	var req roomRequest
-	if !httpx.Bind(c, &req) {
+	name, ok := bindRoom(c)
+	if !ok {
 		return
 	}
-	rm, err := h.repo.UpdateRoom(c.Request.Context(), id, req.Number)
+	rm, err := h.repo.UpdateRoom(c.Request.Context(), id, name)
 	httpx.Reply(c, rm, err)
 }
 
-// DeleteRoom удаляет аудиторию.
-//
-// DELETE /rooms/:id
+func (h *Handler) ArchiveRoom(c *gin.Context) {
+	id, ok := httpx.ID(c, "id")
+	if !ok || !bindArchive(c) {
+		return
+	}
+	rm, err := h.repo.ArchiveRoom(c.Request.Context(), id)
+	httpx.Reply(c, rm, err)
+}
+
 func (h *Handler) DeleteRoom(c *gin.Context) {
 	id, ok := httpx.ID(c, "id")
 	if !ok {

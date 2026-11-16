@@ -20,8 +20,8 @@ type Handler struct{ svc *Service }
 // Position не указан — тема встаёт в конец списка (при обновлении — остаётся на месте).
 type topicRequest struct {
 	Title       string  `json:"title" binding:"required,max=200"`
-	Description *string `json:"description"`
-	Position    *int    `json:"position" binding:"omitempty,min=1"` // позиция в списке, с 1
+	Description *string `json:"description" binding:"omitempty,max=20000"` // при PUT отсутствие или null очищает
+	Position    *int    `json:"position" binding:"omitempty,min=1"`        // с 1; при создании по умолчанию в конец, при PUT отсутствие сохраняет порядок
 }
 
 // materialRequest — тело запроса на создание и изменение материала.
