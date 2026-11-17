@@ -4,6 +4,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 
@@ -22,6 +23,16 @@ func statusOf(k apperr.Kind) int {
 		return http.StatusNotFound
 	case apperr.Conflict:
 		return http.StatusConflict
+	case apperr.Gone:
+		return http.StatusGone
+	case apperr.TooLarge:
+		return http.StatusRequestEntityTooLarge
+	case apperr.Unsupported:
+		return http.StatusUnsupportedMediaType
+	case apperr.TooManyRequests:
+		return http.StatusTooManyRequests
+	case apperr.Unavailable:
+		return http.StatusServiceUnavailable
 	default:
 		return http.StatusInternalServerError
 	}
@@ -34,9 +45,14 @@ func Fail(c *gin.Context, err error) {
 		slog.Error("unhandled error", "path", c.FullPath(), "err", err)
 		ae = apperr.New(apperr.Internal, "internal_error", "internal server error")
 	}
-	c.AbortWithStatusJSON(statusOf(ae.Kind), gin.H{
-		"error": gin.H{"code": ae.Code, "message": ae.Message},
-	})
+	body := gin.H{"code": ae.Code, "message": ae.Message}
+	if len(ae.Details) > 0 {
+		body["details"] = ae.Details
+	}
+	if ae.RetryAfter > 0 {
+		c.Header("Retry-After", strconv.Itoa(ae.RetryAfter))
+	}
+	c.AbortWithStatusJSON(statusOf(ae.Kind), gin.H{"error": body})
 }
 
 func BadRequest(c *gin.Context, err error) {

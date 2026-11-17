@@ -11,7 +11,7 @@ import (
 
 type submissionRequest struct {
 	AnswerText *string `json:"answer_text"`
-	FileIDs    []int64 `json:"file_ids" binding:"max=5,dive,gt=0"`
+	FileIDs    []int64 `json:"file_ids" binding:"max=10,dive,gt=0"`
 	Submit     *bool   `json:"submit"` // по умолчанию true
 }
 

@@ -1,4 +1,3 @@
-// Package auth — вход по email и паролю, выпуск JWT.
 package auth
 
 import (
@@ -6,17 +5,24 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+
+	"university-api/internal/platform/ratelimit"
 )
 
-// Register собирает зависимости модуля auth и регистрирует его маршруты в группе r.
+// Register собирает модуль авторизации и регистрирует его маршруты в публичной группе r
+// (все они работают без access-токена). Возвращает сервис: app передаёт его
+// в middleware.Auth (проверка сессий) и в users (отправка приглашений).
 //
-// pool   — общий пул подключений к Postgres, создаётся один раз в main;
-// secret — ключ для подписи JWT;
-// ttl    — время жизни выдаваемого токена.
-func Register(r *gin.RouterGroup, pool *pgxpool.Pool, secret []byte, ttl time.Duration) {
-	// Сборка цепочки: репозиторий (работа с БД) → сервис (бизнес-логика) → handler (HTTP).
-	h := &Handler{svc: NewService(newPgRepository(pool), secret, ttl)}
+// limiter ограничивает подбор паролей и токенов: 429 rate_limited с Retry-After.
+func Register(r *gin.RouterGroup, pool *pgxpool.Pool, opts Options, limiter *ratelimit.Limiter) *Service {
+	svc := NewService(newRepository(pool), opts)
+	h := &Handler{svc: svc, opts: opts}
 
-	// POST <префикс группы>/auth/login → Handler.Login
-	r.POST("/auth/login", h.Login)
+	r.POST("/auth/login", limiter.Middleware("login", 10, time.Minute), h.Login) // вход
+	r.GET("/auth/csrf", h.CSRF)                                                  // CSRF-токен сессии
+	r.POST("/auth/refresh", h.Refresh)                                           // новый access-токен
+	r.POST("/auth/logout", h.Logout)                                             // завершить сессию
+	r.POST("/auth/activate", limiter.Middleware("activate", 10, time.Minute), h.Activate)
+
+	return svc
 }

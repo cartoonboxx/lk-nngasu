@@ -14,9 +14,11 @@ type Material struct {
 	Title    string `json:"title"`
 
 	// Источник материала: файл, ссылка или оба (хотя бы один обязателен).
-	FileID      *int64  `json:"file_id"`      // nil — у материала нет файла
-	FileName    *string `json:"file_name"`    // имя файла, извлекается из ключа; nil, если файла нет
-	ExternalURL *string `json:"external_url"` // только http(s)
+	File        *FileInfo `json:"file"`         // привязанный файл; null — только ссылка
+	ExternalURL *string   `json:"external_url"` // только http(s)
+
+	FileID  *int64 `json:"-"` // id привязанного файла — для правил редактирования
+	fileKey string // ключ хранения: размер старых файлов берётся с диска
 
 	Position  int       `json:"position"`   // порядок внутри темы (с 1); при равенстве — по id
 	CreatedBy int64     `json:"created_by"` // преподаватель, добавивший материал
@@ -24,6 +26,15 @@ type Material struct {
 }
 
 // Topic — тема курса с вложенными материалами.
+// FileInfo — метаданные файла: имя, тип и размер. Скачивание — GET /files/:id
+// с авторизацией (приватные файлы фронт получает через fetch → Blob).
+type FileInfo struct {
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	MimeType  string `json:"mime_type"`
+	SizeBytes int64  `json:"size_bytes"`
+}
+
 type Topic struct {
 	ID          int64   `json:"id"`
 	CourseID    int64   `json:"course_id"`

@@ -9,13 +9,35 @@ import (
 // и передаётся в сервис. Копировать безопасно.
 type Calendar struct {
 	loc           *time.Location // часовой пояс вуза: в нём определяется «сегодня»
-	weekOneMonday time.Time      // понедельник первой недели; нулевое значение — чётность ISO-недель
-	lessonLen     time.Duration  // длительность пары, одна на все занятия
+	weekOneMonday time.Time      // понедельник первой (верхней) недели; нулевое значение — календарь не настроен
+	lessonLen     time.Duration  // длительность пары по умолчанию (старые записи без ends_at)
+	bells         []Bell         // сетка звонков: 7 пар; последняя короче (80 минут)
 }
 
-// NewCalendar: weekOneDate — любая дата первой (верхней) недели; нулевая — верхней считается
-// нечётная ISO-неделя.
+// NewCalendar: weekOneDate — любая дата первой (верхней) недели (WEEK_ONE_DATE).
+// Нулевая дата — календарь не настроен: номер недели не вычисляется, и маршруты,
+// которым он нужен, отвечают 409 academic_calendar_not_configured.
 // loc == nil означает UTC. Время суток в weekOneDate не учитывается.
+// Bell — пара по сетке звонков: начало и конец "HH:MM".
+type Bell struct{ Start, End string }
+
+// WithBells задаёт сетку звонков (LESSON_BELLS). Пустая сетка — время занятия
+// проверяется только на «конец позже начала».
+func (c Calendar) WithBells(b []Bell) Calendar { c.bells = b; return c }
+
+// IsBell — интервал совпадает с одной из пар сетки (или сетка не задана).
+func (c Calendar) IsBell(start, end string) bool {
+	if len(c.bells) == 0 {
+		return true
+	}
+	for _, b := range c.bells {
+		if b.Start == start && b.End == end {
+			return true
+		}
+	}
+	return false
+}
+
 func NewCalendar(loc *time.Location, weekOneDate time.Time, lessonLen time.Duration) Calendar {
 	if loc == nil {
 		loc = time.UTC
@@ -51,21 +73,18 @@ func mondayOf(d time.Time) time.Time { return d.AddDate(0, 0, -(isoDay(d) - 1)) 
 // Без перевода в loc сервер в UTC считал бы «завтра» уже с 21:00 по Москве.
 func (c Calendar) Today() time.Time { return civil(time.Now().In(c.loc)) }
 
+// Configured — задана ли опорная дата верхней недели. Без неё чётность недель
+// не угадывается (по ISO-неделям она не совпадает с учебным календарём).
+func (c Calendar) Configured() bool { return !c.weekOneMonday.IsZero() }
+
 // WeekNumber возвращает 1 (верхняя) или 2 (нижняя) неделю для даты.
+// Вызывать только при Configured().
 //
-// Если задан weekOneMonday, недели чередуются от него: чётное число недель
-// от первой — верхняя, нечётное — нижняя. Работает и для дат раньше
-// weekOneMonday: двойной остаток ((x%2)+2)%2 убирает отрицательный остаток,
-// который в Go даёт % для отрицательных чисел.
-// Иначе — по чётности ISO-номера недели.
+// Недели чередуются от weekOneMonday: чётное число недель от первой — верхняя,
+// нечётное — нижняя. Работает и для дат раньше weekOneMonday: двойной остаток
+// ((x%2)+2)%2 убирает отрицательный остаток, который в Go даёт % для отрицательных чисел.
 func (c Calendar) WeekNumber(date time.Time) int {
 	monday := mondayOf(civil(date))
-	if c.weekOneMonday.IsZero() {
-		if _, w := monday.ISOWeek(); w%2 == 1 {
-			return 1
-		}
-		return 2
-	}
 	// Обе даты — понедельники в полночь UTC, так что разница — целое число недель.
 	weeks := int(monday.Sub(c.weekOneMonday).Hours()/24) / 7
 	return 1 + ((weeks%2)+2)%2

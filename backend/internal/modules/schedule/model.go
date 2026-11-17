@@ -18,6 +18,7 @@ type Lesson struct {
 	ID          int64   `json:"id"`
 	WorkloadID  int64   `json:"workload_id"` // строка нагрузки, из которой поставлено занятие
 	CourseID    int64   `json:"course_id"`   // дисциплина группы в семестре (course_offering)
+	SemesterID  int64   `json:"semester_id"` // семестр курса
 	Subject     string  `json:"subject"`     // название дисциплины
 	LessonType  string  `json:"lesson_type"` // вид занятия из нагрузки (лекция, практика, лабораторная)
 	TeacherID   int64   `json:"teacher_id"`
@@ -27,10 +28,10 @@ type Lesson struct {
 	WeekNumber  int     `json:"week_number"` // 1 — верхняя, 2 — нижняя
 	DayOfWeek   int     `json:"day_of_week"` // 1 (Пн) .. 6 (Сб)
 	StartsAt    string  `json:"starts_at"`   // "08:30"
-	EndsAt      string  `json:"ends_at"`     // начало + длительность пары из конфигурации; в БД не хранится
+	EndsAt      string  `json:"ends_at"`     // "09:30"; хранится в БД (последняя пара короче остальных)
 	RoomID      int64   `json:"room_id"`
-	Room        string  `json:"room"`           // номер аудитории
-	Date        *string `json:"date,omitempty"` // "YYYY-MM-DD"; заполняется только при запросе по датам
+	Room        string  `json:"room"` // обозначение аудитории
+	Date        *string `json:"date"` // "YYYY-MM-DD" в календарном режиме, null в режиме шаблона
 }
 
 // LessonInput — редактируемые поля занятия. workload_id задаётся при создании и не меняется.
@@ -38,11 +39,13 @@ type Lesson struct {
 type LessonInput struct {
 	WeekNumber int    // 1 — верхняя, 2 — нижняя
 	DayOfWeek  int    // 1 (Пн) .. 6 (Сб)
-	StartsAt   string // "08:30"
+	StartsAt   string // "08:00"
+	EndsAt     string // "09:30"
 	RoomID     int64
 }
 
-// LessonFilter — выборка шаблонных занятий. Без SemesterID берётся текущий семестр.
+// LessonFilter — выборка шаблонных занятий. Без SemesterID сервис подставляет
+// текущий семестр (нет текущего — 409 current_semester_not_set).
 // Все поля необязательны и сочетаются через AND; nil — без фильтра.
 // GroupID и TeacherID приходят из пути публичных маршрутов,
 // StudentID и TeacherID в «моём расписании» — только из JWT, не из запроса.
@@ -51,6 +54,7 @@ type LessonFilter struct {
 	GroupID    *int64
 	TeacherID  *int64
 	StudentID  *int64 // занятия группы этого студента
+	RoomID     *int64 // только для редактора расписания (GET /schedule/lessons)
 	Week, Day  *int   // срез по сетке; заполняются сервисом из Query
 }
 
@@ -61,18 +65,30 @@ type Query struct {
 	From, To  *time.Time // обе границы включительно
 }
 
-// GroupRef — группа в публичном списке для выбора расписания.
-type GroupRef struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+// RefQuery — поиск и страница публичных справочников выбора расписания.
+type RefQuery struct {
+	Q             string
+	Limit, Offset int
 }
 
-// TeacherRef — преподаватель в публичном списке для выбора расписания.
-// Содержит только то, что можно показать гостю: без email и прочих личных данных.
-type TeacherRef struct {
-	ID             int64  `json:"id"` // user_id преподавателя
-	FullName       string `json:"full_name"`
-	DepartmentName string `json:"department_name"`
+// ScheduleRef — элемент публичного справочника для выбора расписания:
+// группа (department_name = null) или преподаватель (ФИО и кафедра).
+type ScheduleRef struct {
+	ID             int64   `json:"id"`
+	Name           string  `json:"name"`
+	DepartmentName *string `json:"department_name"`
+}
+
+// ScheduleConflict — занятие, с которым пересекается новое или изменённое:
+// в той же неделе, дне и семестре интервалы [start, end) накладываются,
+// и совпадает хотя бы один ресурс — группа, преподаватель или аудитория.
+type ScheduleConflict struct {
+	LessonID   int64    `json:"lesson_id"`
+	Resources  []string `json:"resources"` // "group" | "teacher" | "room"
+	WeekNumber int      `json:"week_number"`
+	DayOfWeek  int      `json:"day_of_week"`
+	StartsAt   string   `json:"starts_at"`
+	EndsAt     string   `json:"ends_at"`
 }
 
 // WeekInfo — какая сегодня (или в указанную дату) неделя.

@@ -1,87 +1,138 @@
 // Package users владеет таблицами app_user, teacher, student.
 //
-// Пользователь хранится в app_user; если он преподаватель или студент,
-// у него есть ещё строка в teacher или student с полями своей роли.
+// Пользователь хранится в app_user. Учебные роли независимы: у пользователя может
+// быть строка в student, в teacher, в обеих или ни в одной; права администратора —
+// отдельный флаг is_admin.
 package users
 
-// User — пользователь в том виде, в каком он отдаётся наружу (API, ответы списков).
-// Собирается из app_user и, в зависимости от роли, из student или teacher.
-// Поля с omitempty заполняются только для своей роли, у остальных они nil
-// и в JSON не попадают.
-type User struct {
-	ID          int64   `json:"id"`
-	LastName    string  `json:"last_name"`
-	FirstName   string  `json:"first_name"`
-	MiddleNames *string `json:"middle_names"` // отчество (может отсутствовать)
-	// FullName — «Фамилия Имя Отчество», собирается из частей ФИО
-	// (в БД или при чтении); напрямую не редактируется.
-	FullName     string `json:"full_name"`
-	Email        string `json:"email"`
-	AvatarFileID *int64 `json:"avatar_file_id"` // ссылка на загруженный файл аватара; nil — аватара нет
-	// IsActive — false для заблокированных/отключённых учёток: вход запрещён,
-	// но запись и связанные данные сохраняются.
-	IsActive bool   `json:"is_active"`
-	Role     string `json:"role"` // admin | teacher | student
-
-	// Только для студентов (строка в student).
-	GroupID          *int64  `json:"group_id,omitempty"`
-	GroupName        *string `json:"group_name,omitempty"`         // название группы, подтягивается JOIN-ом для отображения
-	RecordBookNumber *string `json:"record_book_number,omitempty"` // номер зачётной книжки
-	IsHeadman        *bool   `json:"is_headman,omitempty"`         // староста группы
-
-	// Только для преподавателей (строка в teacher).
-	DepartmentID   *int64  `json:"department_id,omitempty"`
-	DepartmentName *string `json:"department_name,omitempty"` // название кафедры, подтягивается JOIN-ом
+// FileRef — аватар: id файла и адрес для скачивания (с авторизацией).
+type FileRef struct {
+	ID  int64  `json:"id"`
+	URL string `json:"url"`
 }
 
-// CreateUser — данные для создания пользователя (делает администратор).
-// В зависимости от Role создаётся ещё строка в student или teacher.
-type CreateUser struct {
-	Role                string // admin | teacher | student
-	LastName, FirstName string
-	MiddleNames         *string
-	Email               string
-	Password            string // открытый пароль; хешируется перед записью, в БД не хранится
+// StudentProfile — данные учебной роли студента (StudentProfile в документации).
+type StudentProfile struct {
+	GroupID          int64   `json:"group_id"`
+	GroupName        string  `json:"group_name"`
+	RecordBookNumber *string `json:"record_book_number"` // у старых записей может отсутствовать
+	IsHeadman        bool    `json:"is_headman"`         // староста; не самостоятельная роль
+}
 
-	// GroupID обязателен для студента, DepartmentID — для преподавателя;
-	// для других ролей игнорируются.
-	GroupID, DepartmentID *int64
+// TeacherProfile — данные учебной роли преподавателя (TeacherProfile).
+type TeacherProfile struct {
+	DepartmentID   int64  `json:"department_id"`
+	DepartmentName string `json:"department_name"`
+}
 
-	// Только для студента.
+// User — Profile / UserSummary из документации: профиль без документов и хеша пароля.
+// Отдаётся в GET /me, в списках пользователей и преподавателю в карточке.
+// student и teacher всегда присутствуют в JSON: null — роли нет.
+type User struct {
+	ID          int64           `json:"id"`
+	LastName    string          `json:"last_name"`
+	FirstName   string          `json:"first_name"`
+	MiddleNames *string         `json:"middle_names"`
+	FullName    string          `json:"full_name"` // «Фамилия Имя Отчество», вычисляет сервер
+	Email       string          `json:"email"`
+	Avatar      *FileRef        `json:"avatar"`
+	IsActive    bool            `json:"is_active"`
+	IsAdmin     bool            `json:"is_admin"`
+	Student     *StudentProfile `json:"student"`
+	Teacher     *TeacherProfile `json:"teacher"`
+}
+
+// AdminUser — полная карточка пользователя, только для администратора.
+// Поля User встраиваются и в JSON идут на одном уровне с документами.
+type AdminUser struct {
+	User
+	Passport *string `json:"passport"` // 10 цифр; у пользователей, заведённых до миграции 006, может быть null
+	Snils    *string `json:"snils"`    // 11 цифр; то же
+	// CredentialState — "active": пароль задан; "invited": ждём активации по приглашению.
+	CredentialState string `json:"credential_state"`
+}
+
+// StudentRole — роль студента при создании или замене (StudentWrite).
+// Названия группы здесь нет: их вычисляет сервер.
+type StudentRole struct {
+	GroupID          int64
 	RecordBookNumber *string
 	IsHeadman        bool
 }
 
-// UpdateProfile — что пользователь может менять о себе сам.
-// nil означает «не трогать». Email, пароль, роль и привязки к группе/кафедре
-// здесь намеренно отсутствуют — их меняет только администратор.
-type UpdateProfile struct {
-	LastName, FirstName, MiddleNames *string
-	AvatarFileID                     *int64
+// TeacherRole — роль преподавателя при создании или замене (TeacherWrite).
+type TeacherRole struct {
+	DepartmentID int64
 }
 
-// AdminUpdate — что может менять администратор; nil означает «не трогать».
-type AdminUpdate struct {
-	LastName, FirstName, MiddleNames *string
-	Email                            *string
-	Password                         *string // новый открытый пароль; хешируется перед записью
-	IsActive                         *bool   // блокировка/разблокировка учётки
-	IsAdmin                          *bool   // выдать/снять права администратора
+// CreateUser — создание пользователя (UserCreateInput) или одобрение заявки.
+// Пароля нет: администратор создаёт учётку без пароля, пользователь задаёт его
+// по приглашению. При одобрении заявки хеш пароля берётся из заявки.
+type CreateUser struct {
+	LastName, FirstName string
+	MiddleNames         *string
+	Email               string
+	Passport, Snils     string // уже нормализованные цифры
+	Student             *StudentRole
+	Teacher             *TeacherRole
+	AvatarFileID        *int64
 
-	// Применяются только если у пользователя соответствующая роль:
-	// GroupID, IsHeadman, RecordBookNumber — студенту, DepartmentID — преподавателю.
-	GroupID, DepartmentID *int64
-	IsHeadman             *bool
-	RecordBookNumber      *string
+	// CreatedBy — администратор, который создаёт пользователя (для приглашения).
+	CreatedBy int64
+}
+
+// UpdateProfile — изменения своего профиля (ProfilePatchInput).
+// Учебные роли и документы меняет только администратор.
+type UpdateProfile struct {
+	LastName, FirstName Field[string] // null запрещён
+	MiddleNames         Field[string] // null очищает отчество
+	AvatarFileID        Field[int64]  // null убирает аватар
+}
+
+// AdminUpdate — частичная правка администратором (UserPatchInput).
+// Field различает «ключа нет» (не трогать) и «передан null».
+type AdminUpdate struct {
+	LastName, FirstName Field[string]      // null запрещён
+	MiddleNames         Field[string]      // null очищает отчество
+	Email               Field[string]      // null запрещён
+	Passport, Snils     Field[string]      // null запрещён
+	Student             Field[StudentRole] // null снимает роль, объект — задаёт или заменяет
+	Teacher             Field[TeacherRole] // то же
+	AvatarFileID        Field[int64]       // null убирает аватар
+	IsActive            Field[bool]        // блокировка / восстановление
+	// is_admin и пароль здесь не меняются: права администратора назначаются
+	// отдельной процедурой вне панели (cmd/createadmin).
+}
+
+// CourseStudent — строка состава группы или курса: только то, что нужно
+// для учебной работы (без email, документов и полной карточки).
+type CourseStudent struct {
+	StudentID        int64   `json:"student_id"`
+	FullName         string  `json:"full_name"`
+	RecordBookNumber *string `json:"record_book_number"`
+	IsHeadman        bool    `json:"is_headman"`
+}
+
+// InvitationReceipt — ответ на повторную отправку приглашения.
+type InvitationReceipt struct {
+	UserID         int64  `json:"user_id"`
+	DeliveryStatus string `json:"delivery_status"` // "queued"
 }
 
 // ListFilter — параметры выборки списка пользователей.
 // Пустые/нулевые значения означают «без фильтра».
+//
+// Все фильтры объединяются через AND. «Староста» во фронте — это
+// role=student&is_headman=true: староста — признак студента, а не роль.
 type ListFilter struct {
-	Role         string // student | teacher | admin | "" (все)
+	Role         string // student | teacher | "" (все); совмещение ролей допустимо
+	IsHeadman    *bool  // true — только старосты, false — студенты без признака
+	IsActive     *bool  // активен / заблокирован
+	IsAdmin      *bool  // администраторы / не администраторы
 	GroupID      *int64 // только студенты этой группы
 	DepartmentID *int64 // только преподаватели этой кафедры
-	Q            string // поиск по подстроке в ФИО и email
-	Limit        int    // размер страницы
-	Offset       int    // сколько записей пропустить (пагинация)
+	Q            string // подстрока ФИО или email, без учёта регистра
+	Desc         bool   // sort=-full_name
+	Limit        int    // размер страницы, 1–200
+	Offset       int    // сколько записей пропустить
 }

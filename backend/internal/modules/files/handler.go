@@ -17,7 +17,7 @@ import (
 )
 
 // maxAvatarBytes — потолок для картинок профиля, независимо от общего лимита.
-const maxAvatarBytes = 5 << 20 // 5 МБ
+const maxAvatarBytes = 2 << 20 // 2 MiB по контракту (JPEG, PNG, WebP)
 
 // Handler — HTTP-слой модуля files. Отдельного сервиса нет:
 // handler сам работает с таблицей file (repo) и файлами на диске (storage).
@@ -41,7 +41,7 @@ func errNotFoundFile() error { return apperr.NewNotFound("file_not_found") }
 
 // errTooBig — файл превышает лимит для выбранного purpose.
 func errTooBig() error {
-	return apperr.NewInvalid("file_too_large", "file exceeds the upload limit")
+	return apperr.NewTooLarge("file_too_large", "file exceeds the upload limit") // 413
 }
 
 // readable проверяет право на чтение; чужой и несуществующий файл неотличимы (оба — 404).
@@ -75,6 +75,12 @@ func (h *Handler) readable(c *gin.Context, id int64) (key string, ok bool) {
 func (h *Handler) Upload(c *gin.Context) {
 	p := middleware.Me(c)
 
+	// Ограничиваем тело ДО любого чтения формы: PostForm и FormFile разбирают
+	// multipart целиком, и лимит, поставленный после них, уже ничего не ограничивает.
+	// Здесь общий лимит (+1 МБ на служебную часть multipart); более строгий лимит
+	// аватара проверяется ниже по fh.Size и в storage.Save.
+	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, h.maxBytes+(1<<20))
+
 	// purpose определяет допустимые типы и лимит: для аватара — только картинки
 	// и не больше maxAvatarBytes (но и не больше общего лимита).
 	types, limit := attachmentTypes, h.maxBytes
@@ -87,12 +93,15 @@ func (h *Handler) Upload(c *gin.Context) {
 		return
 	}
 
-	// Ограничиваем тело запроса. +1 МБ — запас на служебную часть multipart
-	// (границы, заголовки частей, другие поля формы), точный лимит проверяется ниже.
-	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, limit+(1<<20))
 	fh, err := c.FormFile("file")
 	if err != nil {
-		httpx.BadRequest(c, errors.New(`multipart field "file" is required (or the file is too large)`))
+		// Тело длиннее лимита — 413, а не «поле не найдено».
+		var tooBig *http.MaxBytesError
+		if errors.As(err, &tooBig) {
+			httpx.Fail(c, errTooBig())
+			return
+		}
+		httpx.BadRequest(c, errors.New(`multipart field "file" is required`))
 		return
 	}
 	// Быстрая проверка по размеру, заявленному в multipart.
@@ -106,7 +115,7 @@ func (h *Handler) Upload(c *gin.Context) {
 	name := CleanName(fh.Filename)
 	ft, ok := types[extOf(name)]
 	if !ok {
-		httpx.Fail(c, apperr.NewInvalid("unsupported_file_type", "file type is not allowed: "+allowedList(types)))
+		httpx.Fail(c, apperr.NewUnsupported("unsupported_file_type", "file type is not allowed: "+allowedList(types)))
 		return
 	}
 
@@ -150,7 +159,7 @@ func (h *Handler) Upload(c *gin.Context) {
 
 	// Сначала диск, потом БД. Если запись в БД не удалась — удаляем файл с диска,
 	// чтобы не оставлять файлов без записи.
-	id, err := h.repo.Insert(c.Request.Context(), key)
+	id, err := h.repo.Insert(c.Request.Context(), key, ft.mime, size)
 	if err != nil {
 		_ = h.storage.Remove(key)
 		httpx.Fail(c, err)

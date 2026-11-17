@@ -18,6 +18,12 @@ import (
 // нужны для форм, фильтров и расписания), изменять — только администратор.
 //
 // Изменение — через PUT: клиент присылает объект целиком, а не отдельные поля.
+// Архивирование — PATCH {"archived": true}: запись остаётся в списках с archived = true,
+// но новые связи с ней создать нельзя. Восстановления из архива пока нет.
+//
+// Все списки — только для авторизованных пользователей (контракт). Форме регистрации
+// они больше не нужны: группу и кафедру назначает администратор при одобрении заявки.
+// Публичный выбор расписания — отдельные /schedule/groups и /schedule/teachers.
 func Register(r *gin.RouterGroup, pool *pgxpool.Pool) {
 	repo := newRepository(pool)
 	h := &Handler{repo: repo} // сервисного слоя нет: правила простые, хендлеры работают с репозиторием напрямую
@@ -25,14 +31,15 @@ func Register(r *gin.RouterGroup, pool *pgxpool.Pool) {
 
 	// Справочники «id + название»: чтение — всем авторизованным, правка — администратору.
 	// Одинаковые CRUD-хендлеры, отличается только таблица.
-	registerCatalog(r, "/departments", admin, repo.departments)
+	registerCatalog(r, r, "/departments", admin, repo.departments)
 	// Справочник дисциплин — под /catalog: путь /subjects занят страницей «Мои предметы» ЛК (модуль courses).
-	registerCatalog(r, "/catalog/subjects", admin, repo.subjects)
+	registerCatalog(r, r, "/catalog/subjects", admin, repo.subjects)
 
 	// Специальности (направления подготовки).
 	r.GET("/specializations", h.ListSpecializations)
 	r.POST("/specializations", admin, h.CreateSpecialization)
 	r.PUT("/specializations/:id", admin, h.UpdateSpecialization)
+	r.PATCH("/specializations/:id", admin, h.ArchiveSpecialization)
 	r.DELETE("/specializations/:id", admin, h.DeleteSpecialization)
 
 	// Учебные группы.
@@ -43,6 +50,7 @@ func Register(r *gin.RouterGroup, pool *pgxpool.Pool) {
 	r.GET("/groups/:id", h.GetGroup)
 	r.POST("/groups", admin, h.CreateGroup)
 	r.PUT("/groups/:id", admin, h.UpdateGroup)
+	r.PATCH("/groups/:id", admin, h.ArchiveGroup)
 	r.DELETE("/groups/:id", admin, h.DeleteGroup)
 
 	// Семестры. Ровно один семестр отмечен текущим: его отдаёт /semesters/current,
@@ -52,6 +60,7 @@ func Register(r *gin.RouterGroup, pool *pgxpool.Pool) {
 	r.GET("/semesters/current", h.CurrentSemester)
 	r.POST("/semesters", admin, h.CreateSemester)
 	r.PUT("/semesters/:id", admin, h.UpdateSemester)
+	r.PATCH("/semesters/:id", admin, h.ArchiveSemester)
 	r.POST("/semesters/:id/current", admin, h.SetCurrentSemester)
 	r.DELETE("/semesters/:id", admin, h.DeleteSemester)
 
@@ -59,21 +68,25 @@ func Register(r *gin.RouterGroup, pool *pgxpool.Pool) {
 	r.GET("/rooms", h.ListRooms)
 	r.POST("/rooms", admin, h.CreateRoom)
 	r.PUT("/rooms/:id", admin, h.UpdateRoom)
+	r.PATCH("/rooms/:id", admin, h.ArchiveRoom)
 	r.DELETE("/rooms/:id", admin, h.DeleteRoom)
 }
 
 // registerCatalog вешает GET/POST/PUT/DELETE для справочника «id + название».
+// Список вешается на read (публичную или защищённую группу), правка — на write.
 //
-//	GET    path      — список, любому вошедшему;
+//	GET    path      — страница (по умолчанию только действующие);
 //	POST   path      — создать, только admin;
 //	PUT    path/:id  — переименовать, только admin;
+//	PATCH  path/:id  — в архив ({"archived": true}), только admin;
 //	DELETE path/:id  — удалить, только admin.
 //
 // cat задаёт таблицу справочника, хендлеры для неё строит catalogHandlers.
-func registerCatalog(r *gin.RouterGroup, path string, admin gin.HandlerFunc, cat catalog) {
-	list, create, update, remove := catalogHandlers(cat)
-	r.GET(path, list)
-	r.POST(path, admin, create)
-	r.PUT(path+"/:id", admin, update)
-	r.DELETE(path+"/:id", admin, remove)
+func registerCatalog(read, write *gin.RouterGroup, path string, admin gin.HandlerFunc, cat catalog) {
+	list, create, update, arch, remove := catalogHandlers(cat)
+	read.GET(path, list)
+	write.POST(path, admin, create)
+	write.PUT(path+"/:id", admin, update)
+	write.PATCH(path+"/:id", admin, arch)
+	write.DELETE(path+"/:id", admin, remove)
 }

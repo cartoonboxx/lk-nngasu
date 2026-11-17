@@ -15,9 +15,11 @@ type Repository struct{ db *pgxpool.Pool }
 
 func newRepository(db *pgxpool.Pool) *Repository { return &Repository{db: db} }
 
-func (r *Repository) Insert(ctx context.Context, key string) (int64, error) {
+// Insert создаёт запись о файле вместе с MIME-типом и размером (для FileInfo в ответах).
+func (r *Repository) Insert(ctx context.Context, key, mime string, size int64) (int64, error) {
 	var id int64
-	err := r.db.QueryRow(ctx, `INSERT INTO file (storage_key) VALUES ($1) RETURNING id`, key).Scan(&id)
+	err := r.db.QueryRow(ctx, `INSERT INTO file (storage_key, mime_type, size_bytes) VALUES ($1, $2, $3) RETURNING id`,
+		key, mime, size).Scan(&id)
 	return id, database.Translate(err)
 }
 

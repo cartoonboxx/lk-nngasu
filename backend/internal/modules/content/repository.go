@@ -38,17 +38,45 @@ func scanTopic(row pgx.Row) (Topic, error) {
 // var, а не const: строка собирается с вызовом функции.
 var materialSelect = `
 	SELECT m.id, m.topic_id, t.course_id, m.title, m.file_id, ` + database.FileName("f") + `,
+	       f.mime_type, f.size_bytes, f.storage_key,
 	       m.external_url, m.position, m.created_by, m.created_at
 	FROM material m
 	JOIN topic t ON t.id = m.topic_id
 	LEFT JOIN file f ON f.id = m.file_id`
 
 // scanMaterial читает строку, полученную через materialSelect.
+// Если файла нет (LEFT JOIN дал NULL), File остаётся nil.
+// size_bytes у старых файлов может быть NULL — его досчитает сервис по ключу.
 func scanMaterial(row pgx.Row) (Material, error) {
-	var m Material
-	err := row.Scan(&m.ID, &m.TopicID, &m.CourseID, &m.Title, &m.FileID, &m.FileName,
-		&m.ExternalURL, &m.Position, &m.CreatedBy, &m.CreatedAt)
-	return m, err
+	var (
+		m          Material
+		name, mime *string
+		size       *int64
+		key        *string
+	)
+	err := row.Scan(&m.ID, &m.TopicID, &m.CourseID, &m.Title, &m.FileID, &name,
+		&mime, &size, &key, &m.ExternalURL, &m.Position, &m.CreatedBy, &m.CreatedAt)
+	if err != nil || m.FileID == nil {
+		return m, err
+	}
+	m.File = &FileInfo{ID: *m.FileID, Name: deref(name), MimeType: deref(mime)}
+	if m.File.MimeType == "" {
+		m.File.MimeType = "application/octet-stream"
+	}
+	if size != nil {
+		m.File.SizeBytes = *size
+	} else {
+		m.File.SizeBytes = -1 // неизвестен — сервис возьмёт с диска
+	}
+	m.fileKey = deref(key)
+	return m, nil
+}
+
+func deref(s *string) string {
+	if s == nil {
+		return ""
+	}
+	return *s
 }
 
 // ListTopics возвращает темы курса с вложенными материалами (двумя запросами, без N+1).
@@ -88,6 +116,18 @@ func (r *Repository) GetTopic(ctx context.Context, id int64) (Topic, error) {
 		return Topic{}, apperr.NewNotFound("topic_not_found")
 	}
 	return t, database.Translate(err)
+}
+
+// GetTopicFull — тема вместе с материалами (для ответов POST и PUT темы).
+// GetTopic без материалов используется для проверки прав.
+func (r *Repository) GetTopicFull(ctx context.Context, id int64) (Topic, error) {
+	t, err := r.GetTopic(ctx, id)
+	if err != nil {
+		return Topic{}, err
+	}
+	t.Materials, err = database.Collect(ctx, r.db, scanMaterial,
+		materialSelect+` WHERE m.topic_id = $1 ORDER BY m.position, m.id`, id)
+	return t, err
 }
 
 // CreateTopic создаёт тему и возвращает её id.

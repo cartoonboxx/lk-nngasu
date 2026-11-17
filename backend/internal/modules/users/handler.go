@@ -1,6 +1,9 @@
 package users
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/gin-gonic/gin"
 
 	"university-api/internal/platform/httpx"
@@ -15,26 +18,74 @@ type Handler struct{ svc *Service }
 
 // --- Тела запросов ---
 //
-// Валидация формата (длины, email, обязательность) сделана через теги binding
-// и выполняется в httpx.Bind. Указатели в PATCH-запросах означают:
-// поле не передано (nil) — не менять.
+// Формат (обязательность, email, длины) проверяется тегами binding в httpx.Bind.
+// Правила, которые тегами не выразить (trim имён, цифры документов, null там,
+// где он запрещён), проверяет сервис. Поля PATCH обёрнуты в Field, чтобы отличать
+// «ключа нет» от «передан null».
 
-// updateProfileRequest — тело PATCH /me: что пользователь меняет о себе.
-type updateProfileRequest struct {
-	LastName     *string `json:"last_name" binding:"omitempty,min=1,max=50"`
-	FirstName    *string `json:"first_name" binding:"omitempty,min=1,max=50"`
-	MiddleNames  *string `json:"middle_names" binding:"omitempty,max=50"` // без min=1: отчество может быть пустым
-	AvatarFileID *int64  `json:"avatar_file_id"`                          // id ранее загруженного файла
+// studentWriteBody — StudentWrite: полный объект роли при создании или замене.
+// Название группы не передаётся, его вычисляет сервер.
+type studentWriteBody struct {
+	GroupID          int64  `json:"group_id" binding:"required,gt=0"`
+	RecordBookNumber string `json:"record_book_number" binding:"required,max=50"`
+	IsHeadman        *bool  `json:"is_headman" binding:"required"` // указатель: required у bool отверг бы false
 }
 
-// changePasswordRequest — тело POST /me/password.
-// Для смены пароля нужен текущий пароль.
-type changePasswordRequest struct {
+func (b studentWriteBody) role() StudentRole {
+	n := b.RecordBookNumber
+	return StudentRole{GroupID: b.GroupID, RecordBookNumber: &n, IsHeadman: *b.IsHeadman}
+}
+
+// teacherWriteBody — TeacherWrite.
+type teacherWriteBody struct {
+	DepartmentID int64 `json:"department_id" binding:"required,gt=0"`
+}
+
+func (b teacherWriteBody) role() TeacherRole { return TeacherRole{DepartmentID: b.DepartmentID} }
+
+// userCreateBody — UserCreateInput (POST /users). Пароля нет: сервер отправляет приглашение.
+// student и teacher обязательны как ключи: null — роли нет, объект — роль есть.
+type userCreateBody struct {
+	LastName     string                  `json:"last_name" binding:"required,max=50"`
+	FirstName    string                  `json:"first_name" binding:"required,max=50"`
+	MiddleNames  *string                 `json:"middle_names" binding:"omitempty,max=50"`
+	Email        string                  `json:"email" binding:"required,email,max=255"`
+	Passport     string                  `json:"passport" binding:"required,max=20"` // "45 09 123456" допустимо
+	Snils        string                  `json:"snils" binding:"required,max=20"`    // "112-233-445 95" допустимо
+	Student      Field[studentWriteBody] `json:"student"`
+	Teacher      Field[teacherWriteBody] `json:"teacher"`
+	AvatarFileID *int64                  `json:"avatar_file_id"`
+}
+
+// userPatchBody — UserPatchInput (PATCH /users/:id). Все поля необязательны, нужен хотя бы один.
+type userPatchBody struct {
+	LastName     Field[string]           `json:"last_name"`
+	FirstName    Field[string]           `json:"first_name"`
+	MiddleNames  Field[string]           `json:"middle_names"`
+	Email        Field[string]           `json:"email"`
+	Passport     Field[string]           `json:"passport"`
+	Snils        Field[string]           `json:"snils"`
+	Student      Field[studentWriteBody] `json:"student"`
+	Teacher      Field[teacherWriteBody] `json:"teacher"`
+	AvatarFileID Field[int64]            `json:"avatar_file_id"`
+	IsActive     Field[bool]             `json:"is_active"`
+}
+
+// profilePatchBody — ProfilePatchInput (PATCH /me).
+type profilePatchBody struct {
+	LastName     Field[string] `json:"last_name"`
+	FirstName    Field[string] `json:"first_name"`
+	MiddleNames  Field[string] `json:"middle_names"`
+	AvatarFileID Field[int64]  `json:"avatar_file_id"`
+}
+
+// passwordBody — PasswordInput (POST /me/password).
+type passwordBody struct {
 	OldPassword string `json:"old_password" binding:"required"`
-	NewPassword string `json:"new_password" binding:"required,min=8,max=72"` // 72 — предел длины пароля у bcrypt
+	NewPassword string `json:"new_password" binding:"required,min=8,max=72"` // и не больше 72 байт — проверяет сервис
 }
 
-// changeEmailRequest — тело POST /me/email.
+// changeEmailRequest — тело POST /me/email (в документации не описано).
 // Смена email подтверждается паролем, чтобы украденная сессия
 // не давала перехватить учётку через восстановление пароля.
 type changeEmailRequest struct {
@@ -42,55 +93,23 @@ type changeEmailRequest struct {
 	NewEmail string `json:"new_email" binding:"required,email,max=255"`
 }
 
-// createUserRequest — тело POST /users (создание пользователя администратором).
-// Поля группы и кафедры проверяются на соответствие роли в сервисе,
-// здесь только формат.
-type createUserRequest struct {
-	Role             string  `json:"role" binding:"required,oneof=student teacher admin"`
-	LastName         string  `json:"last_name" binding:"required,max=50"`
-	FirstName        string  `json:"first_name" binding:"required,max=50"`
-	MiddleNames      *string `json:"middle_names" binding:"omitempty,max=50"`
-	Email            string  `json:"email" binding:"required,email,max=255"`
-	Password         string  `json:"password" binding:"required,min=8,max=72"`
-	GroupID          *int64  `json:"group_id"`                                      // для студента
-	DepartmentID     *int64  `json:"department_id"`                                 // для преподавателя
-	RecordBookNumber *string `json:"record_book_number" binding:"omitempty,max=50"` // для студента
-	IsHeadman        bool    `json:"is_headman"`                                    // для студента
-}
-
-// adminUpdateRequest — тело PATCH /users/:id (правка пользователя администратором).
-type adminUpdateRequest struct {
-	LastName         *string `json:"last_name" binding:"omitempty,min=1,max=50"`
-	FirstName        *string `json:"first_name" binding:"omitempty,min=1,max=50"`
-	MiddleNames      *string `json:"middle_names" binding:"omitempty,max=50"`
-	Email            *string `json:"email" binding:"omitempty,email,max=255"`
-	Password         *string `json:"password" binding:"omitempty,min=8,max=72"` // сброс пароля администратором, старый не нужен
-	IsActive         *bool   `json:"is_active"`                                 // блокировка/разблокировка
-	IsAdmin          *bool   `json:"is_admin"`                                  // выдать/снять права администратора
-	GroupID          *int64  `json:"group_id"`
-	DepartmentID     *int64  `json:"department_id"`
-	IsHeadman        *bool   `json:"is_headman"`
-	RecordBookNumber *string `json:"record_book_number" binding:"omitempty,max=50"`
-}
-
 // --- Текущий пользователь (/me) ---
 // Id берётся из сессии (middleware.Me), а не из URL, поэтому
 // пользователь физически может работать только со своей учёткой.
 
-// Me возвращает профиль текущего пользователя.
+// Me возвращает свой профиль (Profile).
 //
 // GET /me
 func (h *Handler) Me(c *gin.Context) {
 	u, err := h.svc.Get(c.Request.Context(), middleware.Me(c).UserID)
-	httpx.Reply(c, u, err)
+	httpx.Reply(c, u.User, err)
 }
 
-// UpdateMe частично обновляет профиль текущего пользователя (ФИО, аватар)
-// и возвращает обновлённый профиль.
+// UpdateMe частично обновляет свой профиль (ФИО, аватар) и возвращает его.
 //
 // PATCH /me
 func (h *Handler) UpdateMe(c *gin.Context) {
-	var req updateProfileRequest
+	var req profilePatchBody
 	if !httpx.Bind(c, &req) {
 		return // ответ с ошибкой валидации уже отправлен в Bind
 	}
@@ -101,20 +120,18 @@ func (h *Handler) UpdateMe(c *gin.Context) {
 	httpx.Reply(c, u, err)
 }
 
-// ChangePassword меняет пароль текущего пользователя после проверки старого.
-// В ответе тела нет.
+// ChangePassword меняет свой пароль после проверки старого. Ответ 204.
 //
 // POST /me/password
 func (h *Handler) ChangePassword(c *gin.Context) {
-	var req changePasswordRequest
+	var req passwordBody
 	if !httpx.Bind(c, &req) {
 		return
 	}
 	httpx.ReplyEmpty(c, h.svc.ChangePassword(c.Request.Context(), middleware.Me(c).UserID, req.OldPassword, req.NewPassword))
 }
 
-// ChangeEmail меняет email текущего пользователя после проверки пароля
-// и возвращает обновлённый профиль.
+// ChangeEmail меняет свой email после проверки пароля и возвращает профиль.
 //
 // POST /me/email
 func (h *Handler) ChangeEmail(c *gin.Context) {
@@ -128,43 +145,113 @@ func (h *Handler) ChangeEmail(c *gin.Context) {
 
 // --- Работа с пользователями по id ---
 
-// List возвращает страницу пользователей с фильтрами из query-параметров.
-// Все параметры необязательны; некорректный group_id или department_id
-// даёт 400 (ответ отправляют OptInt64).
+// List возвращает страницу UserSummary с фильтрами из query-параметров.
+// Некорректный параметр — 400 invalid_query с details.fields.
 //
-// GET /users?role=&group_id=&department_id=&q=&limit=&offset=
+// GET /users?q=&role=&is_headman=&is_active=&is_admin=&group_id=&department_id=&sort=&limit=&offset=
 func (h *Handler) List(c *gin.Context) {
-	groupID, ok := httpx.OptInt64(c, "group_id")
+	f, ok := parseUserFilter(c)
 	if !ok {
 		return
 	}
-	deptID, ok := httpx.OptInt64(c, "department_id")
-	if !ok {
-		return
-	}
-	limit, offset := httpx.Page(c) // значения по умолчанию и верхний предел limit — в httpx.Page
-	list, err := h.svc.List(c.Request.Context(), ListFilter{
-		Role: c.Query("role"), GroupID: groupID, DepartmentID: deptID,
-		Q: c.Query("q"), Limit: limit, Offset: offset,
-	})
-	httpx.Reply(c, list, err)
+	list, total, err := h.svc.List(c.Request.Context(), f)
+	httpx.ReplyPage(c, list, httpx.Meta{Limit: f.Limit, Offset: f.Offset, Total: total}, err)
 }
 
-// GroupStudents возвращает всех студентов группы одним списком, без пагинации.
-// Лимит 500 — защитная верхняя граница: в реальной группе студентов
-// заведомо меньше.
+// parseUserFilter разбирает и проверяет query-параметры списка пользователей.
+// При ошибке ответ 400 уже отправлен.
+func parseUserFilter(c *gin.Context) (ListFilter, bool) {
+	f := ListFilter{Q: strings.TrimSpace(c.Query("q")), Role: c.Query("role"), Limit: 50}
+	switch f.Role {
+	case "", "student", "teacher":
+	default:
+		failQuery(c, "role", "must be student or teacher")
+		return f, false
+	}
+	for _, p := range []struct {
+		name string
+		dst  **bool
+	}{{"is_headman", &f.IsHeadman}, {"is_active", &f.IsActive}, {"is_admin", &f.IsAdmin}} {
+		raw := c.Query(p.name)
+		if raw == "" {
+			continue
+		}
+		v, err := strconv.ParseBool(raw)
+		if err != nil || (raw != "true" && raw != "false") {
+			failQuery(c, p.name, "must be true or false")
+			return f, false
+		}
+		*p.dst = &v
+	}
+	for _, p := range []struct {
+		name string
+		dst  **int64
+	}{{"group_id", &f.GroupID}, {"department_id", &f.DepartmentID}} {
+		raw := c.Query(p.name)
+		if raw == "" {
+			continue
+		}
+		v, err := strconv.ParseInt(raw, 10, 64)
+		if err != nil || v <= 0 {
+			failQuery(c, p.name, "must be a positive integer")
+			return f, false
+		}
+		*p.dst = &v
+	}
+	switch c.Query("sort") {
+	case "", "full_name":
+	case "-full_name":
+		f.Desc = true
+	default:
+		failQuery(c, "sort", "must be full_name or -full_name")
+		return f, false
+	}
+	var ok bool
+	f.Limit, f.Offset, ok = parsePage(c)
+	return f, ok
+}
+
+// GroupStudents возвращает страницу состава группы (CourseStudent): только данные,
+// нужные для учебной работы, без email, документов и полной карточки.
+// Нет группы или нет доступа к ней — 404 group_not_found (не раскрываем, что группа есть).
 //
-// GET /groups/:id/students
+// GET /groups/:id/students?limit=&offset=
 func (h *Handler) GroupStudents(c *gin.Context) {
 	groupID, ok := httpx.ID(c, "id")
 	if !ok {
 		return
 	}
-	list, err := h.svc.List(c.Request.Context(), ListFilter{Role: "student", GroupID: &groupID, Limit: 500})
-	httpx.Reply(c, list, err)
+	limit, offset, ok := parsePage(c)
+	if !ok {
+		return
+	}
+	list, total, err := h.svc.GroupStudents(c.Request.Context(), middleware.Me(c), groupID, limit, offset)
+	httpx.ReplyPage(c, list, httpx.Meta{Limit: limit, Offset: offset, Total: total}, err)
 }
 
-// Get возвращает пользователя по id.
+// parsePage — limit (1–200, по умолчанию 50) и offset (>= 0). При ошибке 400 уже отправлен.
+func parsePage(c *gin.Context) (limit, offset int, ok bool) {
+	limit = 50
+	if raw := c.Query("limit"); raw != "" {
+		v, err := strconv.Atoi(raw)
+		if err != nil || v < 1 || v > 200 {
+			failQuery(c, "limit", "must be an integer from 1 to 200")
+			return 0, 0, false
+		}
+		limit = v
+	}
+	if raw := c.Query("offset"); raw != "" {
+		v, err := strconv.Atoi(raw)
+		if err != nil || v < 0 {
+			failQuery(c, "offset", "must be an integer >= 0")
+			return 0, 0, false
+		}
+		offset = v
+	}
+	return limit, offset, true
+}
+
+// Get возвращает полную карточку пользователя (AdminUser) — только администратору.
 //
 // GET /users/:id
 func (h *Handler) Get(c *gin.Context) {
@@ -176,27 +263,58 @@ func (h *Handler) Get(c *gin.Context) {
 	httpx.Reply(c, u, err)
 }
 
-// Create создаёт пользователя (действие администратора) и отвечает 201
-// с созданным пользователем.
+// Create создаёт пользователя без пароля и отправляет ему приглашение.
+// Ответ 201 с AdminUser (credential_state = "invited").
 //
 // POST /users
 func (h *Handler) Create(c *gin.Context) {
-	var req createUserRequest
+	var req userCreateBody
 	if !httpx.Bind(c, &req) {
 		return
 	}
-	u, err := h.svc.Create(c.Request.Context(), CreateUser{
-		Role: req.Role, LastName: req.LastName, FirstName: req.FirstName, MiddleNames: req.MiddleNames,
-		Email: req.Email, Password: req.Password, GroupID: req.GroupID, DepartmentID: req.DepartmentID,
-		RecordBookNumber: req.RecordBookNumber, IsHeadman: req.IsHeadman,
-	})
+	// Ключи student и teacher обязательны, хотя значение может быть null.
+	if !req.Student.Set {
+		httpx.Fail(c, fieldErr("student", "required (null if the user is not a student)"))
+		return
+	}
+	if !req.Teacher.Set {
+		httpx.Fail(c, fieldErr("teacher", "required (null if the user is not a teacher)"))
+		return
+	}
+	in := CreateUser{
+		LastName: req.LastName, FirstName: req.FirstName, MiddleNames: req.MiddleNames,
+		Email: req.Email, Passport: req.Passport, Snils: req.Snils,
+		AvatarFileID: req.AvatarFileID, CreatedBy: middleware.Me(c).UserID,
+	}
+	if req.Student.Value != nil {
+		r := req.Student.Value.role()
+		in.Student = &r
+	}
+	if req.Teacher.Value != nil {
+		r := req.Teacher.Value.role()
+		in.Teacher = &r
+	}
+	c.Header("Cache-Control", "no-store")
+	u, err := h.svc.Create(c.Request.Context(), in)
 	httpx.ReplyCreated(c, u, err)
 }
 
-// AdminUpdate частично обновляет пользователя от имени администратора.
-// В сервис передаётся и сам администратор (middleware.Me), чтобы проверить
-// действия над собой, например запретить снять с себя админку
-// или заблокировать собственную учётку.
+// ResendInvitation отправляет новое приглашение пользователю без пароля.
+// Прежние ссылки перестают работать. Ответ 202 с InvitationReceipt.
+//
+// POST /users/:id/invitation
+func (h *Handler) ResendInvitation(c *gin.Context) {
+	id, ok := httpx.ID(c, "id")
+	if !ok {
+		return
+	}
+	r, err := h.svc.ResendInvitation(c.Request.Context(), id, middleware.Me(c).UserID)
+	httpx.ReplyAccepted(c, r, err)
+}
+
+// AdminUpdate частично обновляет пользователя от имени администратора
+// и возвращает AdminUser. В сервис передаётся и сам администратор, чтобы
+// запретить ему заблокировать себя или снять с себя права.
 //
 // PATCH /users/:id
 func (h *Handler) AdminUpdate(c *gin.Context) {
@@ -204,15 +322,18 @@ func (h *Handler) AdminUpdate(c *gin.Context) {
 	if !ok {
 		return
 	}
-	var req adminUpdateRequest
+	var req userPatchBody
 	if !httpx.Bind(c, &req) {
 		return
 	}
-	u, err := h.svc.AdminUpdate(c.Request.Context(), middleware.Me(c), id, AdminUpdate{
+	in := AdminUpdate{
 		LastName: req.LastName, FirstName: req.FirstName, MiddleNames: req.MiddleNames,
-		Email: req.Email, Password: req.Password, IsActive: req.IsActive, IsAdmin: req.IsAdmin,
-		GroupID: req.GroupID, DepartmentID: req.DepartmentID, IsHeadman: req.IsHeadman,
-		RecordBookNumber: req.RecordBookNumber,
-	})
+		Email: req.Email, Passport: req.Passport, Snils: req.Snils,
+		Student:      mapField(req.Student, studentWriteBody.role),
+		Teacher:      mapField(req.Teacher, teacherWriteBody.role),
+		AvatarFileID: req.AvatarFileID, IsActive: req.IsActive,
+	}
+	c.Header("Cache-Control", "no-store")
+	u, err := h.svc.AdminUpdate(c.Request.Context(), middleware.Me(c), id, in)
 	httpx.Reply(c, u, err)
 }

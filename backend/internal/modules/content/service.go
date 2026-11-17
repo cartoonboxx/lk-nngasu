@@ -2,6 +2,9 @@ package content
 
 import (
 	"context"
+	"errors"
+	"strings"
+	"unicode/utf8"
 
 	"university-api/internal/platform/apperr"
 	"university-api/internal/platform/middleware"
@@ -25,6 +28,7 @@ type CourseGuard interface {
 // Нужен, потому что при удалении материалов удаляются и их файлы.
 type Blobs interface {
 	Remove(key string) error
+	Size(key string) (int64, error) // размер файла на диске — для старых записей без size_bytes
 }
 
 // Service — бизнес-логика тем и материалов: проверка прав через guard,
@@ -50,12 +54,26 @@ func (s *Service) removeBlobs(keys []string) {
 	}
 }
 
+// normTitle — название темы или материала: 1–200 символов после trim.
+func normTitle(t *string) error {
+	*t = strings.TrimSpace(*t)
+	if *t == "" || utf8.RuneCountInString(*t) > 200 {
+		return apperr.NewInvalid("invalid_request", "request body is invalid").
+			WithDetails(map[string]any{"fields": map[string][]string{"title": {"must be 1-200 characters after trim"}}})
+	}
+	return nil
+}
+
 // ListTopics возвращает темы курса. Доступно всем, кто может просматривать курс.
 func (s *Service) ListTopics(ctx context.Context, p middleware.Principal, courseID int64) ([]Topic, error) {
 	if err := s.guard.CourseView(ctx, p, courseID); err != nil {
 		return nil, err
 	}
-	return s.repo.ListTopics(ctx, courseID)
+	ts, err := s.repo.ListTopics(ctx, courseID)
+	for i := range ts {
+		s.withSizes(ts[i].Materials)
+	}
+	return ts, err
 }
 
 // topicForManage загружает тему и проверяет, что её курс пользователь вправе менять.
@@ -71,6 +89,9 @@ func (s *Service) topicForManage(ctx context.Context, p middleware.Principal, id
 // CreateTopic создаёт тему в курсе. Нужно право управлять курсом.
 // После вставки тема перечитывается, чтобы вернуть её с вычисленными полями (позиция и т.п.).
 func (s *Service) CreateTopic(ctx context.Context, p middleware.Principal, courseID int64, in TopicInput) (Topic, error) {
+	if err := normTitle(&in.Title); err != nil {
+		return Topic{}, err
+	}
 	if err := s.guard.CourseManage(ctx, p, courseID); err != nil {
 		return Topic{}, err
 	}
@@ -78,18 +99,21 @@ func (s *Service) CreateTopic(ctx context.Context, p middleware.Principal, cours
 	if err != nil {
 		return Topic{}, err
 	}
-	return s.repo.GetTopic(ctx, id)
+	return s.topicOut(s.repo.GetTopicFull(ctx, id))
 }
 
 // UpdateTopic изменяет тему и возвращает её актуальное состояние.
 func (s *Service) UpdateTopic(ctx context.Context, p middleware.Principal, id int64, in TopicInput) (Topic, error) {
+	if err := normTitle(&in.Title); err != nil {
+		return Topic{}, err
+	}
 	if _, err := s.topicForManage(ctx, p, id); err != nil {
 		return Topic{}, err
 	}
 	if err := s.repo.UpdateTopic(ctx, id, in); err != nil {
 		return Topic{}, err
 	}
-	return s.repo.GetTopic(ctx, id)
+	return s.topicOut(s.repo.GetTopicFull(ctx, id))
 }
 
 // DeleteTopic удаляет тему вместе с её материалами.
@@ -112,39 +136,43 @@ func (s *Service) DeleteTopic(ctx context.Context, p middleware.Principal, id in
 // current — id файла, который уже привязан к материалу (nil при создании).
 // Если файл не меняется, владение не проверяем: так другой преподаватель курса
 // или админ может править материал, не будучи автором файла.
-func (s *Service) checkMaterial(ctx context.Context, p middleware.Principal, in MaterialInput, current *int64) error {
+func (s *Service) checkMaterial(ctx context.Context, p middleware.Principal, in *MaterialInput, current *int64) error {
+	if err := normTitle(&in.Title); err != nil {
+		return err
+	}
 	if in.FileID == nil && in.ExternalURL == nil {
-		return apperr.NewInvalid("material_source", "provide file_id or external_url")
+		return apperr.NewInvalid("material_source_required", "provide file_id or external_url")
 	}
 	// Только http(s): ссылки вида javascript: или data: не пропускаем.
 	if in.ExternalURL != nil && !validate.HTTPURL(*in.ExternalURL) {
-		return apperr.NewInvalid("bad_url", "external_url must be an http(s) link")
+		return apperr.NewInvalid("invalid_request", "request body is invalid").
+			WithDetails(map[string]any{"fields": map[string][]string{"external_url": {"must be an http(s) link"}}})
 	}
 	// Новый файл можно прикрепить только свой — чужой файл по id не привязать.
 	if in.FileID != nil && (current == nil || *current != *in.FileID) {
-		return s.guard.OwnsFile(ctx, p.UserID, *in.FileID)
+		return s.ownFile(ctx, p.UserID, *in.FileID)
 	}
 	return nil
 }
 
-// CreateMaterial: created_by ссылается на teacher, поэтому материалы добавляет преподаватель курса.
-// Админ создать материал не может (он не преподаватель), но может изменять и удалять — см. materialForManage.
+// CreateMaterial добавляет материал в тему. Право — то же, что на управление курсом:
+// преподаватель курса или администратор. created_by — тот, кто фактически добавил.
 func (s *Service) CreateMaterial(ctx context.Context, p middleware.Principal, topicID int64, in MaterialInput) (Material, error) {
 	t, err := s.repo.GetTopic(ctx, topicID)
 	if err != nil {
 		return Material{}, err
 	}
-	if err := s.guard.CourseTeacher(ctx, p, t.CourseID); err != nil {
+	if err := s.guard.CourseManage(ctx, p, t.CourseID); err != nil {
 		return Material{}, err
 	}
-	if err := s.checkMaterial(ctx, p, in, nil); err != nil {
+	if err := s.checkMaterial(ctx, p, &in, nil); err != nil {
 		return Material{}, err
 	}
 	id, err := s.repo.CreateMaterial(ctx, topicID, p.UserID, in)
 	if err != nil {
 		return Material{}, err
 	}
-	return s.repo.GetMaterial(ctx, id)
+	return s.materialOut(s.repo.GetMaterial(ctx, id))
 }
 
 // materialForManage загружает материал и проверяет, что его курс пользователь вправе менять.
@@ -163,7 +191,7 @@ func (s *Service) UpdateMaterial(ctx context.Context, p middleware.Principal, id
 	if err != nil {
 		return Material{}, err
 	}
-	if err := s.checkMaterial(ctx, p, in, m.FileID); err != nil {
+	if err := s.checkMaterial(ctx, p, &in, m.FileID); err != nil {
 		return Material{}, err
 	}
 	keys, err := s.repo.UpdateMaterial(ctx, id, in)
@@ -171,7 +199,7 @@ func (s *Service) UpdateMaterial(ctx context.Context, p middleware.Principal, id
 		return Material{}, err // транзакция откатилась — с диска ничего не удаляем
 	}
 	s.removeBlobs(keys)
-	return s.repo.GetMaterial(ctx, id)
+	return s.materialOut(s.repo.GetMaterial(ctx, id))
 }
 
 // DeleteMaterial удаляет материал и его файл с диска (если файл больше нигде не используется).
@@ -185,4 +213,47 @@ func (s *Service) DeleteMaterial(ctx context.Context, p middleware.Principal, id
 	}
 	s.removeBlobs(keys)
 	return nil
+}
+
+// errFileNotFound — файла нет или он не принадлежит пользователю (404 file_not_found):
+// по ответу нельзя узнать, существует ли чужой файл.
+var errFileNotFound = apperr.NewNotFound("file_not_found")
+
+// ownFile — новый файл материала должен быть загружен самим пользователем.
+func (s *Service) ownFile(ctx context.Context, userID, fileID int64) error {
+	err := s.guard.OwnsFile(ctx, userID, fileID)
+	var ae *apperr.Error
+	if errors.As(err, &ae) && ae.Code == "invalid_file" {
+		return errFileNotFound
+	}
+	return err
+}
+
+// withSizes дополняет FileInfo размером с диска там, где он не записан в БД (старые файлы).
+func (s *Service) withSizes(ms []Material) {
+	for i := range ms {
+		if f := ms[i].File; f != nil && f.SizeBytes < 0 {
+			f.SizeBytes = 0
+			if n, err := s.blobs.Size(ms[i].fileKey); err == nil {
+				f.SizeBytes = n
+			}
+		}
+	}
+}
+
+// topicOut и materialOut дополняют ответ размерами файлов (см. withSizes).
+func (s *Service) topicOut(t Topic, err error) (Topic, error) {
+	if err == nil {
+		s.withSizes(t.Materials)
+	}
+	return t, err
+}
+
+func (s *Service) materialOut(m Material, err error) (Material, error) {
+	if err == nil {
+		ms := []Material{m}
+		s.withSizes(ms)
+		m = ms[0]
+	}
+	return m, err
 }

@@ -33,14 +33,12 @@ func TestWeekNumberWithAnchor(t *testing.T) {
 	}
 }
 
-func TestWeekNumberISOParityWithoutAnchor(t *testing.T) {
-	c := NewCalendar(time.UTC, time.Time{}, 90*time.Minute)
-	// 2026-01-05 — понедельник ISO-недели 2 → нижняя; 2026-01-12 — неделя 3 → верхняя.
-	if got := c.WeekNumber(date("2026-01-05")); got != 2 {
-		t.Errorf("ISO week 2 → %d, want 2", got)
+func TestCalendarNotConfigured(t *testing.T) {
+	if NewCalendar(time.UTC, time.Time{}, 90*time.Minute).Configured() {
+		t.Error("calendar without WEEK_ONE_DATE must not be configured")
 	}
-	if got := c.WeekNumber(date("2026-01-12")); got != 1 {
-		t.Errorf("ISO week 3 → %d, want 1", got)
+	if !NewCalendar(time.UTC, date("2026-09-01"), 90*time.Minute).Configured() {
+		t.Error("calendar with WEEK_ONE_DATE must be configured")
 	}
 }
 

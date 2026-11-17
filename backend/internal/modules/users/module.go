@@ -8,16 +8,26 @@ import (
 )
 
 // Register собирает пакет users (репозиторий → сервис → хендлеры)
-// и вешает его маршруты на r.
+// и вешает его маршруты.
 //
-// r должна быть уже закрыта middleware аутентификации: все маршруты
-// пакета рассчитывают, что middleware.Me(c) вернёт текущего пользователя.
+// public — группа без аутентификации: только отправка заявки на регистрацию.
+// protected должна быть уже закрыта middleware аутентификации: её маршруты
+// рассчитывают, что middleware.Me(c) вернёт текущего пользователя.
 // Здесь поверх этого задаются только ограничения по ролям.
 //
 // files нужен сервису, чтобы проверять, что файл аватара принадлежит
 // пользователю, который его ставит.
-func Register(r *gin.RouterGroup, pool *pgxpool.Pool, files FileOwnership) {
-	h := &Handler{svc: NewService(newRepository(pool), files)}
+//
+// opts — версия условий для регистрации и отправка приглашений (см. Options).
+func Register(public, r *gin.RouterGroup, pool *pgxpool.Pool, files FileOwnership, opts Options) {
+	h := &Handler{svc: NewService(newRepository(pool), files, opts)}
+
+	// Заявка на регистрацию — без входа. Учётку создаёт администратор, одобряя заявку.
+	register := []gin.HandlerFunc{h.SubmitRegistration}
+	if opts.RegisterLimit != nil {
+		register = append([]gin.HandlerFunc{opts.RegisterLimit}, register...)
+	}
+	public.POST("/auth/register", register...)
 
 	// Ограничения по ролям, навешиваются на отдельные маршруты.
 	admin := middleware.RequireRole(middleware.RoleAdmin)
@@ -27,18 +37,29 @@ func Register(r *gin.RouterGroup, pool *pgxpool.Pool, files FileOwnership) {
 	// Id берётся из сессии, так что чужой профиль через эти маршруты не изменить.
 	r.GET("/me", h.Me)
 	r.PATCH("/me", h.UpdateMe)
-	r.POST("/me/password", h.ChangePassword)
+	password := []gin.HandlerFunc{h.ChangePassword}
+	if opts.PasswordLimit != nil {
+		password = append([]gin.HandlerFunc{opts.PasswordLimit}, password...)
+	}
+	r.POST("/me/password", password...)
 	r.POST("/me/email", h.ChangeEmail)
 
 	// Управление пользователями: только администратор.
 	r.GET("/users", admin, h.List)
 	r.POST("/users", admin, h.Create)
 	r.PATCH("/users/:id", admin, h.AdminUpdate)
+	r.POST("/users/:id/invitation", admin, h.ResendInvitation) // повторно отправить приглашение задать пароль
 
-	// Просмотр карточки пользователя: преподаватели и администраторы.
-	// Студенты чужие карточки не видят.
-	r.GET("/users/:id", staff, h.Get)
+	// Заявки на регистрацию: только администратор.
+	r.GET("/registration-requests", admin, h.ListRegistrations)                // очередь заявок
+	r.GET("/registration-requests/:id", admin, h.GetRegistration)              // одна заявка
+	r.POST("/registration-requests/:id/decision", admin, h.DecideRegistration) // одобрить или отклонить
 
-	// Состав группы: преподаватели и администраторы (журнал, ведомости).
+	// Полная карточка с паспортом и СНИЛС — только администратор.
+	// Преподаватель видит студентов через состав группы или курса, без документов.
+	r.GET("/users/:id", admin, h.Get)
+
+	// Состав группы: администратор — любая группа, преподаватель — группа,
+	// у которой он ведёт курс (проверяет сервис). Студентам недоступно.
 	r.GET("/groups/:id/students", staff, h.GroupStudents)
 }

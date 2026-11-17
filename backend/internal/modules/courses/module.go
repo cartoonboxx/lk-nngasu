@@ -15,8 +15,10 @@ import (
 // готовую функцию из app, а не импортирует эти пакеты. nil — страница без тем.
 //
 // Возвращает сервис: app использует его для страницы оценок ЛК.
-func Register(r *gin.RouterGroup, pool *pgxpool.Pool, checker *access.Checker, topics TopicsLoader) *Service {
-	repo := newRepository(pool)
+//
+// lessonMinutes — длительность занятия (LESSON_MINUTES): по ней считаются часы шаблона в нагрузке.
+func Register(r *gin.RouterGroup, pool *pgxpool.Pool, checker *access.Checker, topics TopicsLoader, lessonMinutes int) *Service {
+	repo := newRepository(pool, lessonMinutes)
 	h := &Handler{svc: NewService(repo, checker, topics), repo: repo}
 	admin := middleware.RequireRole(middleware.RoleAdmin)
 
@@ -24,12 +26,16 @@ func Register(r *gin.RouterGroup, pool *pgxpool.Pool, checker *access.Checker, t
 	// Предметы текущего семестра для ЛК (= /courses?current=true).
 	// Справочник дисциплин для админки — в structure по пути /catalog/subjects.
 	r.GET("/subjects", h.Subjects)
+	r.GET("/subjects/:id", h.GetCourse) // страница предмета; id — id курса из списка /subjects
 	r.POST("/courses", admin, h.CreateCourse)
 	r.GET("/courses/:id", h.GetCourse)
+	r.PATCH("/courses/:id", admin, h.ReplaceSubject) // заменить дисциплину, сохранив всё остальное
 	r.DELETE("/courses/:id", admin, h.DeleteCourse)
 	r.GET("/courses/:id/students", h.ListStudents)
 
+	r.GET("/courses/:id/workloads", h.ListWorkloads)
 	r.POST("/courses/:id/workloads", admin, h.AddWorkload)
+	r.PUT("/workloads/:id", admin, h.UpdateWorkload)
 	r.DELETE("/workloads/:id", admin, h.DeleteWorkload)
 
 	return h.svc

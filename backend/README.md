@@ -1,7 +1,7 @@
 # university-api
 
 REST API личного кабинета вуза: **Go + Gin + pgx + PostgreSQL**, модульный монолит.
-Схема БД — упрощённая `university_cabinet` (см. `migrations/001_init.sql`, 19 таблиц).
+Схема БД `university_cabinet` задаётся миграциями `migrations/NNN_*.sql`; они же — источник правды о схеме.
 
 ## Быстрый старт
 
@@ -17,7 +17,7 @@ docker compose exec -e ADMIN_EMAIL=admin@example.com \
 
 curl -s localhost:5173/api/v1/auth/login -H 'Content-Type: application/json' \
   -d '{"email":"admin@example.com","password":"сменить-меня-123"}'
-# -> {"data":{"access_token":"...","token_type":"Bearer","expires_at":"...","role":"admin"}}
+# -> {"data":{"access_token":"...","token_type":"Bearer","expires_at":"...","user":{"id":1,"is_admin":true,...}}}
 # дальше: Authorization: Bearer <token>
 ```
 
@@ -30,18 +30,33 @@ Vite проксирует запросы в контейнер `backend:8080`. S
 `{"status":"ok"}` через Vite и продакшен-nginx. Внутренний `GET /healthz`
 используется healthcheck контейнера и возвращает тот же ответ.
 
-Без Docker: `cp .env.example .env`, задать переменные, `make tidy` (создаст `go.sum`), `make migrate`, `make admin`, `make run`.
+Без Docker: `cp .env.example .env`, задать переменные, `make admin`, `make run`.
+
+## Миграции
+
+API применяет новые миграции сам при старте (`MIGRATE_ON_START=true` по умолчанию), поэтому
+после деплоя база обновляется автоматически. Применённые версии хранятся в таблице `schema_migrations`;
+повторно файл не выполняется. Каждая миграция идёт в своей транзакции: при ошибке база не меняется,
+а сервер не стартует и пишет в лог имя файла и ошибку.
+
+- Новая миграция: файл `migrations/011_short_name.sql` со следующим свободным номером.
+  `BEGIN`/`COMMIT` писать не нужно. Уже применённые файлы не редактировать — только новый номер.
+- Обновить базу без запуска сервера: `make migrate` (или `go run ./cmd/migrate`).
+- База, в которую `001`–`010` накатывали вручную через `psql`: при первом запуске они распознаются
+  по признакам в схеме и отмечаются применёнными, без повторного выполнения.
 
 ## Структура
 
 ```
-cmd/api            точка входа
+cmd/api            точка входа (при старте применяет миграции)
+cmd/migrate        применить миграции без запуска сервера
 cmd/createadmin    создание первого администратора
 internal/app       сборка зависимостей и роутер (единственное место, где модули знают друг о друге)
 internal/platform  apperr, httpx, middleware (JWT, роли), database (DB/InTx/Collect, ошибки PG, Filter),
-                   access (права на курс и файл), filekey, filegc (удаление неиспользуемых файлов), validate
-internal/modules   auth, users, structure, courses, schedule, content, assignments, files
-migrations         001_init.sql
+                   Migrate (миграции), access (права на курс и файл), filekey, filegc (удаление
+                   неиспользуемых файлов), validate, mail (очередь писем), ratelimit
+internal/modules   auth, users, profile, structure, courses, schedule, content, assignments, files, chat
+migrations         001–010 *.sql, встроены в бинарник (embed.go)
 ```
 
 Модуль = `module.go` (маршруты) → `handler` → `service` (правила и права) → `repository` (SQL).
@@ -54,8 +69,9 @@ migrations         001_init.sql
 
 - студент видит курсы своей группы; преподаватель — курсы, где у него есть нагрузка; админ — всё;
 - студент видит только свои ответы и оценки;
-- `created_by` и `reviewed_by` в БД ссылаются на `teacher`, поэтому **админ** управляет справочниками, курсами, нагрузкой,
-  расписанием, пользователями и может править/удалять задания и материалы, но **не** создаёт их и не ставит оценки — это делает преподаватель курса;
+- **админ** управляет справочниками, курсами, нагрузкой, расписанием и пользователями, может создавать и править
+  темы, материалы и задания (`created_by` ссылается на `app_user`); оценки ставит только преподаватель курса
+  (`reviewed_by` ссылается на `teacher`);
 - к материалу, заданию или ответу можно прикрепить только свой файл (папка `<user_id>/` в ключе хранения).
 
 ## Формат ответов
@@ -164,4 +180,5 @@ migrations         001_init.sql
 
 ## Не реализовано
 
-Чаты, новости, уведомления, сброс пароля и подтверждение email по почте, ведомость, задания для нескольких групп сразу, CORS, refresh-токены.
+Новости, WebSocket, главная (`Dashboard`) и ресурсы, уведомления, сброс пароля по почте, задания для нескольких групп сразу.
+Задания, оценки, файлы и чаты работают, но ещё не сверены с текущим контрактом API.

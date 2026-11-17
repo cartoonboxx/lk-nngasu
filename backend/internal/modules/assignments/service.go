@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"strings"
+	"unicode/utf8"
 
 	"university-api/internal/platform/apperr"
 	"university-api/internal/platform/middleware"
@@ -73,8 +74,9 @@ func (s *Service) checkFiles(ctx context.Context, p middleware.Principal, ids []
 
 func normalizeInput(in *AssignmentInput) error {
 	in.Title = strings.TrimSpace(in.Title)
-	if in.Title == "" {
-		return apperr.NewInvalid("title_required", "title is required")
+	if in.Title == "" || utf8.RuneCountInString(in.Title) > 255 {
+		return apperr.NewInvalid("invalid_request", "request body is invalid").
+			WithDetails(map[string]any{"fields": map[string][]string{"title": {"must be 1-255 characters after trim"}}})
 	}
 	if in.Description != nil {
 		d := strings.TrimSpace(*in.Description)
@@ -119,9 +121,11 @@ func (s *Service) GetAssignment(ctx context.Context, p middleware.Principal, id 
 	return a, nil
 }
 
-// CreateAssignment: created_by ссылается на teacher — создаёт преподаватель курса.
+// CreateAssignment: задание создаёт преподаватель курса или администратор
+// (контракт: администратор управляет заданиями); created_by — тот, кто создал.
+// Оценивание при этом остаётся только за преподавателем курса.
 func (s *Service) CreateAssignment(ctx context.Context, p middleware.Principal, courseID int64, in AssignmentInput) (Assignment, error) {
-	if err := s.guard.CourseTeacher(ctx, p, courseID); err != nil {
+	if err := s.guard.CourseManage(ctx, p, courseID); err != nil {
 		return Assignment{}, err
 	}
 	if err := normalizeInput(&in); err != nil {
