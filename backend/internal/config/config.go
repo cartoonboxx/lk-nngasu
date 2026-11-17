@@ -16,6 +16,8 @@ type Config struct {
 	AccessTTL      time.Duration
 	UploadDir      string
 	MaxUploadBytes int64
+	// MigrateOnStart — применять новые миграции при старте API (MIGRATE_ON_START, по умолчанию true).
+	MigrateOnStart bool
 
 	// Расписание.
 	// Авторизация по документации API.
@@ -59,6 +61,7 @@ func Load() (Config, error) {
 	}
 
 	cfg.CookieSecure = getenv("COOKIE_SECURE", "true") != "false"
+	cfg.MigrateOnStart = getenv("MIGRATE_ON_START", "true") != "false"
 	for _, o := range strings.Split(os.Getenv("ALLOWED_ORIGINS"), ",") {
 		if o = strings.TrimRight(strings.TrimSpace(o), "/"); o != "" {
 			cfg.AllowedOrigins = append(cfg.AllowedOrigins, o)

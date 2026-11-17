@@ -8,6 +8,7 @@ import (
 	"time"
 	"university-api/internal/modules/chat"
 	"university-api/internal/platform/middleware"
+	"university-api/migrations"
 
 	"github.com/gin-gonic/gin"
 
@@ -35,6 +36,12 @@ func Run(ctx context.Context, cfg config.Config) error {
 		return err
 	}
 	defer pool.Close()
+
+	if cfg.MigrateOnStart {
+		if err := database.Migrate(ctx, pool, migrations.FS); err != nil {
+			return err
+		}
+	}
 
 	storage, err := files.NewStorage(cfg.UploadDir)
 	if err != nil {
