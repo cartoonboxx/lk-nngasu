@@ -15,12 +15,13 @@
       <span v-if="notification" :class="style.notification" />
     </span>
     <span>{{ text }}</span>
-    <span v-if="badge !== undefined" :class="style.badge">{{ badge }}</span>
+    <Badge v-if="badge !== undefined" :class="style.counter" :value="badge" variant="info" inline />
     <PhCaretRight v-else-if="variant === 'list'" :class="style.arrow" :size="18" />
   </component>
 </template>
 
 <script lang="ts">
+import Badge from '@/components/UI/Badge/Badge.vue'
 import { pressFeedback } from '@/directives/pressFeedback'
 import { defineComponent, type Component, type PropType } from 'vue'
 import { RouterLink, type RouteLocationRaw } from 'vue-router'
@@ -30,7 +31,7 @@ import style from './NavigationItem.module.scss'
 export default defineComponent({
   directives: { press: pressFeedback },
   name: 'NavigationItem',
-  components: { RouterLink, PhCaretRight },
+  components: { Badge, RouterLink, PhCaretRight },
   props: {
     text: { type: String, required: true },
     icon: { type: [Object, Function] as PropType<Component>, required: true },

@@ -40,11 +40,6 @@
     &:hover {
       color: var(--color-text-primary);
     }
-
-    &:focus-visible {
-      outline: 2px solid var(--color-border-focus);
-      outline-offset: 4px;
-    }
   }
 
   .footer {

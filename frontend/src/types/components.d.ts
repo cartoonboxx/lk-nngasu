@@ -1,6 +1,9 @@
 import type { ButtonHTMLAttributes } from 'vue'
 
 declare global {
+  type StatusBadgeVariant = 'neutral' | 'info' | 'success' | 'warning' | 'error'
+  type BadgeVariant = 'accent' | 'info' | 'neutral'
+
   type UiSize = 'sm' | 'md' | 'lg'
   type UiState = 'default' | 'hover' | 'active' | 'disabled'
 

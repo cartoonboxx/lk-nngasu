@@ -4,10 +4,12 @@
     :data-active="active"
     :data-disabled="disabled"
   >
-    <button
+    <component
+      :is="to ? 'RouterLink' : 'button'"
+      :to="to"
       v-press
       :class="style.trigger"
-      type="button"
+      :type="to ? undefined : 'button'"
       :disabled="disabled"
       v-bind="triggerAttrs"
       @click="$emit('select')"
@@ -20,7 +22,7 @@
         ><slot>{{ text }}</slot></span
       >
       <slot name="trailing" />
-    </button>
+    </component>
 
     <span v-if="$slots.actions" :class="style.actions">
       <slot name="actions" />
@@ -31,6 +33,7 @@
 <script lang="ts">
 import { pressFeedback } from '@/directives/pressFeedback'
 import { defineComponent } from 'vue'
+import { RouterLink } from 'vue-router'
 import { baseTabProps } from '../tabProps'
 
 import style from './BaseTab.module.scss'
@@ -38,6 +41,7 @@ import style from './BaseTab.module.scss'
 export default defineComponent({
   directives: { press: pressFeedback },
   name: 'BaseTab',
+  components: { RouterLink },
   emits: ['select'],
   props: baseTabProps,
   data() {

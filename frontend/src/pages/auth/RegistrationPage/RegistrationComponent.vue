@@ -19,6 +19,28 @@
         />
         <TextInput
           size="lg"
+          v-model="snils"
+          label="СНИЛС"
+          name="snils"
+          autocomplete="snils"
+          placeholder="112-233-445 95"
+          type="text"
+          required
+          full-width
+        />
+        <TextInput
+          size="lg"
+          v-model="passport"
+          label="Паспорт"
+          name="passport"
+          autocomplete="passport"
+          placeholder="45 09 123456"
+          type="text"
+          required
+          full-width
+        />
+        <TextInput
+          size="lg"
           v-model="password"
           label="Пароль"
           name="password"
@@ -107,6 +129,8 @@ export default defineComponent({
     return {
       style,
       email: '',
+      passport: '',
+      snils: '',
       password: '',
       confirmPassword: '',
       acceptedTerms: false,

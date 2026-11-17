@@ -55,8 +55,6 @@
 
     cursor: pointer;
     &:focus-visible {
-      outline: 2px solid var(--color-border-focus);
-      outline-offset: 2px;
     }
     &:disabled {
       cursor: not-allowed;
@@ -77,7 +75,11 @@
   width: 34px;
   flex: 0 0 34px;
   place-items: center;
-  color: var(--color-content-interactive);
+  color: var(--file-icon-color, var(--color-text-secondary));
+
+  .disabled & {
+    color: var(--color-content-disabled);
+  }
 }
 
 .content {

@@ -1,6 +1,11 @@
 import { type Component, type PropType } from 'vue'
+import type { RouteLocationRaw } from 'vue-router'
 
 export const baseTabProps = {
+  to: {
+    type: [String, Object] as PropType<RouteLocationRaw>,
+    default: undefined,
+  },
   triggerAttrs: {
     type: Object as PropType<TabTriggerAttrs>,
     default: () => ({}),

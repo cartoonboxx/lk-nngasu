@@ -1,0 +1,30 @@
+@use "@/styles/mixins";
+
+.notFoundPage {
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+
+  .content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-8);
+    align-items: center;
+  }
+
+  .textBlock {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-6);
+
+    span {
+      padding-left: var(--space-6);
+      color: var(--color-text-primary);
+      font-weight: 400;
+      border-left: 1px solid var(--color-border-level-3);
+    }
+  }
+}

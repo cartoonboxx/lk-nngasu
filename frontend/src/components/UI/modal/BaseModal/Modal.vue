@@ -338,8 +338,8 @@ export default defineComponent({
         this.close()
       this.backdropPressed = false
     },
-    onNativeClose() {
-      const dialog = this.$refs.dialog as HTMLDialogElement
+    onNativeClose(event: Event) {
+      const dialog = event.currentTarget as HTMLDialogElement
       if (dialog.open) return
       this.clearAnimation()
       this.cancelDrag()

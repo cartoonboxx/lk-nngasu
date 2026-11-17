@@ -42,6 +42,10 @@
 }
 
 .bottomNavigation.hidden,
+:global(
+    body:has(input:read-write:focus, textarea:read-write:focus, [contenteditable]:read-write:focus)
+  )
+  .bottomNavigation,
 :global(body[data-message-keyboard='true']) .bottomNavigation {
   visibility: hidden;
   pointer-events: none;

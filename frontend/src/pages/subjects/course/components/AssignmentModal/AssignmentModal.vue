@@ -13,15 +13,9 @@
           </p>
           <div :class="style.titleRow">
             <h2>Практическая работа №{{ topicIndex + 1 }}</h2>
-            <p
-              :class="[
-                style.status,
-                reviewed ? style.reviewed : null,
-                answer && !reviewed ? style.pending : null,
-              ]"
-            >
+            <StatusBadge :variant="reviewed ? 'success' : answer ? 'info' : 'neutral'">
               {{ reviewed ? 'Работа проверена' : answer ? 'Ожидает проверки' : 'Не отправлено' }}
-            </p>
+            </StatusBadge>
           </div>
           <p :class="style.deadline">
             <PhCalendarBlank :size="23" />
@@ -155,7 +149,8 @@
               :title="attachment.name"
               :meta="attachment.meta"
               :readonly="!attachment.file && !attachment.url"
-              @click="download(attachment)"
+              :src="attachment.file || attachment.url"
+              :filename="attachment.name"
             >
               <template #icon>
                 <component
@@ -214,6 +209,7 @@
 </template>
 
 <script lang="ts">
+import StatusBadge from '@/components/UI/StatusBadge/StatusBadge.vue'
 import { defineComponent, useId, type PropType } from 'vue'
 import {
   PhCalendarBlank,
@@ -239,6 +235,7 @@ import style from './AssignmentModal.module.scss'
 export default defineComponent({
   name: 'AssignmentModal',
   components: {
+    StatusBadge,
     Modal,
     Button,
     MediaButton,
@@ -378,15 +375,6 @@ export default defineComponent({
         return
       }
       this.$emit('submit', { attachments: [...this.attachments], comment: this.comment.trim() })
-    },
-    download(attachment: AssignmentAttachment) {
-      const url = attachment.file ? URL.createObjectURL(attachment.file) : attachment.url
-      if (!url) return
-      const link = document.createElement('a')
-      link.href = url
-      link.download = attachment.name
-      link.click()
-      if (attachment.file) setTimeout(() => URL.revokeObjectURL(url), 1000)
     },
   },
 })

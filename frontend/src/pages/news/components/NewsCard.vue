@@ -1,9 +1,5 @@
 <template>
-  <component
-    :is="canOpen ? 'a' : 'article'"
-    :href="canOpen ? url : undefined"
-    :class="[style.card, featured ? style.featured : '']"
-  >
+  <RouterLink :class="[style.card, featured ? style.featured : '']" :to="url">
     <div
       v-if="image"
       :class="style.image"
@@ -29,24 +25,26 @@
         </p>
       </div>
 
-      <div v-if="canOpen" :class="style.readHint">
+      <div :class="style.readHint">
         Читать далее
         <PhArrowRight :size="14" />
       </div>
     </div>
-  </component>
+  </RouterLink>
 </template>
 
 <script lang="ts">
 import { defineComponent } from 'vue'
 import { PhArrowRight } from '@phosphor-icons/vue'
 import style from './NewsCard.module.scss'
+import { RouterLink } from 'vue-router'
 
 export default defineComponent({
   name: 'NewsCard',
 
   components: {
     PhArrowRight,
+    RouterLink,
   },
 
   props: {

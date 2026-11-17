@@ -66,7 +66,7 @@
             @select="navigate('messages')"
           >
             <template v-if="!collapsed && unreadMessages" #actions>
-              <span v-if="unreadMessages" :class="style.tabBadge">{{ unreadMessages }}</span>
+              <Badge :value="unreadMessages" variant="info" inline />
             </template>
           </NavTab>
         </Tooltip>
@@ -108,6 +108,7 @@
 </template>
 
 <script lang="ts">
+import Badge from '@/components/UI/Badge/Badge.vue'
 import {
   PhBookOpen,
   PhCalendarBlank,
@@ -129,14 +130,7 @@ import style from './DesktopNavBar.module.scss'
 
 export default defineComponent({
   name: 'DesktopNavBar',
-  components: {
-    PhSidebarSimple,
-    BrandHeader,
-    StudentCard,
-    NavTab,
-    IconButton,
-    Tooltip,
-  },
+  components: { Badge, PhSidebarSimple, BrandHeader, StudentCard, NavTab, IconButton, Tooltip },
   emits: ['collapse-change'],
   data() {
     return { style, collapsed: false }
