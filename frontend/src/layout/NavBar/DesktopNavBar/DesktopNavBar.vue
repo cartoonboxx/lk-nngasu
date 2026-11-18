@@ -99,8 +99,8 @@
     <Tooltip :class="style.tabTooltip" :isShow="collapsed" text="Аккаунт" position="right">
       <StudentCard
         :compact="collapsed"
-        name="Анна Иванова"
-        role="Студент"
+        :name="auth.user?.full_name || 'Аккаунт'"
+        :role="auth.roleLabel"
         @click="navigate('settings')"
       />
     </Tooltip>
@@ -108,6 +108,7 @@
 </template>
 
 <script lang="ts">
+import { useAuthStore } from '@/stores/auth'
 import Badge from '@/components/UI/Badge/Badge.vue'
 import {
   PhBookOpen,
@@ -133,7 +134,7 @@ export default defineComponent({
   components: { Badge, PhSidebarSimple, BrandHeader, StudentCard, NavTab, IconButton, Tooltip },
   emits: ['collapse-change'],
   data() {
-    return { style, collapsed: false }
+    return { style, collapsed: false, auth: useAuthStore() }
   },
   methods: {
     navigate(routeName: string) {

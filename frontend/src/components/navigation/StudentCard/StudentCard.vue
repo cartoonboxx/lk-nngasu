@@ -1,7 +1,14 @@
 <template>
   <button :class="[style.card, compact ? style.compact : null]" type="button">
     <img v-if="imageSrc" :class="style.avatar" :src="imageSrc" :alt="imageAlt" />
-    <span v-else :class="style.avatar">АИ</span>
+    <span v-else :class="style.avatar">{{
+      name
+        .split(/\s+/)
+        .filter(Boolean)
+        .slice(0, 2)
+        .map((part) => part[0])
+        .join('')
+    }}</span>
     <span v-if="!compact" :class="style.copy">
       <h6>{{ name }}</h6>
       <span>{{ role }}</span>

@@ -14,12 +14,14 @@
               alt="Фото профиля"
               :class="style.profileAvatarImage"
             />
-            <span v-else>АИ</span>
+            <span v-else
+              >{{ auth.user?.first_name.slice(0, 1) }}{{ auth.user?.last_name.slice(0, 1) }}</span
+            >
           </div>
 
           <div :class="style.profileInfo">
-            <p>Анна Иванова</p>
-            <p>Студент</p>
+            <p>{{ auth.user?.full_name }}</p>
+            <p>{{ auth.roleLabel }}</p>
           </div>
 
           <Button variant="secondary">Изменить фото</Button>
@@ -62,6 +64,17 @@
           >
         </div>
       </div>
+
+      <div :class="style.settingsSectionRow">
+        <div>
+          <h2>Аккаунт</h2>
+          <p>{{ auth.user?.email }}</p>
+        </div>
+        <Button variant="secondary" :loading="loggingOut" :disabled="loggingOut" @click="signOut"
+          >Выйти из аккаунта</Button
+        >
+      </div>
+      <p v-if="logoutError" :class="style.passwordError" role="alert">{{ logoutError }}</p>
 
       <Modal v-model="isPasswordModalOpen" :width="460" @close="resetPasswordForm">
         <template #default="{ close }">
@@ -154,6 +167,7 @@
 </template>
 
 <script lang="ts">
+import { useAuthStore } from '@/stores/auth'
 import { defineComponent } from 'vue'
 import { PhEye, PhEyeSlash } from '@phosphor-icons/vue'
 
@@ -183,6 +197,9 @@ export default defineComponent({
   data() {
     return {
       style,
+      auth: useAuthStore(),
+      loggingOut: false,
+      logoutError: '',
       isPasswordModalOpen: false,
       showCurrentPassword: false,
       showNewPassword: false,
@@ -202,6 +219,19 @@ export default defineComponent({
   },
 
   methods: {
+    async signOut() {
+      if (this.loggingOut) return
+      this.loggingOut = true
+      this.logoutError = ''
+      try {
+        await this.auth.signOut()
+        await this.$router.replace({ name: 'authorization' })
+      } catch (error) {
+        this.logoutError = error instanceof Error ? error.message : 'Не удалось завершить сессию.'
+      } finally {
+        this.loggingOut = false
+      }
+    },
     resetPasswordForm() {
       this.currentPassword = ''
       this.newPassword = ''

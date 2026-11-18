@@ -53,8 +53,8 @@
     >
       <StudentCard
         :compact="collapsed"
-        name="Анна Иванова"
-        role="Администратор"
+        :name="auth.user?.full_name || 'Аккаунт'"
+        :role="auth.roleLabel"
         @click="accountOpen = true"
       />
     </Tooltip>
@@ -105,8 +105,8 @@
         />
       </nav>
       <StudentCard
-        name="Анна Иванова"
-        role="Администратор"
+        :name="auth.user?.full_name || 'Аккаунт'"
+        :role="auth.roleLabel"
         @click="
           () => {
             menuOpen = false
@@ -117,19 +117,21 @@
     </section>
   </Modal>
   <AdminDialog v-model="accountOpen" title="Аккаунт администратора">
-    <p>Анна Иванова · Администратор</p>
-    <p :class="style.muted">
-      Открыт локальный демонстрационный сеанс. Он не предоставляет прав в университетских системах.
-    </p>
+    <p>{{ auth.user?.full_name }} · {{ auth.roleLabel }}</p>
+    <p :class="style.muted">{{ auth.user?.email }}</p>
+    <p v-if="logoutError" :class="style.error" role="alert">{{ logoutError }}</p>
     <div :class="style.dialogFooter">
-      <RouterLink to="/authorization" :class="style.link">Выйти из демо-режима</RouterLink>
+      <Button :loading="loggingOut" :disabled="loggingOut" @click="signOut"
+        >Выйти из аккаунта</Button
+      >
     </div>
   </AdminDialog>
 </template>
 <script lang="ts">
+import { useAuthStore } from '@/stores/auth'
 import Badge from '@/components/UI/Badge/Badge.vue'
 import { defineComponent, markRaw } from 'vue'
-import { RouterLink } from 'vue-router'
+import Button from '@/components/UI/buttons/Button/Button.vue'
 import {
   PhUsers,
   PhBuildings,
@@ -156,7 +158,7 @@ import style from '../Admin.module.scss'
 export default defineComponent({
   components: {
     Badge,
-    RouterLink,
+    Button,
     BrandHeader,
     StudentCard,
     NavTab,
@@ -174,6 +176,9 @@ export default defineComponent({
       desktop,
       mobile,
       style,
+      auth: useAuthStore(),
+      loggingOut: false,
+      logoutError: '',
       collapsed: false,
       menuOpen: false,
       accountOpen: false,
@@ -226,6 +231,19 @@ export default defineComponent({
     },
   },
   methods: {
+    async signOut() {
+      if (this.loggingOut) return
+      this.loggingOut = true
+      this.logoutError = ''
+      try {
+        await this.auth.signOut()
+        await this.$router.replace({ name: 'authorization' })
+      } catch (error) {
+        this.logoutError = error instanceof Error ? error.message : 'Не удалось завершить сессию.'
+      } finally {
+        this.loggingOut = false
+      }
+    },
     syncViewport() {
       this.isMobile = this.mediaQuery?.matches ?? false
       if (!this.isMobile) this.menuOpen = false

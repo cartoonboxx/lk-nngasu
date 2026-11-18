@@ -15,7 +15,7 @@ import NewsPage from '@/pages/news/NewsPage.vue'
 import NewsDetailsPage from '@/pages/news/page/NewsDetailsPage.vue'
 import NotFoundPage from '@/pages/notFound/NotFoundPage.vue'
 import AdminPage from '@/pages/admin/AdminPage.vue'
-import { adminDemoSession, adminDemoSessionKey } from '@/pages/auth/admin-demo'
+import { useAuthStore } from '@/stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -67,6 +67,7 @@ const router = createRouter({
     {
       path: '/',
       component: HomeLayout,
+      meta: { requiresAuth: true },
       children: [
         {
           path: '',
@@ -152,18 +153,22 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach((to, from) => {
-  if (to.name === 'authorization' || (from.meta.adminOnly && !to.meta.adminOnly)) {
-    adminDemoSession.active = false
-    try {
-      sessionStorage.removeItem(adminDemoSessionKey)
-    } catch {
-      /* In-memory access is already cleared. */
-    }
+router.beforeEach(async (to) => {
+  const auth = useAuthStore()
+  const authPage = to.name === 'authorization' || to.name === 'registration'
+  if (!to.meta.requiresAuth && !to.meta.adminOnly && !authPage) return
+
+  try {
+    await auth.ensureSession()
+  } catch {
+    if (authPage) return
+    return { name: 'authorization', query: { reason: 'server-unavailable' } }
   }
-  if (to.meta.adminOnly && !adminDemoSession.active) {
-    return { name: 'authorization', query: { reason: 'admin-required' } }
+  if ((to.meta.requiresAuth || to.meta.adminOnly) && !auth.user) {
+    return { name: 'authorization', query: { redirect: to.fullPath } }
   }
+  if (to.meta.adminOnly && !auth.user?.is_admin) return { name: 'dashboard' }
+  if (authPage && auth.user) return { name: auth.user.is_admin ? 'admin-requests' : 'dashboard' }
 })
 
 export default router
