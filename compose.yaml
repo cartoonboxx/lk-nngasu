@@ -24,6 +24,13 @@ services:
       DATABASE_URL: postgres://root:K7m!q2Vz@db:5432/nngasu?sslmode=disable
       JWT_SECRET: ${JWT_SECRET:?Задайте JWT_SECRET длиной не менее 32 символов}
       ACCESS_TTL: ${ACCESS_TTL:-12h}
+      ADMIN_SETUP_KEY: ${ADMIN_SETUP_KEY:-}
+      APP_URL: ${APP_URL:-http://localhost:5173}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
       COOKIE_SECURE: "false"
       TIMEZONE: Europe/Moscow
       WEEK_ONE_DATE: ${WEEK_ONE_DATE:-2026-09-01}

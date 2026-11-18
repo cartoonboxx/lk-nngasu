@@ -17,10 +17,10 @@ import (
 // одновременно, не применят одну миграцию дважды.
 const migrateLockKey = 7_100_200_300
 
-// baselineMarkers — признаки миграций 001–010, применённых вручную до появления
+// baselineMarkers — признаки миграций 001–011, применённых вручную до появления
 // таблицы schema_migrations. Для базы без этой таблицы Migrate отмечает
 // применёнными миграции подряд, пока признак находится, и не запускает их повторно.
-// Новым миграциям (011+) признаки не нужны: их применяет только Migrate.
+// Учитывает также SQL, применённый docker-entrypoint-initdb.d при создании базы.
 var baselineMarkers = map[int]string{
 	1:  `to_regclass('public.app_user') IS NOT NULL`,
 	2:  `to_regclass('public.chat') IS NOT NULL`,
@@ -32,6 +32,7 @@ var baselineMarkers = map[int]string{
 	8:  `EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'department' AND column_name = 'archived')`,
 	9:  `EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'lesson' AND column_name = 'ends_at')`,
 	10: `EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'file' AND column_name = 'mime_type')`,
+	11: `to_regclass('public.admin_setup') IS NOT NULL`,
 }
 
 var (

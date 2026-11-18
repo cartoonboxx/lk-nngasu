@@ -33,6 +33,12 @@ const router = createRouter({
       children: [
         { path: '', redirect: { name: 'admin-requests' } },
         {
+          path: 'administrators',
+          name: 'admin-administrators',
+          meta: { ownerOnly: true },
+          component: () => import('@/pages/admin/AdministratorsPage.vue'),
+        },
+        {
           path: 'requests',
           name: 'admin-requests',
           component: () => import('@/pages/admin/RequestsPage.vue'),
@@ -126,6 +132,16 @@ const router = createRouter({
       ],
     },
     {
+      path: '/setup',
+      name: 'setup',
+      component: () => import('@/pages/auth/SetupPage/SetupPage.vue'),
+    },
+    {
+      path: '/activation',
+      name: 'activation',
+      component: () => import('@/pages/auth/ActivationPage/ActivationPage.vue'),
+    },
+    {
       path: '/authorization',
       name: 'authorization',
       component: AuthorizationPage,
@@ -167,6 +183,7 @@ router.beforeEach(async (to) => {
   if ((to.meta.requiresAuth || to.meta.adminOnly) && !auth.user) {
     return { name: 'authorization', query: { redirect: to.fullPath } }
   }
+  if (to.meta.ownerOnly && !auth.user?.can_manage_admins) return { name: 'dashboard' }
   if (to.meta.adminOnly && !auth.user?.is_admin) return { name: 'dashboard' }
   if (authPage && auth.user) return { name: auth.user.is_admin ? 'admin-requests' : 'dashboard' }
 })

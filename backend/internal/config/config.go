@@ -10,6 +10,7 @@ import (
 )
 
 type Config struct {
+	AdminSetupKey  string // одноразовая первоначальная настройка; пусто — отключена
 	HTTPAddr       string
 	DatabaseURL    string
 	JWTSecret      string
@@ -25,7 +26,7 @@ type Config struct {
 	AllowedOrigins []string // кроме своего адреса, откуда можно вызывать /auth/refresh и /auth/logout
 	TermsVersion   string   // поддерживаемая версия условий использования
 	AppURL         string   // адрес фронтенда для ссылок в письмах (…/activation?token=…)
-	SMTP           SMTP     // отправка писем; пустой Host — ссылки пишутся в лог сервера
+	SMTP           SMTP     // отправка писем; пустой Host — доставка отключена
 
 	Location       *time.Location // часовой пояс вуза
 	WeekOneDate    time.Time      // любая дата первой (верхней) недели; нулевая — календарь не настроен (409)
@@ -52,6 +53,11 @@ func Load() (Config, error) {
 	}
 	if len(cfg.JWTSecret) < 32 {
 		return Config{}, errors.New("JWT_SECRET must be at least 32 characters")
+	}
+
+	cfg.AdminSetupKey = os.Getenv("ADMIN_SETUP_KEY")
+	if cfg.AdminSetupKey != "" && (len(cfg.AdminSetupKey) < 32 || len(cfg.AdminSetupKey) > 256) {
+		return Config{}, errors.New("ADMIN_SETUP_KEY must be 32..256 bytes long")
 	}
 
 	var err error

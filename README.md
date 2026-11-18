@@ -38,12 +38,11 @@ docker compose exec -T db psql -U root -d nngasu -v ON_ERROR_STOP=1 --single-tra
 Данные PostgreSQL и загруженные файлы сохраняются в томах `postgres-data`
 и `uploads`. Обычный `docker compose down` их сохраняет.
 
-Создание первого администратора:
-
-```sh
-docker compose exec -e ADMIN_EMAIL=admin@example.com \
-  -e ADMIN_PASSWORD='замените-на-свой-пароль' backend createadmin
-```
+Создание первого администратора выполняется через страницу `/setup`:
+задайте отдельный случайный `ADMIN_SETUP_KEY` в серверном `.env` до запуска,
+введите его в форме и создайте владельца. Следующих администраторов владелец
+приглашает из `/admin/administrators`; для писем настройте SMTP и `APP_URL`.
+[Подробная инструкция](backend/docs/admin-access.md).
 
 При запуске Vite вне Docker задайте `API_PROXY_TARGET` с адресом API
 (по умолчанию `http://localhost:8080`). Порты Compose при необходимости
@@ -181,12 +180,11 @@ docker compose --env-file .env --env-file .release.env -f compose.prod.yaml ps
 docker compose --env-file .env --env-file .release.env -f compose.prod.yaml logs --tail=100 -f frontend backend db
 ```
 
-Создание первого администратора:
-
-```sh
-docker compose --env-file .env --env-file .release.env -f compose.prod.yaml exec \
-  -e ADMIN_EMAIL=admin@example.com -e ADMIN_PASSWORD='замените-на-свой-пароль' backend createadmin
-```
+Для первого владельца задайте `ADMIN_SETUP_KEY` в серверном `.env`, пересоздайте
+контейнер бэкенда с этой конфигурацией и откройте `/setup` по публичному HTTPS-адресу.
+После настройки ключ можно удалить. Для приглашений следующих администраторов
+задайте SMTP и `APP_URL` из `deploy/.env.example`.
+[Подробная инструкция](backend/docs/admin-access.md).
 
 Остановка с сохранением данных:
 

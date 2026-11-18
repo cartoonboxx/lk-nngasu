@@ -30,7 +30,7 @@ type userRecord struct {
 
 // userSelect — пользователь с группой и кафедрой; порядок колонок — как в scanUser.
 const userSelect = `
-	SELECT u.id, u.email, u.password_hash, u.is_active, u.is_admin,
+	SELECT u.id, u.email, u.password_hash, u.is_active, u.is_admin, u.can_manage_admins,
 	       u.last_name, u.first_name, u.middle_names, u.avatar_file_id,
 	       s.group_id, g.name, s.record_book_number, s.is_headman,
 	       t.department_id, d.name
@@ -51,7 +51,7 @@ func scanUser(row pgx.Row) (userRecord, error) {
 		departmentID   *int64
 		departmentName *string
 	)
-	err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.IsActive, &u.IsAdmin,
+	err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.IsActive, &u.IsAdmin, &u.CanManageAdmins,
 		&u.LastName, &u.FirstName, &u.MiddleNames, &avatarID,
 		&groupID, &groupName, &recordBook, &isHeadman, &departmentID, &departmentName)
 	if errors.Is(err, pgx.ErrNoRows) {

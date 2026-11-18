@@ -30,18 +30,18 @@ var (
 // Invite создаёт приглашение в отдельной транзакции (POST /users/:id/invitation).
 func (s *Service) Invite(ctx context.Context, userID, invitedBy int64) error {
 	return database.InTx(ctx, s.repo.db, func(tx pgx.Tx) error {
-		return s.InviteTx(ctx, tx, userID, invitedBy)
+		return s.InviteTx(ctx, tx, userID, invitedBy, false)
 	})
 }
 
 // InviteTx создаёт приглашение задать пароль и ставит письмо со ссылкой
-// <APP_URL>/activation?token=… в очередь — внутри транзакции вызывающего.
+// <APP_URL>/activation#token=… в очередь — внутри транзакции вызывающего.
 // Так создание пользователя и приглашение атомарны: либо есть оба, либо ничего.
 // Прежние неиспользованные приглашения отменяются.
 // Пользователь, у которого пароль уже задан, — 409 already_activated.
 //
 // Реализует users.Inviter.
-func (s *Service) InviteTx(ctx context.Context, tx pgx.Tx, userID, invitedBy int64) error {
+func (s *Service) InviteTx(ctx context.Context, tx pgx.Tx, userID, invitedBy int64, grantsAdmin bool) error {
 	var email, firstName, hash string
 	err := tx.QueryRow(ctx, `SELECT email, first_name, password_hash FROM app_user WHERE id = $1 FOR UPDATE`, userID).
 		Scan(&email, &firstName, &hash)
@@ -63,12 +63,12 @@ func (s *Service) InviteTx(ctx context.Context, tx pgx.Tx, userID, invitedBy int
 		by = &invitedBy
 	}
 	token := newToken()
-	if _, err := tx.Exec(ctx, `INSERT INTO user_invitation (user_id, token_hash, created_by, expires_at)
-		VALUES ($1, $2, $3, $4)`, userID, hashToken(token), by, time.Now().Add(invitationTTL)); err != nil {
+	if _, err := tx.Exec(ctx, `INSERT INTO user_invitation (user_id, token_hash, created_by, expires_at, grants_admin)
+		VALUES ($1, $2, $3, $4, $5)`, userID, hashToken(token), by, time.Now().Add(invitationTTL), grantsAdmin); err != nil {
 		return err
 	}
 
-	link := s.opts.AppURL + "/activation?token=" + url.QueryEscape(token)
+	link := s.opts.AppURL + "/activation#token=" + url.QueryEscape(token)
 	body := fmt.Sprintf("Здравствуйте, %s!\n\n"+
 		"Для вас создана учётная запись в личном кабинете. Чтобы задать пароль, перейдите по ссылке "+
 		"(она действует 24 часа):\n\n%s\n\n"+
@@ -89,15 +89,17 @@ func (s *Service) Activate(ctx context.Context, token, password string) error {
 
 	return database.InTx(ctx, s.repo.db, func(tx pgx.Tx) error {
 		var (
-			id, userID int64
-			expiresAt  time.Time
-			used       bool
-			revoked    bool
+			id, userID  int64
+			expiresAt   time.Time
+			used        bool
+			revoked     bool
+			grantsAdmin bool
+			invitedBy   *int64
 		)
 		err := tx.QueryRow(ctx, `
-			SELECT id, user_id, expires_at, used_at IS NOT NULL, revoked_at IS NOT NULL
+			SELECT id, user_id, expires_at, used_at IS NOT NULL, revoked_at IS NOT NULL, grants_admin, created_by
 			FROM user_invitation WHERE token_hash = $1 FOR UPDATE`, hashToken(token)).
-			Scan(&id, &userID, &expiresAt, &used, &revoked)
+			Scan(&id, &userID, &expiresAt, &used, &revoked, &grantsAdmin, &invitedBy)
 		switch {
 		case errors.Is(err, pgx.ErrNoRows):
 			return errInvitationInvalid
@@ -112,12 +114,18 @@ func (s *Service) Activate(ctx context.Context, token, password string) error {
 		}
 
 		// Пароль задаётся, только если его ещё нет: администратор мог успеть задать его сам.
-		tag, err := tx.Exec(ctx, `UPDATE app_user SET password_hash = $2 WHERE id = $1 AND password_hash = ''`, userID, string(hash))
+		tag, err := tx.Exec(ctx, `UPDATE app_user SET password_hash = $2, is_admin = is_admin OR $3 WHERE id = $1 AND password_hash = '' AND is_active`, userID, string(hash), grantsAdmin)
 		if err != nil {
 			return err
 		}
 		if tag.RowsAffected() == 0 {
 			return errAlreadyActivated
+		}
+		if grantsAdmin {
+			if _, err := tx.Exec(ctx, `INSERT INTO admin_access_audit (actor_id, target_id, target_email, action)
+				SELECT $1, id, email, 'activate' FROM app_user WHERE id = $2`, invitedBy, userID); err != nil {
+				return err
+			}
 		}
 		_, err = tx.Exec(ctx, `UPDATE user_invitation SET used_at = now() WHERE id = $1`, id)
 		return err

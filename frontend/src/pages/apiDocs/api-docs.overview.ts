@@ -7,6 +7,7 @@ export const accessLabels: Record<ApiAccess, string> = {
   teacher: 'Преподаватель курса',
   staff: 'Преподаватель с доступом / администратор',
   admin: 'Администратор',
+  owner: 'Владелец системы (can_manage_admins)',
   member: 'Участник чата',
   refresh: 'Refresh-сессия (cookie)',
   ticket: 'Одноразовый WebSocket-ticket',

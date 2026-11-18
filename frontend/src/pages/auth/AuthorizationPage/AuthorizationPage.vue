@@ -62,6 +62,11 @@
         Пока нет аккаунта?
         <RouterLink :class="style.link" to="/registration">Зарегистрироваться</RouterLink>
       </p>
+      <p v-if="setupAvailable" :class="style.footer">
+        <RouterLink :class="style.link" to="/setup"
+          >Настроить первый аккаунт администратора</RouterLink
+        >
+      </p>
       <p v-if="signInError" :class="style.error" role="alert">{{ signInError }}</p>
       <p v-if="$route.query.reason === 'server-unavailable'" :class="style.error" role="alert">
         Не удалось восстановить сессию. Проверьте подключение к серверу и повторите вход.
@@ -81,6 +86,7 @@ import Checkbox from '@/components/UI/inputs/Checkbox/Checkbox.vue'
 import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
 import style from '../AuthForm.module.scss'
 import { useAuthStore } from '@/stores/auth'
+import { apiRequest } from '@/api/client'
 
 export default defineComponent({
   name: 'AuthorizationPage',
@@ -99,11 +105,20 @@ export default defineComponent({
       style,
       auth: useAuthStore(),
       submitting: false,
+      setupAvailable: false,
       login: '',
       signInError: '',
       password: '',
       rememberMe: false,
       showPassword: false,
+    }
+  },
+  async mounted() {
+    try {
+      const status = await apiRequest<{ available: boolean }>('/auth/setup')
+      this.setupAvailable = status.available
+    } catch {
+      this.setupAvailable = false
     }
   },
   methods: {

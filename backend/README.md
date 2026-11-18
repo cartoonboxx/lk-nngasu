@@ -8,12 +8,11 @@ REST API личного кабинета вуза: **Go + Gin + pgx + PostgreSQL
 ```bash
 cd ..                               # команды из корня репозитория
 export JWT_SECRET=$(openssl rand -hex 32)
+export ADMIN_SETUP_KEY=$(openssl rand -hex 32) # сохраните ключ для формы /setup
 docker compose up -d --build --wait  # фронтенд, API, PostgreSQL и Adminer
 
-# первый администратор (через API создать нельзя: POST /users требует админа)
-docker compose exec -e ADMIN_EMAIL=admin@example.com \
-  -e ADMIN_PASSWORD='сменить-меня-123' \
-  backend createadmin
+# откройте /setup на фронтенде и создайте владельца по ADMIN_SETUP_KEY
+# затем войдите с указанными в форме почтой и паролем
 
 curl -s localhost:5173/api/v1/auth/login -H 'Content-Type: application/json' \
   -d '{"email":"admin@example.com","password":"сменить-меня-123"}'
@@ -30,7 +29,12 @@ Vite проксирует запросы в контейнер `backend:8080`. S
 `{"status":"ok"}` через Vite и продакшен-nginx. Внутренний `GET /healthz`
 используется healthcheck контейнера и возвращает тот же ответ.
 
-Без Docker: `cp .env.example .env`, задать переменные, `make admin`, `make run`.
+Без Docker: `cp .env.example .env`, экспортировать переменные в окружение,
+запустить `make run`, открыть `/setup` на фронтенде.
+
+Первый администратор создаётся через одноразовую настройку; следующих владелец
+приглашает из `/admin/administrators`. Подробности и конфигурация SMTP —
+[создание владельца и администраторов](docs/admin-access.md).
 
 ## Миграции
 

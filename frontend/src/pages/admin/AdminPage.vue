@@ -5,17 +5,20 @@
   />
   <main :class="[home.mainContent, collapsed && home.collapsed]" :inert="mobileMenuOpen">
     <div :class="layout.content">
-      <p v-if="$adminStore.success" :class="style.success" role="status">
-        {{ $adminStore.success }}
-      </p>
-      <div v-if="$adminStore.error" :class="style.error" role="alert">
-        {{ $adminStore.error }}
-        <Button v-if="!$adminStore.data" variant="ghost" @click="$adminStore.initialize(true)">
-          Повторить
-        </Button>
-      </div>
-      <div v-if="$adminStore.loading" :class="style.empty" role="status">Загрузка данных…</div>
-      <RouterView v-else-if="$adminStore.data" />
+      <RouterView v-if="$route.meta.ownerOnly" />
+      <template v-else>
+        <p v-if="$adminStore.success" :class="style.success" role="status">
+          {{ $adminStore.success }}
+        </p>
+        <div v-if="$adminStore.error" :class="style.error" role="alert">
+          {{ $adminStore.error }}
+          <Button v-if="!$adminStore.data" variant="ghost" @click="$adminStore.initialize(true)">
+            Повторить
+          </Button>
+        </div>
+        <div v-if="$adminStore.loading" :class="style.empty" role="status">Загрузка данных…</div>
+        <RouterView v-else-if="$adminStore.data" />
+      </template>
     </div>
   </main>
 </template>

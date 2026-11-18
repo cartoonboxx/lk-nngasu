@@ -44,11 +44,13 @@ var dummyHash, _ = bcrypt.GenerateFromPassword([]byte("dummy-password-for-timing
 
 // Options — настройки модуля из конфигурации приложения.
 type Options struct {
-	Secret         []byte        // ключ подписи JWT и CSRF-токенов (JWT_SECRET)
-	AccessTTL      time.Duration // срок access-токена (ACCESS_TTL)
-	CookieSecure   bool          // флаг Secure у refresh-cookie
-	AllowedOrigins []string      // дополнительные разрешённые Origin для refresh/logout
-	AppURL         string        // адрес фронтенда для ссылки активации
+	AdminSetupKey           string
+	AdminInvitationsEnabled bool          // приглашения администраторов требуют SMTP, без вывода токенов в лог
+	Secret                  []byte        // ключ подписи JWT и CSRF-токенов (JWT_SECRET)
+	AccessTTL               time.Duration // срок access-токена (ACCESS_TTL)
+	CookieSecure            bool          // флаг Secure у refresh-cookie
+	AllowedOrigins          []string      // дополнительные разрешённые Origin для refresh/logout
+	AppURL                  string        // адрес фронтенда для ссылки активации
 }
 
 // Service — вход, сессии и приглашения.

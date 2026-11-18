@@ -58,7 +58,7 @@ func Run(ctx context.Context, cfg config.Config) error {
 	v1 := r.Group("/api/v1")
 	limiter := ratelimit.New()
 
-	// Письма: через SMTP, а без настроек — в лог сервера (для разработки).
+	// Письма через SMTP; без настроек доставка откладывается без раскрытия ссылок в логах.
 	var mailer mail.Sender = mail.Log{}
 	if cfg.SMTP.Host != "" {
 		mailer = mail.SMTP{Host: cfg.SMTP.Host, Port: cfg.SMTP.Port, User: cfg.SMTP.User,
@@ -71,11 +71,12 @@ func Run(ctx context.Context, cfg config.Config) error {
 	// Публичные маршруты авторизации: вход, CSRF, refresh, logout, активация.
 	authSvc := auth.Register(v1, pool, auth.Options{
 		Secret: secret, AccessTTL: cfg.AccessTTL, CookieSecure: cfg.CookieSecure,
-		AllowedOrigins: cfg.AllowedOrigins, AppURL: cfg.AppURL,
+		AllowedOrigins: cfg.AllowedOrigins, AppURL: cfg.AppURL, AdminSetupKey: cfg.AdminSetupKey, AdminInvitationsEnabled: cfg.SMTP.Host != "",
 	}, limiter)
 
 	// Всё, что ниже, требует JWT действующей сессии.
 	protected := v1.Group("", middleware.Auth(secret, authSvc))
+	authSvc.RegisterAdminRoutes(protected, limiter)
 	checker := access.NewChecker(pool)
 
 	bells := make([]schedule.Bell, 0, len(cfg.LessonBells))

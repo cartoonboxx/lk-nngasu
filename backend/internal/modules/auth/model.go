@@ -33,17 +33,18 @@ type Token struct {
 // UserInfo — кто вошёл. student, teacher и is_admin независимы: у пользователя может
 // быть несколько ролей сразу, и фронт не должен выбирать права по одной из них.
 type UserInfo struct {
-	ID          int64        `json:"id"`
-	LastName    string       `json:"last_name"`
-	FirstName   string       `json:"first_name"`
-	MiddleNames *string      `json:"middle_names"`
-	FullName    string       `json:"full_name"` // "Фамилия Имя Отчество"
-	Email       string       `json:"email"`
-	Avatar      *FileRef     `json:"avatar"` // null — аватара нет
-	IsActive    bool         `json:"is_active"`
-	IsAdmin     bool         `json:"is_admin"`
-	Student     *StudentInfo `json:"student"` // null — не студент
-	Teacher     *TeacherInfo `json:"teacher"` // null — не преподаватель
+	ID              int64        `json:"id"`
+	LastName        string       `json:"last_name"`
+	FirstName       string       `json:"first_name"`
+	MiddleNames     *string      `json:"middle_names"`
+	FullName        string       `json:"full_name"` // "Фамилия Имя Отчество"
+	Email           string       `json:"email"`
+	Avatar          *FileRef     `json:"avatar"` // null — аватара нет
+	IsActive        bool         `json:"is_active"`
+	CanManageAdmins bool         `json:"can_manage_admins"`
+	IsAdmin         bool         `json:"is_admin"`
+	Student         *StudentInfo `json:"student"` // null — не студент
+	Teacher         *TeacherInfo `json:"teacher"` // null — не преподаватель
 }
 
 // FileRef — файл аватара: id и адрес скачивания через модуль files.

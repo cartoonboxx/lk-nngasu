@@ -28,7 +28,7 @@ type Inviter interface {
 	// Invite — в своей транзакции (повторная отправка).
 	Invite(ctx context.Context, userID, invitedBy int64) error
 	// InviteTx — в транзакции вызывающего: создание пользователя и приглашение атомарны.
-	InviteTx(ctx context.Context, tx pgx.Tx, userID, invitedBy int64) error
+	InviteTx(ctx context.Context, tx pgx.Tx, userID, invitedBy int64, grantsAdmin bool) error
 }
 
 // Options — настройки пакета из конфигурации приложения.
@@ -201,7 +201,7 @@ func (s *Service) Create(ctx context.Context, in CreateUser) (AdminUser, error) 
 	// не активирует приглашение. Пользователь и письмо в очереди создаются
 	// одной транзакцией: если что-то не удалось, не остаётся ни того, ни другого.
 	id, err := s.repo.Create(ctx, in, "", func(tx pgx.Tx, id int64) error {
-		return s.opts.Inviter.InviteTx(ctx, tx, id, in.CreatedBy)
+		return s.opts.Inviter.InviteTx(ctx, tx, id, in.CreatedBy, false)
 	})
 	if err != nil {
 		return AdminUser{}, err
@@ -284,7 +284,7 @@ func (s *Service) AdminUpdate(ctx context.Context, actor middleware.Principal, i
 		return AdminUser{}, apperr.NewConflict("self_lockout", "you cannot block yourself")
 	}
 
-	if err := s.repo.AdminUpdate(ctx, id, in); err != nil {
+	if err := s.repo.AdminUpdate(ctx, id, actor.UserID, in); err != nil {
 		return AdminUser{}, err
 	}
 	return s.repo.Get(ctx, id)

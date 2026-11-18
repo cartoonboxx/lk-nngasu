@@ -10,6 +10,30 @@ export const apiGroups: ApiGroup[] = [
       'scheme.dbml; frontend/src/pages/auth; сценарии входа, регистрации и активации аккаунта',
     endpoints: [
       {
+        method: 'GET',
+        path: '/auth/setup',
+        title: 'Доступность первоначальной настройки',
+        access: 'public',
+        stage: 'extension',
+        response: { status: 200, schema: 'SetupStatus' },
+        notes: [
+          'Реализовано. available=true только при заданном ADMIN_SETUP_KEY и незавершённой настройке. Cache-Control: no-store.',
+        ],
+      },
+      {
+        method: 'POST',
+        path: '/auth/setup',
+        title: 'Создать первого администратора — владельца',
+        access: 'public',
+        stage: 'extension',
+        body: 'AdminSetupInput',
+        response: { status: 201, description: '{data: {created: true}}' },
+        errors: ['403 setup_key_invalid', '409 setup_closed / email_exists', '429 rate_limited'],
+        notes: [
+          'Реализовано. Ключ передаётся только в JSON по HTTPS. Создание владельца и постоянное закрытие настройки атомарны. Удаление аккаунтов не открывает настройку заново. Сессия не создаётся: после настройки обычный вход.',
+        ],
+      },
+      {
         method: 'POST',
         path: '/auth/login',
         title: 'Войти в аккаунт',
@@ -152,7 +176,65 @@ export const apiGroups: ApiGroup[] = [
         notes: [
           'Расширение: scheme.dbml не содержит заявок, приглашений и их состояний; требуется отдельное хранилище.',
           'Поддерживает создание пользователя из админки, где сейчас нет поля пароля. После успешной активации предложить обычный вход.',
-          'Новое решение: нужна форма /activation на фронтенде и почтовая отправка. Здесь документируется только API; форму активации эта задача не реализует.',
+          'Реализовано: форма /activation получает токен из фрагмента #token=… письма. При grants_admin права администратора назначаются в одной транзакции с установкой пароля и погашением приглашения.',
+        ],
+      },
+    ],
+  },
+  {
+    id: 'admin-access',
+    title: 'Управление администраторами',
+    description:
+      'Реализовано. Только владелец с can_manage_admins; право перечитывается из БД на каждом запросе. Обычного is_admin недостаточно.',
+    source: 'backend/internal/modules/auth/service_admin.go; migrations/011_admin_setup.sql',
+    endpoints: [
+      {
+        method: 'GET',
+        path: '/admin/administrators',
+        title: 'Администраторы и ожидающие приглашения',
+        access: 'owner',
+        stage: 'extension',
+        response: { status: 200, schema: 'Administrator', array: true },
+        errors: ['401 session_expired', '403 owner_required'],
+        notes: [
+          'Возвращает серверные аккаунты и приглашения с grants_admin, включая просроченные.',
+        ],
+      },
+      {
+        method: 'POST',
+        path: '/admin/administrators/invitations',
+        title: 'Пригласить администратора',
+        access: 'owner',
+        stage: 'extension',
+        body: 'AdminInvitationInput',
+        response: { status: 204 },
+        errors: [
+          '403 owner_required / wrong_password',
+          '409 email_exists',
+          '429 rate_limited',
+          '503 invitations_disabled',
+        ],
+        notes: [
+          'Требует текущий пароль владельца и настроенный SMTP. Создание кандидата, одноразовая ссылка на 24 часа, очередь письма и аудит атомарны. В БД приглашения хранится хеш токена; JSON его не содержит.',
+          'Повтор для той же почты без заданного пароля заменяет ссылку. Активный пользователь назначается через /promote. До активации права не предоставляются.',
+        ],
+      },
+      {
+        method: 'POST',
+        path: '/admin/administrators/promote',
+        title: 'Назначить существующего пользователя администратором',
+        access: 'owner',
+        stage: 'extension',
+        body: 'AdminPromotionInput',
+        response: { status: 204 },
+        errors: [
+          '403 owner_required / wrong_password',
+          '404 user_not_found',
+          '409 already_admin / account_not_ready',
+          '429 rate_limited',
+        ],
+        notes: [
+          'Нужен активный пользователь с заданным паролем. Проверяется текущий пароль владельца. Сессии назначенного пользователя отзываются; требуется повторный вход. Изменение прав и аудит выполняются одной транзакцией. Право can_manage_admins не передаётся.',
         ],
       },
     ],

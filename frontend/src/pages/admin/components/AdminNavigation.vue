@@ -24,7 +24,7 @@
       </div>
       <div :class="desktop.tabList">
         <Tooltip
-          v-for="item in navigation"
+          v-for="item in visibleNavigation"
           :key="item.path"
           :class="desktop.tabTooltip"
           :text="item.label"
@@ -192,15 +192,21 @@ export default defineComponent({
         { path: 'courses', label: 'Дисциплины и нагрузка', icon: markRaw(PhBooks) },
         { path: 'schedule', label: 'Расписание', icon: markRaw(PhCalendarBlank) },
         { path: 'news', label: 'Новости', icon: markRaw(PhNewspaper) },
+        { path: 'administrators', label: 'Администраторы', icon: markRaw(PhUsers) },
       ],
     }
   },
   computed: {
+    visibleNavigation() {
+      return this.navigation.filter(
+        (item) => item.path !== 'administrators' || this.auth.user?.can_manage_admins,
+      )
+    },
     primaryNavigation() {
-      return this.navigation.slice(0, 3)
+      return this.visibleNavigation.slice(0, 3)
     },
     moreNavigation() {
-      return this.navigation.slice(3)
+      return this.visibleNavigation.slice(3)
     },
     isMoreActive(): boolean {
       return (

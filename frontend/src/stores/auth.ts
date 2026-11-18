@@ -1,4 +1,3 @@
-import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 import { ApiError, apiRequest } from '@/api/client'
 
@@ -11,6 +10,7 @@ interface AuthUser {
   email: string
   is_active: boolean
   is_admin: boolean
+  can_manage_admins: boolean
   avatar: { id: number; url: string } | null
   student: {
     group_id: number
@@ -28,78 +28,100 @@ interface AuthToken {
   user: AuthUser
 }
 
-export const useAuthStore = defineStore('auth', () => {
-  // Access-токен и профиль живут только в памяти; refresh-cookie управляет браузер.
-  const session = ref<AuthToken | null>(null)
-  const initialized = ref(false)
-  let refreshPromise: Promise<void> | null = null
-  const user = computed(() => session.value?.user ?? null)
-  const roleLabel = computed(() =>
-    [
-      user.value?.is_admin && 'Администратор',
-      user.value?.student && 'Студент',
-      user.value?.teacher && 'Преподаватель',
-    ]
-      .filter(Boolean)
-      .join(', '),
-  )
+export const useAuthStore = defineStore('auth', {
+  state: () => ({
+    // Access-токен и профиль живут только в памяти; refresh-cookie управляет браузер.
+    session: null as AuthToken | null,
+    initialized: false,
+    refreshPromise: null as Promise<void> | null,
+  }),
+  getters: {
+    user: (state): AuthUser | null => state.session?.user ?? null,
+    roleLabel(): string {
+      return [
+        this.user?.is_admin && (this.user.can_manage_admins ? 'Владелец' : 'Администратор'),
+        this.user?.student && 'Студент',
+        this.user?.teacher && 'Преподаватель',
+      ]
+        .filter(Boolean)
+        .join(', ')
+    },
+  },
+  actions: {
+    async request<T>(path: string, options: RequestInit = {}): Promise<T> {
+      await this.ensureSession()
+      if (!this.session) throw new ApiError(401, 'session_expired')
+      const headers = new Headers(options.headers)
+      headers.set('Authorization', `Bearer ${this.session.access_token}`)
+      try {
+        return await apiRequest<T>(path, { ...options, headers })
+      } catch (error) {
+        if (error instanceof ApiError && error.code === 'token_expired') {
+          await this.refresh()
+          if (!this.session) throw new ApiError(401, 'session_expired')
+          headers.set('Authorization', `Bearer ${this.session.access_token}`)
+          return apiRequest<T>(path, { ...options, headers })
+        }
+        if (error instanceof ApiError && error.status === 401) this.session = null
+        throw error
+      }
+    },
 
-  async function refresh() {
-    if (refreshPromise) return refreshPromise
-    refreshPromise = (async () => {
+    async refresh(): Promise<void> {
+      if (this.refreshPromise) return this.refreshPromise
+      this.refreshPromise = (async () => {
+        try {
+          const csrf = await apiRequest<{ csrf_token: string }>('/auth/csrf')
+          this.session = await apiRequest<AuthToken>('/auth/refresh', {
+            method: 'POST',
+            headers: { 'X-CSRF-Token': csrf.csrf_token },
+          })
+          this.initialized = true
+        } catch (error) {
+          if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
+            this.session = null
+            this.initialized = true
+            if (error.status === 401) return
+          }
+          throw error
+        } finally {
+          this.refreshPromise = null
+        }
+      })()
+      return this.refreshPromise
+    },
+
+    async ensureSession() {
+      if (
+        !this.initialized ||
+        (this.session && Date.parse(this.session.expires_at) <= Date.now() + 30000)
+      ) {
+        await this.refresh()
+      }
+    },
+
+    async signIn(email: string, password: string, rememberMe: boolean) {
+      if (this.refreshPromise) await this.refreshPromise
+      this.session = await apiRequest<AuthToken>('/auth/login', {
+        method: 'POST',
+        body: JSON.stringify({ email: email.trim(), password, remember_me: rememberMe }),
+      })
+      this.initialized = true
+    },
+
+    async signOut() {
+      if (this.refreshPromise) await this.refreshPromise
       try {
         const csrf = await apiRequest<{ csrf_token: string }>('/auth/csrf')
-        session.value = await apiRequest<AuthToken>('/auth/refresh', {
+        await apiRequest<void>('/auth/logout', {
           method: 'POST',
           headers: { 'X-CSRF-Token': csrf.csrf_token },
         })
-        initialized.value = true
       } catch (error) {
-        if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
-          session.value = null
-          initialized.value = true
-          if (error.status === 401) return
-        }
-        throw error
-      } finally {
-        refreshPromise = null
+        if (!(error instanceof ApiError) || error.status !== 401) throw error
       }
-    })()
-    return refreshPromise
-  }
-
-  async function ensureSession() {
-    if (
-      !initialized.value ||
-      (session.value && Date.parse(session.value.expires_at) <= Date.now() + 30000)
-    ) {
-      await refresh()
-    }
-  }
-
-  async function signIn(email: string, password: string, rememberMe: boolean) {
-    if (refreshPromise) await refreshPromise
-    session.value = await apiRequest<AuthToken>('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email: email.trim(), password, remember_me: rememberMe }),
-    })
-    initialized.value = true
-  }
-
-  async function signOut() {
-    if (refreshPromise) await refreshPromise
-    try {
-      const csrf = await apiRequest<{ csrf_token: string }>('/auth/csrf')
-      await apiRequest<void>('/auth/logout', {
-        method: 'POST',
-        headers: { 'X-CSRF-Token': csrf.csrf_token },
-      })
-    } catch (error) {
-      if (!(error instanceof ApiError) || error.status !== 401) throw error
-    }
-    session.value = null
-    initialized.value = true
-  }
-
-  return { session, user, roleLabel, ensureSession, refresh, signIn, signOut }
+      this.session = null
+      this.initialized = true
+    },
+  },
 })

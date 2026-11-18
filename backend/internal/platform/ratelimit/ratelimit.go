@@ -69,11 +69,16 @@ func (l *Limiter) cleanup() {
 // Middleware — не больше limit запросов с одного IP за per на правило name.
 // При превышении — 429 rate_limited и заголовок Retry-After.
 //
-// IP берётся через c.ClientIP(): за nginx нужно указать доверенные прокси
+// identity при необходимости задаёт ключ по пользователю или адресу сокета.
+// По умолчанию IP берётся через c.ClientIP(): за nginx нужно указать доверенные прокси
 // (engine.SetTrustedProxies), иначе клиент подменит IP заголовком X-Forwarded-For.
-func (l *Limiter) Middleware(name string, limit int, per time.Duration) gin.HandlerFunc {
+func (l *Limiter) Middleware(name string, limit int, per time.Duration, identity ...func(*gin.Context) string) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		if ok, retry := l.allow(name+"|"+c.ClientIP(), limit, per); !ok {
+		key := c.ClientIP()
+		if len(identity) > 0 {
+			key = identity[0](c)
+		}
+		if ok, retry := l.allow(name+"|"+key, limit, per); !ok {
 			httpx.Fail(c, apperr.NewRateLimited(max(retry, 1)))
 			return
 		}

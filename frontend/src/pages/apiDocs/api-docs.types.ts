@@ -1,7 +1,16 @@
 export type ApiField = readonly [name: string, type: string, required: boolean, description: string]
 export type ApiStage = 'core' | 'extension'
 export type ApiAccess =
-  'public' | 'session' | 'student' | 'teacher' | 'staff' | 'admin' | 'member' | 'refresh' | 'ticket'
+  | 'owner'
+  | 'public'
+  | 'session'
+  | 'student'
+  | 'teacher'
+  | 'staff'
+  | 'admin'
+  | 'member'
+  | 'refresh'
+  | 'ticket'
 export interface ApiSchema {
   name: string
   description: string

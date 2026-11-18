@@ -1,12 +1,13 @@
 // Package mail — отправка писем (приглашения задать пароль).
 //
-// Если SMTP не настроен, письма не отправляются, а пишутся в лог сервера:
-// так можно проверять сценарий приглашения локально, без почтового ящика.
+// Без SMTP доставка откладывается; содержимое писем и токены не выводятся в лог.
 package mail
 
 import (
+	"crypto/tls"
 	"encoding/base64"
 	"fmt"
+	"io"
 	"log/slog"
 	"net"
 	"net/smtp"
@@ -47,15 +48,53 @@ func (s SMTP) Send(to, subject, body string) error {
 	if s.User != "" {
 		auth = smtp.PlainAuth("", s.User, s.Password, s.Host)
 	}
-	// smtp.SendMail сам переходит на TLS через STARTTLS, если сервер его поддерживает.
-	return smtp.SendMail(net.JoinHostPort(s.Host, s.Port), auth, s.From, []string{to}, []byte(msg))
+	conn, err := net.DialTimeout("tcp", net.JoinHostPort(s.Host, s.Port), 10*time.Second)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	if err := conn.SetDeadline(time.Now().Add(45 * time.Second)); err != nil {
+		return err
+	}
+	client, err := smtp.NewClient(conn, s.Host)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+	// Ссылки активации нельзя отправлять по незашифрованному SMTP.
+	if err := client.StartTLS(&tls.Config{ServerName: s.Host, MinVersion: tls.VersionTLS12}); err != nil {
+		return err
+	}
+	if auth != nil {
+		if err := client.Auth(auth); err != nil {
+			return err
+		}
+	}
+	if err := client.Mail(s.From); err != nil {
+		return err
+	}
+	if err := client.Rcpt(to); err != nil {
+		return err
+	}
+	writer, err := client.Data()
+	if err != nil {
+		return err
+	}
+	if _, err := io.WriteString(writer, msg); err != nil {
+		writer.Close()
+		return err
+	}
+	if err := writer.Close(); err != nil {
+		return err
+	}
+	return client.Quit()
 }
 
-// Log не отправляет письма, а пишет их в лог. Для разработки и стенда без почты.
+// Log сообщает об отсутствии SMTP, не раскрывая содержимое письма.
 type Log struct{}
 
 func (Log) Send(to, subject, body string) error {
-	slog.Warn("SMTP is not configured, email was not sent", "to", to, "subject", subject, "body", body)
-	return nil
+	slog.Warn("SMTP is not configured, email was not sent", "to", to, "subject", subject)
+	return fmt.Errorf("mail: SMTP is not configured")
 }
 func b64(s string) string { return base64.StdEncoding.EncodeToString([]byte(s)) }

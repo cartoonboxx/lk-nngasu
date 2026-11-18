@@ -10,6 +10,13 @@ const personFields: ApiField[] = [
   ['email', 'string', true, 'Email до 255 символов, нормализованный в нижний регистр.'],
   ['avatar', 'FileInfo | null', true, 'Метаданные аватара; скачивание с авторизацией.'],
   ['is_active', 'boolean', true, 'Доступ к аккаунту.'],
+  ['is_admin', 'boolean', true, 'Доступ к административной панели.'],
+  [
+    'can_manage_admins',
+    'boolean',
+    true,
+    'Только в ответе авторизации: право владельца управлять администраторами.',
+  ],
   [
     'role',
     '"student" | "teacher" | "admin"',
@@ -174,6 +181,104 @@ const newsExample = {
 }
 
 export const apiSchemas: ApiSchema[] = [
+  {
+    name: 'SetupStatus',
+    description: 'Доступность одноразовой первоначальной настройки.',
+    fields: [
+      ['available', 'boolean', true, 'Нужен серверный ADMIN_SETUP_KEY и незавершённая настройка.'],
+    ],
+    example: { available: true },
+  },
+  {
+    name: 'AdminSetupInput',
+    description: 'Создание первого администратора и владельца системы.',
+    fields: [
+      [
+        'setup_key',
+        'string',
+        true,
+        'Секрет из ADMIN_SETUP_KEY, 32–256 байт; не хранить во фронтенде или логах.',
+      ],
+      ['email', 'string', true, 'Свободная почта до 255 символов.'],
+      ['first_name', 'string', true, 'Имя, 1–50 символов после trim.'],
+      ['last_name', 'string', true, 'Фамилия, 1–50 символов после trim.'],
+      ['password', 'string', true, 'От 8 символов до 72 байт UTF-8.'],
+    ],
+    example: {
+      setup_key: '<setup-key>',
+      email: 'owner@example.ru',
+      first_name: 'Максим',
+      last_name: 'Иванов',
+      password: '<password>',
+    },
+  },
+  {
+    name: 'AdminInvitationInput',
+    description: 'Приглашение нового администратора или повторная отправка ссылки.',
+    fields: [
+      ['email', 'string', true, 'Почта получателя, до 255 символов.'],
+      [
+        'first_name',
+        'string',
+        true,
+        'Имя нового пользователя, 1–50 символов. При повторе существующее имя сохраняется.',
+      ],
+      ['last_name', 'string', true, 'Фамилия нового пользователя, 1–50 символов.'],
+      ['current_password', 'string', true, 'Текущий пароль владельца для подтверждения.'],
+    ],
+    example: {
+      email: 'admin@example.ru',
+      first_name: 'Анна',
+      last_name: 'Иванова',
+      current_password: '<owner-password>',
+    },
+  },
+  {
+    name: 'AdminPromotionInput',
+    description: 'Выдача прав администратора действующему пользователю.',
+    fields: [
+      ['email', 'string', true, 'Почта активного пользователя с заданным паролем.'],
+      ['current_password', 'string', true, 'Текущий пароль владельца.'],
+    ],
+    example: { email: 'user@example.ru', current_password: '<owner-password>' },
+  },
+  {
+    name: 'Administrator',
+    description:
+      'Серверный список администраторов и ожидающих приглашений. Без документов и токенов.',
+    fields: [
+      ['id', 'integer', true, 'ID аккаунта.'],
+      ['email', 'string', true, 'Почта.'],
+      ['first_name', 'string', true, 'Имя.'],
+      ['last_name', 'string', true, 'Фамилия.'],
+      ['full_name', 'string', true, 'ФИО.'],
+      [
+        'can_manage_admins',
+        'boolean',
+        true,
+        'Право владельца; приглашение/назначение его не выдаёт.',
+      ],
+      ['is_active', 'boolean', true, 'Доступ к аккаунту.'],
+      ['credential_state', '"invited" | "active"', true, 'Задан ли пароль.'],
+      [
+        'invitation_expires_at',
+        'datetime | null',
+        true,
+        'Срок последнего непогашенного приглашения администратора.',
+      ],
+    ],
+    example: {
+      id: 1,
+      email: 'owner@example.ru',
+      first_name: 'Максим',
+      last_name: 'Иванов',
+      full_name: 'Иванов Максим',
+      can_manage_admins: true,
+      is_active: true,
+      credential_state: 'active',
+      invitation_expires_at: null,
+    },
+  },
   {
     name: 'Token',
     description:

@@ -18,6 +18,8 @@ func Register(r *gin.RouterGroup, pool *pgxpool.Pool, opts Options, limiter *rat
 	svc := NewService(newRepository(pool), opts)
 	h := &Handler{svc: svc, opts: opts}
 
+	r.GET("/auth/setup", h.SetupStatus)
+	r.POST("/auth/setup", limiter.Middleware("setup", 5, 15*time.Minute, (*gin.Context).RemoteIP), h.Setup)
 	r.POST("/auth/login", limiter.Middleware("login", 10, time.Minute), h.Login) // вход
 	r.GET("/auth/csrf", h.CSRF)                                                  // CSRF-токен сессии
 	r.POST("/auth/refresh", h.Refresh)                                           // новый access-токен

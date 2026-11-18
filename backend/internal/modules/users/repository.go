@@ -310,11 +310,11 @@ func (r *Repository) UpdateProfile(ctx context.Context, id int64, in UpdateProfi
 }
 
 // AdminUpdate частично обновляет пользователя и его роли одной транзакцией.
-func (r *Repository) AdminUpdate(ctx context.Context, id int64, in AdminUpdate) error {
+func (r *Repository) AdminUpdate(ctx context.Context, id, actorID int64, in AdminUpdate) error {
 	return database.InTx(ctx, r.db, func(tx pgx.Tx) error {
 		// 1. Блокируем строку пользователя: параллельная правка дождётся конца транзакции.
-		var isAdmin, isActive bool
-		err := tx.QueryRow(ctx, `SELECT is_admin, is_active FROM app_user WHERE id = $1 FOR UPDATE`, id).Scan(&isAdmin, &isActive)
+		var isAdmin, isActive, isOwner bool
+		err := tx.QueryRow(ctx, `SELECT is_admin, is_active, can_manage_admins FROM app_user WHERE id = $1 FOR UPDATE`, id).Scan(&isAdmin, &isActive, &isOwner)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return errUserNotFound
 		}
@@ -322,9 +322,16 @@ func (r *Repository) AdminUpdate(ctx context.Context, id int64, in AdminUpdate) 
 			return database.Translate(err)
 		}
 
+		if isOwner && actorID != id {
+			return apperr.NewForbidden("owner_protected", "other administrators cannot edit the system owner")
+		}
+
 		// 2. Нельзя заблокировать последнего активного администратора.
 		// Блокируем всех активных админов, чтобы два запроса не прошли проверку одновременно.
 		blocking := in.IsActive.Value != nil && !*in.IsActive.Value
+		if isOwner && blocking {
+			return apperr.NewConflict("owner_protected", "the system owner cannot be blocked")
+		}
 		if isAdmin && isActive && blocking {
 			rows, err := tx.Query(ctx, `SELECT id FROM app_user WHERE is_admin AND is_active FOR UPDATE`)
 			if err != nil {
