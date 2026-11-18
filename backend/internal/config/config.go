@@ -27,6 +27,8 @@ type Config struct {
 	TermsVersion   string   // поддерживаемая версия условий использования
 	AppURL         string   // адрес фронтенда для ссылок в письмах (…/activation?token=…)
 	SMTP           SMTP     // отправка писем; пустой Host — доставка отключена
+	// ResourcesFile — JSON со ссылками страницы «Ресурсы» (GET /resources); пусто — встроенный набор.
+	ResourcesFile string
 
 	Location       *time.Location // часовой пояс вуза
 	WeekOneDate    time.Time      // любая дата первой (верхней) недели; нулевая — календарь не настроен (409)
@@ -74,6 +76,7 @@ func Load() (Config, error) {
 		}
 	}
 	cfg.TermsVersion = getenv("TERMS_VERSION", "2026-11-13") // как в документации и конфигурации фронта
+	cfg.ResourcesFile = os.Getenv("RESOURCES_FILE")
 	cfg.AppURL = strings.TrimRight(getenv("APP_URL", "http://localhost:5173"), "/")
 	cfg.SMTP = SMTP{
 		Host:     os.Getenv("SMTP_HOST"),
@@ -105,7 +108,8 @@ func Load() (Config, error) {
 		return Config{}, errors.New("LESSON_MINUTES must be between 1 and 600")
 	}
 	cfg.LessonDuration = time.Duration(mins) * time.Minute
-	if raw := strings.TrimSpace(os.Getenv("LESSON_BELLS")); raw != "" {
+	// Сетка звонков по контракту: 7 пар, последняя — 80 минут. LESSON_BELLS=off — не сверять.
+	if raw := strings.TrimSpace(getenv("LESSON_BELLS", DefaultBells)); raw != "off" {
 		for _, pair := range strings.Split(raw, ",") {
 			se := strings.Split(strings.TrimSpace(pair), "-")
 			if len(se) != 2 {
@@ -121,6 +125,9 @@ func Load() (Config, error) {
 	}
 	return cfg, nil
 }
+
+// DefaultBells — сетка звонков из контракта API.
+const DefaultBells = "08:00-09:30,09:45-11:15,11:30-13:00,13:20-14:50,15:10-16:40,16:55-18:25,18:35-19:55"
 
 func getenv(key, def string) string {
 	if v := os.Getenv(key); v != "" {

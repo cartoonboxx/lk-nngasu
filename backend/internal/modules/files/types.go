@@ -10,8 +10,25 @@ import (
 // fileType — допустимый тип файла: расширение → MIME и проверка «магических» первых байт.
 // Расширение в имени легко подделать, поэтому содержимое должно ему соответствовать.
 type fileType struct {
-	mime  string
-	magic func(head []byte) bool
+	mime    string
+	magic   func(head []byte) bool
+	aliases []string // другие MIME, которыми браузеры и ОС подписывают этот же формат
+}
+
+// acceptsMIME сверяет MIME, присланный клиентом в части формы, с расширением.
+// Пустой и application/octet-stream («тип неизвестен») не противоречат расширению —
+// содержимое всё равно проверит сигнатура.
+func (t fileType) acceptsMIME(ct string) bool {
+	ct = strings.ToLower(strings.TrimSpace(strings.SplitN(ct, ";", 2)[0]))
+	if ct == "" || ct == "application/octet-stream" || ct == t.mime {
+		return true
+	}
+	for _, a := range t.aliases {
+		if ct == a {
+			return true
+		}
+	}
+	return false
 }
 
 // prefix возвращает проверку «файл начинается с этих байт» — для форматов
@@ -35,23 +52,25 @@ func webpMagic(head []byte) bool {
 // attachmentTypes — вложения заданий, ответов и материалов (FR-HW-02, FR-HW-06).
 // Ключ — расширение в нижнем регистре с точкой.
 var attachmentTypes = map[string]fileType{
-	".pdf":  {"application/pdf", prefix('%', 'P', 'D', 'F', '-')},
-	".docx": {"application/vnd.openxmlformats-officedocument.wordprocessingml.document", zipMagic},
-	".pptx": {"application/vnd.openxmlformats-officedocument.presentationml.presentation", zipMagic},
-	".xlsx": {"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", zipMagic},
+	".pdf":  {"application/pdf", prefix('%', 'P', 'D', 'F', '-'), nil},
+	".docx": {"application/vnd.openxmlformats-officedocument.wordprocessingml.document", zipMagic, nil},
+	".pptx": {"application/vnd.openxmlformats-officedocument.presentationml.presentation", zipMagic, nil},
+	".xlsx": {"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", zipMagic, nil},
 	// Старый Excel — составной документ OLE2 (Compound File Binary).
-	".xls": {"application/vnd.ms-excel", prefix(0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1)},
-	".zip": {"application/zip", zipMagic},
+	".xls": {"application/vnd.ms-excel", prefix(0xD0, 0xCF, 0x11, 0xE0, 0xA1, 0xB1, 0x1A, 0xE1), nil},
+	// Windows присылает zip как application/x-zip-compressed.
+	".zip": {"application/zip", zipMagic, []string{"application/x-zip-compressed", "application/x-zip"}},
 	// "Rar!\x1A\x07" — общее начало сигнатур RAR 4 и RAR 5.
-	".rar": {"application/vnd.rar", prefix('R', 'a', 'r', '!', 0x1A, 0x07)},
+	".rar": {"application/vnd.rar", prefix('R', 'a', 'r', '!', 0x1A, 0x07),
+		[]string{"application/x-rar-compressed", "application/x-rar"}},
 }
 
 // avatarTypes — картинки профиля.
 var avatarTypes = map[string]fileType{
-	".jpg":  {"image/jpeg", prefix(0xFF, 0xD8, 0xFF)},
-	".jpeg": {"image/jpeg", prefix(0xFF, 0xD8, 0xFF)},
-	".png":  {"image/png", prefix(0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n')},
-	".webp": {"image/webp", webpMagic},
+	".jpg":  {"image/jpeg", prefix(0xFF, 0xD8, 0xFF), []string{"image/pjpeg"}},
+	".jpeg": {"image/jpeg", prefix(0xFF, 0xD8, 0xFF), []string{"image/pjpeg"}},
+	".png":  {"image/png", prefix(0x89, 'P', 'N', 'G', '\r', '\n', 0x1A, '\n'), nil},
+	".webp": {"image/webp", webpMagic, nil},
 }
 
 // extOf возвращает расширение имени в нижнем регистре с точкой (".PDF" → ".pdf");

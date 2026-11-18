@@ -32,33 +32,55 @@ const (
 	isLate = `(sb.submitted_at IS NOT NULL AND a.deadline_at IS NOT NULL AND sb.submitted_at > a.deadline_at)`
 )
 
-// filesJSON — подзапрос «файлы владельца» в виде json-массива [{id, name}].
+// filesJSON — подзапрос «файлы владельца» в виде json-массива FileInfo.
+// size = -1 — размер не записан (файлы до миграции 010): сервис возьмёт его с диска.
 func filesJSON(linkTable, ownerCol, ownerExpr string) string {
-	return fmt.Sprintf(`(SELECT COALESCE(json_agg(json_build_object('id', f.id, 'name', %s) ORDER BY f.id), '[]'::json)
+	return fmt.Sprintf(`(SELECT COALESCE(json_agg(json_build_object(
+			'id', f.id, 'name', %s, 'mime_type', COALESCE(f.mime_type, 'application/octet-stream'),
+			'size_bytes', COALESCE(f.size_bytes, -1), 'key', f.storage_key) ORDER BY f.id), '[]'::json)
 		FROM %s l JOIN file f ON f.id = l.file_id WHERE l.%s = %s)`,
 		database.FileName("f"), linkTable, ownerCol, ownerExpr)
 }
 
-func decodeFiles(raw []byte) ([]FileRef, error) {
-	files := []FileRef{}
+func decodeFiles(raw []byte) ([]FileInfo, error) {
+	files := []FileInfo{}
 	if len(raw) == 0 {
 		return files, nil
 	}
-	if err := json.Unmarshal(raw, &files); err != nil {
+	var rows []struct {
+		ID        int64  `json:"id"`
+		Name      string `json:"name"`
+		MimeType  string `json:"mime_type"`
+		SizeBytes int64  `json:"size_bytes"`
+		Key       string `json:"key"`
+	}
+	if err := json.Unmarshal(raw, &rows); err != nil {
 		return nil, err
+	}
+	for _, r := range rows {
+		files = append(files, FileInfo{ID: r.ID, Name: r.Name, MimeType: r.MimeType, SizeBytes: r.SizeBytes, key: r.Key})
 	}
 	return files, nil
 }
 
-// assignmentErr уточняет FK-ошибки по имени ограничения.
+var (
+	errTopicMismatch  = apperr.NewInvalid("topic_course_mismatch", "topic does not exist or belongs to another course")
+	errTopicTaken     = apperr.NewConflict("topic_assignment_exists", "this topic already has an assignment")
+	errFileNotFound   = apperr.NewNotFound("file_not_found")
+	errHasSubmissions = apperr.NewConflict("assignment_has_submissions", "the assignment has student work and cannot be deleted")
+)
+
+// assignmentErr уточняет ошибки ограничений по их имени.
 func assignmentErr(err error) error {
 	switch database.ConstraintName(err) {
 	case "assignment_topic_course_fk":
-		return apperr.NewInvalid("topic_not_in_course", "topic does not exist or belongs to another course")
+		return errTopicMismatch
+	case "assignment_topic_unique":
+		return errTopicTaken
 	case "assignment_course_id_fkey":
 		return apperr.NewNotFound("course_not_found")
 	case "assignment_file_file_id_fkey", "submission_file_file_id_fkey":
-		return apperr.NewInvalid("file_not_found", "attached file does not exist")
+		return errFileNotFound
 	}
 	return database.Translate(err)
 }
@@ -111,7 +133,7 @@ func scanAssignment(staff, student bool) func(pgx.Row) (Assignment, error) {
 
 func (r *Repository) ListAssignments(ctx context.Context, courseID int64, staff bool, viewerID int64) ([]Assignment, error) {
 	return database.Collect(ctx, r.db, scanAssignment(staff, viewerID > 0),
-		assignmentSelect+` WHERE a.course_id = $3 ORDER BY t.position, a.deadline_at NULLS LAST, a.id`,
+		assignmentSelect+` WHERE a.course_id = $3 ORDER BY a.published_at DESC, a.id DESC`,
 		staff, viewerID, courseID)
 }
 
@@ -159,15 +181,28 @@ func (r *Repository) UpdateAssignment(ctx context.Context, id int64, in Assignme
 	return keys, err
 }
 
-// DeleteAssignment удаляет задание со всеми ответами (ON DELETE CASCADE) и освободившимися файлами.
+// DeleteAssignment удаляет задание без ответов и освободившиеся файлы задания.
+// Если есть хоть один сохранённый ответ (даже черновик) — 409 assignment_has_submissions:
+// удаление не должно уничтожать работы и оценки. Строка задания блокируется, чтобы
+// студент не успел сохранить ответ между проверкой и удалением.
 func (r *Repository) DeleteAssignment(ctx context.Context, id int64) ([]string, error) {
 	var keys []string
 	err := database.InTx(ctx, r.db, func(tx pgx.Tx) error {
-		fileIDs, err := database.Collect(ctx, tx, scanID, `
-			SELECT file_id FROM assignment_file WHERE assignment_id = $1
-			UNION
-			SELECT sf.file_id FROM submission_file sf JOIN submission s ON s.id = sf.submission_id
-			WHERE s.assignment_id = $1`, id)
+		var hasWork bool
+		err := tx.QueryRow(ctx, `
+			SELECT EXISTS (SELECT 1 FROM submission WHERE assignment_id = a.id)
+			FROM assignment a WHERE a.id = $1 FOR UPDATE`, id).Scan(&hasWork)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperr.NewNotFound("assignment_not_found")
+		}
+		if err != nil {
+			return database.Translate(err)
+		}
+		if hasWork {
+			return errHasSubmissions
+		}
+		fileIDs, err := database.Collect(ctx, tx, scanID,
+			`SELECT file_id FROM assignment_file WHERE assignment_id = $1`, id)
 		if err != nil {
 			return err
 		}

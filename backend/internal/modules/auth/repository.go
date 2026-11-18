@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"errors"
-	"strconv"
 	"strings"
 	"time"
 
@@ -29,12 +28,13 @@ type userRecord struct {
 }
 
 // userSelect — пользователь с группой и кафедрой; порядок колонок — как в scanUser.
-const userSelect = `
+var userSelect = `
 	SELECT u.id, u.email, u.password_hash, u.is_active, u.is_admin, u.can_manage_admins,
-	       u.last_name, u.first_name, u.middle_names, u.avatar_file_id,
+	       u.last_name, u.first_name, u.middle_names, ` + database.FileInfoJSON("af") + `,
 	       s.group_id, g.name, s.record_book_number, s.is_headman,
-	       t.department_id, d.name
+	       t.department_id, d.name, ` + database.RoleSQL("u", "t") + `
 	FROM app_user u
+	LEFT JOIN file        af ON af.id = u.avatar_file_id
 	LEFT JOIN student     s ON s.user_id = u.id
 	LEFT JOIN study_group g ON g.id = s.group_id
 	LEFT JOIN teacher     t ON t.user_id = u.id
@@ -43,7 +43,7 @@ const userSelect = `
 func scanUser(row pgx.Row) (userRecord, error) {
 	var (
 		u              userRecord
-		avatarID       *int64
+		avatar         []byte
 		groupID        *int64
 		groupName      *string
 		recordBook     *string
@@ -52,8 +52,8 @@ func scanUser(row pgx.Row) (userRecord, error) {
 		departmentName *string
 	)
 	err := row.Scan(&u.ID, &u.Email, &u.PasswordHash, &u.IsActive, &u.IsAdmin, &u.CanManageAdmins,
-		&u.LastName, &u.FirstName, &u.MiddleNames, &avatarID,
-		&groupID, &groupName, &recordBook, &isHeadman, &departmentID, &departmentName)
+		&u.LastName, &u.FirstName, &u.MiddleNames, &avatar,
+		&groupID, &groupName, &recordBook, &isHeadman, &departmentID, &departmentName, &u.Role)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return userRecord{}, errNotFound
 	}
@@ -62,21 +62,19 @@ func scanUser(row pgx.Row) (userRecord, error) {
 	}
 	u.UserInfo.IsActive = u.IsActive
 	u.FullName = strings.Join(nonEmpty(u.LastName, u.FirstName, deref(u.MiddleNames)), " ")
-	if avatarID != nil {
-		u.Avatar = &FileRef{ID: *avatarID, URL: fileURLBase + strconv.FormatInt(*avatarID, 10)}
+	if u.Avatar, err = database.ParseFileInfo(avatar); err != nil {
+		return userRecord{}, err
 	}
-	if groupID != nil {
+	// Одна роль: профиль другой роли не отдаётся, даже если строка осталась в БД.
+	if groupID != nil && u.Role == "student" {
 		u.Student = &StudentInfo{GroupID: *groupID, GroupName: deref(groupName), RecordBookNumber: recordBook,
 			IsHeadman: isHeadman != nil && *isHeadman}
 	}
-	if departmentID != nil {
+	if departmentID != nil && u.Role == "teacher" {
 		u.Teacher = &TeacherInfo{DepartmentID: *departmentID, DepartmentName: deref(departmentName)}
 	}
 	return u, nil
 }
-
-// fileURLBase — адрес скачивания файла через модуль files (GET /api/v1/files/:id).
-const fileURLBase = "/api/v1/files/"
 
 // nonEmpty — непустые части ФИО, чтобы без отчества не было двойного пробела.
 func nonEmpty(parts ...string) []string {

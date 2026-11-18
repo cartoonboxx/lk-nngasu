@@ -255,16 +255,10 @@ func (s *Service) SessionActive(ctx context.Context, sid string, userID int64) (
 
 // ===== Вспомогательное =====
 
-// issue подписывает access-токен сессии и собирает ответ. Роль в токене нужна только
-// серверу (проверка прав в middleware); фронт смотрит на user.student/teacher/is_admin.
+// issue подписывает access-токен сессии и собирает ответ. Роль в токене — та же
+// единственная роль, что user.role (её перечитывают из БД при каждом refresh).
 func (s *Service) issue(u UserInfo, sid string, sessionExpires time.Time) (Token, error) {
-	role := middleware.RoleStudent
-	switch {
-	case u.IsAdmin:
-		role = middleware.RoleAdmin
-	case u.Teacher != nil:
-		role = middleware.RoleTeacher
-	}
+	role := u.Role
 
 	now := time.Now()
 	expires := now.Add(s.opts.AccessTTL)

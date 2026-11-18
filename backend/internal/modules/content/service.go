@@ -54,7 +54,7 @@ func (s *Service) removeBlobs(keys []string) {
 	}
 }
 
-// normTitle — название темы или материала: 1–200 символов после trim.
+// normTitle — название темы: 1–200 символов после trim.
 func normTitle(t *string) error {
 	*t = strings.TrimSpace(*t)
 	if *t == "" || utf8.RuneCountInString(*t) > 200 {
@@ -137,9 +137,6 @@ func (s *Service) DeleteTopic(ctx context.Context, p middleware.Principal, id in
 // Если файл не меняется, владение не проверяем: так другой преподаватель курса
 // или админ может править материал, не будучи автором файла.
 func (s *Service) checkMaterial(ctx context.Context, p middleware.Principal, in *MaterialInput, current *int64) error {
-	if err := normTitle(&in.Title); err != nil {
-		return err
-	}
 	if in.FileID == nil && in.ExternalURL == nil {
 		return apperr.NewInvalid("material_source_required", "provide file_id or external_url")
 	}
@@ -156,7 +153,7 @@ func (s *Service) checkMaterial(ctx context.Context, p middleware.Principal, in 
 }
 
 // CreateMaterial добавляет материал в тему. Право — то же, что на управление курсом:
-// преподаватель курса или администратор. created_by — тот, кто фактически добавил.
+// преподаватель курса или администратор.
 func (s *Service) CreateMaterial(ctx context.Context, p middleware.Principal, topicID int64, in MaterialInput) (Material, error) {
 	t, err := s.repo.GetTopic(ctx, topicID)
 	if err != nil {
@@ -168,7 +165,7 @@ func (s *Service) CreateMaterial(ctx context.Context, p middleware.Principal, to
 	if err := s.checkMaterial(ctx, p, &in, nil); err != nil {
 		return Material{}, err
 	}
-	id, err := s.repo.CreateMaterial(ctx, topicID, p.UserID, in)
+	id, err := s.repo.CreateMaterial(ctx, topicID, in)
 	if err != nil {
 		return Material{}, err
 	}

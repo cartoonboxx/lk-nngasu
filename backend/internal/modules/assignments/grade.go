@@ -20,7 +20,7 @@ func ValidGrade(g float64) bool {
 
 func validateReview(in *ReviewInput) error {
 	if !ValidGrade(in.Grade) {
-		return apperr.NewInvalid("bad_grade", "grade must be between 0.0 and 5.0 with step 0.1")
+		return apperr.NewInvalid("invalid_grade", "grade must be between 0 and 5 with step 0.1")
 	}
 	if in.Comment != nil {
 		c := strings.TrimSpace(*in.Comment)

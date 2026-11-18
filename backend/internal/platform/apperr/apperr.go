@@ -21,6 +21,7 @@ const (
 	Unsupported     // 415: недопустимый тип файла
 	TooManyRequests // 429: превышен лимит частоты запросов
 	Unavailable     // 503: недоступна зависимость
+	UpgradeRequired // 426: нужен WebSocket
 )
 
 type Error struct {

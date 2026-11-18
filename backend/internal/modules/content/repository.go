@@ -20,13 +20,13 @@ type Repository struct{ db *pgxpool.Pool }
 func newRepository(db *pgxpool.Pool) *Repository { return &Repository{db: db} }
 
 // topicCols — колонки темы в том же порядке, в каком их читает scanTopic.
-const topicCols = `t.id, t.course_id, t.title, t.description, t.position`
+const topicCols = `t.id, t.course_id, t.title, t.description`
 
 // scanTopic читает строку темы. Materials — пустой срез, а не nil,
 // чтобы в JSON тема без материалов отдавалась как "materials": [], а не null.
 func scanTopic(row pgx.Row) (Topic, error) {
 	var t Topic
-	err := row.Scan(&t.ID, &t.CourseID, &t.Title, &t.Description, &t.Position)
+	err := row.Scan(&t.ID, &t.CourseID, &t.Title, &t.Description)
 	t.Materials = []Material{}
 	return t, err
 }
@@ -37,9 +37,8 @@ func scanTopic(row pgx.Row) (Topic, error) {
 // Имя файла хранится в ключе, его извлекает SQL-выражение database.FileName.
 // var, а не const: строка собирается с вызовом функции.
 var materialSelect = `
-	SELECT m.id, m.topic_id, t.course_id, m.title, m.file_id, ` + database.FileName("f") + `,
-	       f.mime_type, f.size_bytes, f.storage_key,
-	       m.external_url, m.position, m.created_by, m.created_at
+	SELECT m.id, m.topic_id, t.course_id, m.file_id, ` + database.FileName("f") + `,
+	       f.mime_type, f.size_bytes, f.storage_key, m.external_url
 	FROM material m
 	JOIN topic t ON t.id = m.topic_id
 	LEFT JOIN file f ON f.id = m.file_id`
@@ -54,8 +53,8 @@ func scanMaterial(row pgx.Row) (Material, error) {
 		size       *int64
 		key        *string
 	)
-	err := row.Scan(&m.ID, &m.TopicID, &m.CourseID, &m.Title, &m.FileID, &name,
-		&mime, &size, &key, &m.ExternalURL, &m.Position, &m.CreatedBy, &m.CreatedAt)
+	err := row.Scan(&m.ID, &m.TopicID, &m.CourseID, &m.FileID, &name,
+		&mime, &size, &key, &m.ExternalURL)
 	if err != nil || m.FileID == nil {
 		return m, err
 	}
@@ -81,15 +80,15 @@ func deref(s *string) string {
 
 // ListTopics возвращает темы курса с вложенными материалами (двумя запросами, без N+1).
 // Первый запрос — все темы курса, второй — все материалы всех тем курса;
-// затем материалы раскладываются по темам в памяти. Порядок — по position, при равенстве по id.
+// затем материалы раскладываются по темам в памяти. Порядок — по id.
 func (r *Repository) ListTopics(ctx context.Context, courseID int64) ([]Topic, error) {
 	topics, err := database.Collect(ctx, r.db, scanTopic,
-		`SELECT `+topicCols+` FROM topic t WHERE t.course_id = $1 ORDER BY t.position, t.id`, courseID)
+		`SELECT `+topicCols+` FROM topic t WHERE t.course_id = $1 ORDER BY t.id`, courseID)
 	if err != nil {
 		return nil, err
 	}
 	materials, err := database.Collect(ctx, r.db, scanMaterial,
-		materialSelect+` WHERE t.course_id = $1 ORDER BY m.position, m.id`, courseID)
+		materialSelect+` WHERE t.course_id = $1 ORDER BY m.id`, courseID)
 	if err != nil {
 		return nil, err
 	}
@@ -126,30 +125,24 @@ func (r *Repository) GetTopicFull(ctx context.Context, id int64) (Topic, error) 
 		return Topic{}, err
 	}
 	t.Materials, err = database.Collect(ctx, r.db, scanMaterial,
-		materialSelect+` WHERE m.topic_id = $1 ORDER BY m.position, m.id`, id)
+		materialSelect+` WHERE m.topic_id = $1 ORDER BY m.id`, id)
 	return t, err
 }
 
-// CreateTopic создаёт тему и возвращает её id.
-// Если позиция не указана — ставит тему в конец: MAX(position) + 1 среди тем курса.
-// position — ключ сортировки, а не уникальный номер: при параллельных вставках
-// или явно заданной позиции возможны дубли, порядок тогда задаёт id.
-// $4::int — явный тип нужен, потому что при nil Postgres не может вывести тип параметра.
+// CreateTopic создаёт тему и возвращает её id (новая тема — последняя: порядок по id).
 func (r *Repository) CreateTopic(ctx context.Context, courseID int64, in TopicInput) (int64, error) {
 	var id int64
 	err := r.db.QueryRow(ctx, `
-		INSERT INTO topic (course_id, title, description, position)
-		VALUES ($1, $2, $3, COALESCE($4::int, (SELECT COALESCE(MAX(position), 0) + 1 FROM topic WHERE course_id = $1)))
-		RETURNING id`, courseID, in.Title, in.Description, in.Position).Scan(&id)
+		INSERT INTO topic (course_id, title, description) VALUES ($1, $2, $3) RETURNING id`,
+		courseID, in.Title, in.Description).Scan(&id)
 	return id, database.Translate(err)
 }
 
-// UpdateTopic полностью заменяет название и описание (description = nil стирает описание);
-// позиция меняется, только если передана. Нет темы — 404 topic_not_found.
+// UpdateTopic полностью заменяет название и описание (description = nil стирает описание).
+// Нет темы — 404 topic_not_found.
 func (r *Repository) UpdateTopic(ctx context.Context, id int64, in TopicInput) error {
-	tag, err := r.db.Exec(ctx, `
-		UPDATE topic SET title = $2, description = $3, position = COALESCE($4::int, position) WHERE id = $1`,
-		id, in.Title, in.Description, in.Position)
+	tag, err := r.db.Exec(ctx, `UPDATE topic SET title = $2, description = $3 WHERE id = $1`,
+		id, in.Title, in.Description)
 	return database.Affected(tag, err, "topic_not_found")
 }
 
@@ -202,15 +195,11 @@ func (r *Repository) GetMaterial(ctx context.Context, id int64) (Material, error
 }
 
 // CreateMaterial создаёт материал в теме и возвращает его id.
-// Позиция по умолчанию — в конец темы (как в CreateTopic).
-// createdBy — id преподавателя; колонка ссылается на teacher.
-func (r *Repository) CreateMaterial(ctx context.Context, topicID, createdBy int64, in MaterialInput) (int64, error) {
+func (r *Repository) CreateMaterial(ctx context.Context, topicID int64, in MaterialInput) (int64, error) {
 	var id int64
 	err := r.db.QueryRow(ctx, `
-		INSERT INTO material (topic_id, title, file_id, external_url, position, created_by)
-		VALUES ($1, $2, $3, $4,
-		        COALESCE($5::int, (SELECT COALESCE(MAX(position), 0) + 1 FROM material WHERE topic_id = $1)), $6)
-		RETURNING id`, topicID, in.Title, in.FileID, in.ExternalURL, in.Position, createdBy).Scan(&id)
+		INSERT INTO material (topic_id, file_id, external_url) VALUES ($1, $2, $3) RETURNING id`,
+		topicID, in.FileID, in.ExternalURL).Scan(&id)
 	return id, database.Translate(err)
 }
 
@@ -230,10 +219,9 @@ func (r *Repository) UpdateMaterial(ctx context.Context, id int64, in MaterialIn
 		if err != nil {
 			return database.Translate(err)
 		}
-		// Название, файл и ссылка заменяются полностью; позиция — только если передана.
+		// Файл и ссылка заменяются полностью.
 		if _, err := tx.Exec(ctx, `
-			UPDATE material SET title = $2, file_id = $3, external_url = $4, position = COALESCE($5::int, position)
-			WHERE id = $1`, id, in.Title, in.FileID, in.ExternalURL, in.Position); err != nil {
+			UPDATE material SET file_id = $2, external_url = $3 WHERE id = $1`, id, in.FileID, in.ExternalURL); err != nil {
 			return database.Translate(err)
 		}
 		// Файл убрали или заменили — пробуем удалить старый.

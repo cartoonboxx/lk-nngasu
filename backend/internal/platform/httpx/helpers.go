@@ -2,6 +2,7 @@ package httpx
 
 import (
 	"net/http"
+	"slices"
 	"strconv"
 	"time"
 
@@ -160,4 +161,43 @@ func ReplyEmpty(c *gin.Context, err error) {
 		return
 	}
 	NoContent(c)
+}
+
+// NoBody — GET и DELETE не принимают тело (правила контракта): иначе 400 invalid_request.
+func NoBody() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		m := c.Request.Method
+		if (m == http.MethodGet || m == http.MethodDelete) &&
+			(c.Request.ContentLength > 0 || len(c.Request.TransferEncoding) > 0) {
+			Fail(c, apperr.NewInvalid("invalid_request", m+" does not accept a request body"))
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
+}
+
+// KnownQuery — правила контракта: неизвестный query-параметр — 400 invalid_query.
+// allowed: "METHOD /полный/путь/:id" → разрешённые имена; маршрут не из списка не проверяется.
+func KnownQuery(allowed map[string][]string) gin.HandlerFunc {
+	return func(c *gin.Context) {
+		names, ok := allowed[c.Request.Method+" "+c.FullPath()]
+		if !ok {
+			c.Next()
+			return
+		}
+		fields := map[string][]string{}
+		for key := range c.Request.URL.Query() {
+			if !slices.Contains(names, key) {
+				fields[key] = []string{"unknown query parameter"}
+			}
+		}
+		if len(fields) > 0 {
+			Fail(c, apperr.NewInvalid("invalid_query", "unknown query parameter").
+				WithDetails(map[string]any{"fields": fields}))
+			c.Abort()
+			return
+		}
+		c.Next()
+	}
 }

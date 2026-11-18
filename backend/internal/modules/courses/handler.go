@@ -1,6 +1,7 @@
 package courses
 
 import (
+	"encoding/json"
 	"math"
 	"strconv"
 
@@ -25,17 +26,25 @@ type createCourseRequest struct {
 	SemesterID int64 `json:"semester_id" binding:"required,gt=0"`
 }
 
-// workloadRequest — WorkloadInput. planned_hours — указатель, чтобы 0 был допустим,
-// а отсутствие поля — нет (required у числа отверг бы 0).
+// workloadRequest — WorkloadInput. planned_hours обязателен, но может быть null
+// («не задано»): сырой JSON отличает отсутствие ключа от null.
 type workloadRequest struct {
-	TeacherID    int64    `json:"teacher_id" binding:"required,gt=0"`
-	LessonType   string   `json:"lesson_type" binding:"required,oneof=lecture practice laboratory consultation exam"`
-	PlannedHours *float64 `json:"planned_hours" binding:"required,min=0"`
+	TeacherID    int64           `json:"teacher_id" binding:"required,gt=0"`
+	LessonType   string          `json:"lesson_type" binding:"required,oneof=lecture practice laboratory consultation exam"`
+	PlannedHours json.RawMessage `json:"planned_hours" binding:"required"`
 }
 
-// validHours — шаг 0.25 академического часа и разумный верхний предел (numeric(7,2)).
-func validHours(h float64) bool {
-	return h >= 0 && h < 100000 && math.Abs(h*4-math.Round(h*4)) < 1e-9
+// plannedHours разбирает planned_hours: null или число 0–99999.99 с точностью до сотых.
+func plannedHours(raw json.RawMessage) (*float64, error) {
+	if string(raw) == "null" {
+		return nil, nil
+	}
+	var h float64
+	if err := json.Unmarshal(raw, &h); err != nil || h < 0 || h > 99999.99 || math.Abs(h*100-math.Round(h*100)) > 1e-6 {
+		return nil, apperr.NewInvalid("invalid_request", "request body is invalid").
+			WithDetails(map[string]any{"fields": map[string][]string{"planned_hours": {"must be null or a number 0-99999.99 with at most two decimals"}}})
+	}
+	return &h, nil
 }
 
 // failQuery — 400 invalid_query с указанием параметра.
@@ -84,15 +93,6 @@ func (h *Handler) ListCourses(c *gin.Context) {
 	}
 	list, total, err := h.svc.List(c.Request.Context(), middleware.Me(c), f)
 	httpx.ReplyPage(c, list, httpx.Meta{Limit: f.Limit, Offset: f.Offset, Total: total}, err)
-}
-
-// Subjects — предметы текущего семестра для ЛК: тот же список, что /courses?current=true,
-// но массивом (маршрут из прежнего контракта фронта; лимит 200).
-//
-// GET /subjects
-func (h *Handler) Subjects(c *gin.Context) {
-	list, _, err := h.svc.List(c.Request.Context(), middleware.Me(c), CourseFilter{CurrentSemester: true, Limit: 200})
-	httpx.Reply(c, list, err)
 }
 
 // GetCourse — страница предмета: курс, нагрузка и темы с материалами и заданиями.
@@ -190,12 +190,12 @@ func (h *Handler) AddWorkload(c *gin.Context) {
 	if !httpx.Bind(c, &req) {
 		return
 	}
-	if !validHours(*req.PlannedHours) {
-		httpx.Fail(c, apperr.NewInvalid("invalid_request", "request body is invalid").
-			WithDetails(map[string]any{"fields": map[string][]string{"planned_hours": {"must be >= 0 with a step of 0.25"}}}))
+	hours, err := plannedHours(req.PlannedHours)
+	if err != nil {
+		httpx.Fail(c, err)
 		return
 	}
-	wid, err := h.repo.AddWorkload(c.Request.Context(), id, req.TeacherID, req.LessonType, *req.PlannedHours)
+	wid, err := h.repo.AddWorkload(c.Request.Context(), id, req.TeacherID, req.LessonType, hours)
 	if err != nil {
 		httpx.Fail(c, err)
 		return
@@ -217,12 +217,12 @@ func (h *Handler) UpdateWorkload(c *gin.Context) {
 	if !httpx.Bind(c, &req) {
 		return
 	}
-	if !validHours(*req.PlannedHours) {
-		httpx.Fail(c, apperr.NewInvalid("invalid_request", "request body is invalid").
-			WithDetails(map[string]any{"fields": map[string][]string{"planned_hours": {"must be >= 0 with a step of 0.25"}}}))
+	hours, err := plannedHours(req.PlannedHours)
+	if err != nil {
+		httpx.Fail(c, err)
 		return
 	}
-	if err := h.repo.UpdateWorkload(c.Request.Context(), id, req.TeacherID, req.LessonType, *req.PlannedHours); err != nil {
+	if err := h.repo.UpdateWorkload(c.Request.Context(), id, req.TeacherID, req.LessonType, hours); err != nil {
 		httpx.Fail(c, err)
 		return
 	}

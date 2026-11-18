@@ -9,7 +9,7 @@ import (
 )
 
 // Register регистрирует маршруты заданий, ответов и оценок.
-// Возвращает сервис: app использует его для страницы предмета и страницы оценок ЛК.
+// Возвращает сервис: app использует его для страницы предмета (задания по темам).
 func Register(r *gin.RouterGroup, pool *pgxpool.Pool, guard Guard, blobs Blobs) *Service {
 	h := &Handler{svc: NewService(newRepository(pool), guard, blobs)}
 	staff := middleware.RequireRole(middleware.RoleTeacher, middleware.RoleAdmin) //определение роли пользователя
@@ -27,13 +27,13 @@ func Register(r *gin.RouterGroup, pool *pgxpool.Pool, guard Guard, blobs Blobs) 
 	r.GET("/assignments/:id/submissions/archive", staff, h.AssignmentArchive)
 	r.GET("/assignments/:id/submission", student, h.MySubmission)
 	r.PUT("/assignments/:id/submission", student, h.SaveSubmission)
-	r.POST("/assignments/:id/submission", student, h.SaveSubmission) // тот же handler: путь из ТЗ фронта
+	r.DELETE("/assignments/:id/submission", student, h.DeleteSubmission)
 
 	r.GET("/submissions/:id", h.GetSubmission)
 	r.GET("/submissions/:id/archive", h.SubmissionArchive)
 	r.PUT("/submissions/:id/review", staff, h.Review)
 
-	r.GET("/me/grades", student, h.MyGrades)
+	r.GET("/grades", student, h.StudentGrades)
 
 	return h.svc
 }

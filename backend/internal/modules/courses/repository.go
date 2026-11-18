@@ -14,13 +14,10 @@ import (
 
 type Repository struct {
 	db *pgxpool.Pool
-	// lessonMinutes — длительность одного занятия; в БД хранится только время начала,
-	// поэтому часы шаблона считаются как число занятий × lessonMinutes / 45.
-	lessonMinutes int
 }
 
-func newRepository(db *pgxpool.Pool, lessonMinutes int) *Repository {
-	return &Repository{db: db, lessonMinutes: lessonMinutes}
+func newRepository(db *pgxpool.Pool) *Repository {
+	return &Repository{db: db}
 }
 
 const courseSelect = `
@@ -81,28 +78,22 @@ func (r *Repository) GetCourse(ctx context.Context, id int64) (Course, error) {
 	return c, database.Translate(err)
 }
 
-// errBadReference — ссылка на несуществующую или архивную запись (400 invalid_reference).
+// errBadReference — ссылка на несуществующую запись (400 invalid_reference).
 func errBadReference(field, problem string) error {
-	return apperr.NewInvalid("invalid_reference", "referenced record does not exist or is archived").
+	return apperr.NewInvalid("invalid_reference", "referenced record does not exist").
 		WithDetails(map[string]any{"fields": map[string][]string{field: {problem}}})
 }
 
-// activeRef проверяет, что запись table с этим id есть и не в архиве.
-// FOR SHARE не даёт заархивировать её, пока транзакция не завершится.
+// activeRef проверяет, что запись table с этим id есть.
+// FOR SHARE не даёт удалить её, пока транзакция не завершится.
 // table и field — константы из кода.
 func activeRef(ctx context.Context, tx pgx.Tx, table, field string, id int64) error {
-	var archived bool
-	err := tx.QueryRow(ctx, `SELECT archived FROM `+table+` WHERE id = $1 FOR SHARE`, id).Scan(&archived)
+	var found bool
+	err := tx.QueryRow(ctx, `SELECT true FROM `+table+` WHERE id = $1 FOR SHARE`, id).Scan(&found)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return errBadReference(field, "does not exist")
 	}
-	if err != nil {
-		return database.Translate(err)
-	}
-	if archived {
-		return errBadReference(field, "is archived")
-	}
-	return nil
+	return database.Translate(err)
 }
 
 // CreateCourse назначает дисциплину группе на семестр (CourseInput).
@@ -187,10 +178,11 @@ func scanWorkload(row pgx.Row) (Workload, error) {
 }
 
 // workloadSelect — нагрузка с ФИО преподавателя и часами двухнедельного шаблона:
-// число занятий × длительность занятия ($1, минуты) / 45, округление до 2 знаков.
+// сумма минут занятий (ends_at − starts_at, последняя пара — 80 минут) / 45, округление до 2 знаков.
 const workloadSelect = `
 	SELECT w.id, w.course_id, w.teacher_id, ` + "%s" + `, w.lesson_type::text, w.planned_hours::float8,
-	       round((SELECT count(*) FROM lesson l WHERE l.workload_id = w.id) * $1::numeric / 45, 2)::float8
+	       round(COALESCE((SELECT sum(EXTRACT(EPOCH FROM l.ends_at - l.starts_at)) FROM lesson l
+	                       WHERE l.workload_id = w.id), 0)::numeric / 60 / 45, 2)::float8
 	FROM workload w
 	JOIN app_user u ON u.id = w.teacher_id`
 
@@ -200,11 +192,11 @@ func (r *Repository) workloadQuery() string {
 
 func (r *Repository) ListWorkloads(ctx context.Context, courseID int64) ([]Workload, error) {
 	return database.Collect(ctx, r.db, scanWorkload,
-		r.workloadQuery()+` WHERE w.course_id = $2 ORDER BY w.lesson_type, u.last_name, w.id`, r.lessonMinutes, courseID)
+		r.workloadQuery()+` WHERE w.course_id = $1 ORDER BY w.lesson_type, u.last_name, w.id`, courseID)
 }
 
 func (r *Repository) GetWorkload(ctx context.Context, id int64) (Workload, error) {
-	w, err := scanWorkload(r.db.QueryRow(ctx, r.workloadQuery()+` WHERE w.id = $2`, r.lessonMinutes, id))
+	w, err := scanWorkload(r.db.QueryRow(ctx, r.workloadQuery()+` WHERE w.id = $1`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Workload{}, apperr.NewNotFound("workload_not_found")
 	}
@@ -240,7 +232,7 @@ func workloadErr(err error) error {
 }
 
 // AddWorkload назначает преподавателя на курс (WorkloadInput).
-func (r *Repository) AddWorkload(ctx context.Context, courseID, teacherID int64, lessonType string, hours float64) (int64, error) {
+func (r *Repository) AddWorkload(ctx context.Context, courseID, teacherID int64, lessonType string, hours *float64) (int64, error) {
 	var id int64
 	err := database.InTx(ctx, r.db, func(tx pgx.Tx) error {
 		var exists bool
@@ -271,7 +263,7 @@ func teacherLockKey(teacherID int64) int64 { return 2<<40 | teacherID }
 // Все занятия нагрузки сохраняются и переходят к новому преподавателю — для всего
 // двухнедельного шаблона. Если новый преподаватель занят в каком-то из этих интервалов
 // (в том же семестре), не сохраняется ничего: 409 schedule_conflict со списком пересечений.
-func (r *Repository) UpdateWorkload(ctx context.Context, id, teacherID int64, lessonType string, hours float64) error {
+func (r *Repository) UpdateWorkload(ctx context.Context, id, teacherID int64, lessonType string, hours *float64) error {
 	return database.InTx(ctx, r.db, func(tx pgx.Tx) error {
 		var current int64
 		err := tx.QueryRow(ctx, `SELECT teacher_id FROM workload WHERE id = $1 FOR UPDATE`, id).Scan(&current)

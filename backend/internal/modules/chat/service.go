@@ -2,6 +2,7 @@ package chat
 
 import (
 	"context"
+	"errors"
 	"io"
 	"strings"
 	"unicode/utf8"
@@ -25,6 +26,8 @@ type Service struct {
 	repo  *Repository
 	guard Guard
 	blobs Blobs
+	// publish — рассылка события WebSocket пользователям (realtime.Hub.Publish); nil — без событий.
+	publish func(userIDs []int64, typ string, data any)
 }
 
 func NewService(repo *Repository, guard Guard, blobs Blobs) *Service {
@@ -33,12 +36,21 @@ func NewService(repo *Repository, guard Guard, blobs Blobs) *Service {
 
 var (
 	errChatNotFound    = apperr.NewNotFound("chat_not_found")
-	errSelfChat        = apperr.NewInvalid("chat_with_self", "cannot start a chat with yourself")
+	errSelfChat        = apperr.NewInvalid("self_chat", "cannot start a chat with yourself")
+	errUserNotFound    = apperr.NewNotFound("user_not_found")
+	errGroupForbidden  = apperr.NewForbidden("group_forbidden", "you are not a member of this group chat")
 	errContactNotAllow = apperr.NewForbidden("contact_not_allowed", "you cannot start a chat with this user")
-	errPeerInactive    = apperr.NewConflict("peer_inactive", "the other user is deactivated")
-	errForbidden       = apperr.NewForbidden("forbidden", "no access to this resource")
-	errNotAuthor       = apperr.NewForbidden("not_author", "only the author can edit this message")
+	errChatForbidden   = apperr.NewForbidden("chat_forbidden", "you are not a participant of this chat")
+	errForbidden       = apperr.NewForbidden("forbidden", "only the author can change this message")
+	errMsgNotFound     = apperr.NewNotFound("message_not_found")
+	errFileNotFound    = apperr.NewNotFound("file_not_found")
 )
+
+// payloadErr — invalid_payload с полем (формат details.fields, как в HTTP).
+func payloadErr(field, problem string) error {
+	return apperr.NewInvalid("invalid_payload", "Некорректный кадр.").
+		WithDetails(map[string]any{"fields": map[string][]string{field: {problem}}})
+}
 
 // pair упорядочивает пару пользователей: в БД личный чат хранится как (меньший, больший).
 func pair(a, b int64) (low, high int64) {
@@ -52,10 +64,10 @@ func pair(a, b int64) (low, high int64) {
 func normalizeBody(body string, hasFiles bool) (string, error) {
 	body = strings.TrimSpace(body)
 	if body == "" && !hasFiles {
-		return "", apperr.NewInvalid("empty_message", "message must have text or files")
+		return "", payloadErr("body", "must not be empty without files")
 	}
 	if utf8.RuneCountInString(body) > MaxBodyRunes {
-		return "", apperr.NewInvalid("message_too_long", "message is too long")
+		return "", payloadErr("body", "must be at most 4000 characters")
 	}
 	return body, nil
 }
@@ -92,13 +104,17 @@ func (s *Service) removeBlobs(keys []string) {
 
 // ---- чаты ----
 
-func (s *Service) List(ctx context.Context, p middleware.Principal) ([]Chat, error) {
+func (s *Service) List(ctx context.Context, p middleware.Principal, q ListQuery) ([]Chat, int, error) {
 	if !p.IsAdmin() {
 		if err := s.repo.EnsureGroupChats(ctx, p.UserID); err != nil {
-			return nil, err
+			return nil, 0, err
 		}
 	}
-	return s.repo.ListChats(ctx, p.UserID, p.IsAdmin())
+	return s.repo.ListChats(ctx, p.UserID, p.IsAdmin(), q)
+}
+
+func (s *Service) Contacts(ctx context.Context, p middleware.Principal, q ListQuery) ([]Contact, int, error) {
+	return s.repo.ListContacts(ctx, p.UserID, q)
 }
 
 func (s *Service) OpenDirect(ctx context.Context, p middleware.Principal, otherID int64) (Chat, error) {
@@ -110,7 +126,7 @@ func (s *Service) OpenDirect(ctx context.Context, p middleware.Principal, otherI
 		return Chat{}, err
 	}
 	if !other.Active {
-		return Chat{}, apperr.NewNotFound("user_not_found")
+		return Chat{}, errUserNotFound
 	}
 	me, err := s.repo.UserInfo(ctx, p.UserID)
 	if err != nil {
@@ -123,9 +139,18 @@ func (s *Service) OpenDirect(ctx context.Context, p middleware.Principal, otherI
 	if !ok {
 		return Chat{}, errContactNotAllow
 	}
-	id, err := s.repo.OpenDirect(ctx, p.UserID, otherID)
+	id, created, err := s.repo.OpenDirect(ctx, p.UserID, otherID)
 	if err != nil {
 		return Chat{}, err
+	}
+	// Новый личный чат — событие chat.created обоим участникам, каждому со своим
+	// заголовком (имя собеседника).
+	if created && s.publish != nil {
+		for _, u := range []int64{p.UserID, otherID} {
+			if view, err := s.repo.ChatView(ctx, id, u); err == nil {
+				s.publish([]int64{u}, "chat.created", map[string]any{"chat": view})
+			}
+		}
 	}
 	return s.repo.ChatView(ctx, id, p.UserID)
 }
@@ -137,7 +162,7 @@ func (s *Service) OpenGroup(ctx context.Context, p middleware.Principal, groupID
 			return Chat{}, err
 		}
 		if !ok {
-			return Chat{}, errForbidden
+			return Chat{}, errGroupForbidden
 		}
 	}
 	id, err := s.repo.OpenGroup(ctx, groupID, p.UserID)
@@ -185,39 +210,47 @@ func (s *Service) Get(ctx context.Context, p middleware.Principal, chatID int64)
 
 // ---- сообщения ----
 
-func (s *Service) Messages(ctx context.Context, p middleware.Principal, chatID int64, before, after *int64, limit int) ([]Message, error) {
-	if before != nil && after != nil {
-		return nil, apperr.NewInvalid("invalid_query", "use either before or after, not both")
-	}
+// Messages — страница истории; limit уже проверен хендлером (1–MaxLimit).
+func (s *Service) Messages(ctx context.Context, p middleware.Principal, chatID int64, before *int64, limit int) (MessagePage, error) {
 	if _, err := s.member(ctx, p, chatID); err != nil {
-		return nil, err
+		return MessagePage{}, err
 	}
-	if limit <= 0 {
-		limit = DefaultLimit
+	return s.repo.ListMessages(ctx, chatID, before, limit)
+}
+
+// participant — пользователь состоит в чате (те же правила, что member), иначе deny.
+func (s *Service) participant(ctx context.Context, p middleware.Principal, chatID int64, deny error) (chatRow, error) {
+	c, err := s.member(ctx, p, chatID)
+	if apperr.IsNotFound(err) {
+		return chatRow{}, deny
 	}
-	limit = min(limit, MaxLimit)
-	return s.repo.ListMessages(ctx, chatID, before, after, limit)
+	return c, err
 }
 
 func (s *Service) checkFiles(ctx context.Context, p middleware.Principal, ids []int64) error {
 	if len(ids) > MaxFiles {
-		return apperr.NewInvalid("too_many_files", "at most 5 files can be attached")
+		return payloadErr("file_ids", "at most 5 files")
 	}
 	seen := make(map[int64]bool, len(ids))
 	for _, id := range ids {
-		if seen[id] {
-			return apperr.NewInvalid("duplicate_file", "the same file is attached twice")
+		if id <= 0 || seen[id] {
+			return payloadErr("file_ids", "must be unique positive ids")
 		}
 		seen[id] = true
 		if err := s.guard.OwnsFile(ctx, p.UserID, id); err != nil {
+			var ae *apperr.Error
+			if errors.As(err, &ae) && ae.Kind != apperr.Internal {
+				return errFileNotFound
+			}
 			return err
 		}
 	}
 	return nil
 }
 
+// Send — message.send: участник чата, текст и/или до 5 своих файлов.
 func (s *Service) Send(ctx context.Context, p middleware.Principal, chatID int64, body string, fileIDs []int64) (Message, error) {
-	c, err := s.member(ctx, p, chatID)
+	c, err := s.participant(ctx, p, chatID, errChatForbidden)
 	if err != nil {
 		return Message{}, err
 	}
@@ -238,69 +271,75 @@ func (s *Service) Send(ctx context.Context, p middleware.Principal, chatID int64
 			return Message{}, err
 		}
 		if !u.Active {
-			return Message{}, errPeerInactive
+			return Message{}, errChatForbidden // собеседник заблокирован
 		}
 	}
 	id, err := s.repo.CreateMessage(ctx, chatID, p.UserID, body, fileIDs)
+	if apperr.IsNotFound(err) || isCode(err, "file_not_found") {
+		return Message{}, errFileNotFound
+	}
 	if err != nil {
 		return Message{}, err
 	}
 	return s.repo.GetMessage(ctx, id)
 }
 
-// ownMessage загружает сообщение и проверяет, что оно из этого чата и не удалено.
-func (s *Service) ownMessage(ctx context.Context, chatID, msgID int64) (Message, error) {
-	m, err := s.repo.GetMessage(ctx, msgID)
-	if err != nil {
-		return Message{}, err
-	}
-	if m.ChatID != chatID || m.Deleted {
-		return Message{}, apperr.NewNotFound("message_not_found")
-	}
-	return m, nil
+func isCode(err error, code string) bool {
+	var ae *apperr.Error
+	return errors.As(err, &ae) && ae.Code == code
 }
 
-func (s *Service) Edit(ctx context.Context, p middleware.Principal, chatID, msgID int64, body string) (Message, error) {
-	if _, err := s.member(ctx, p, chatID); err != nil {
+// ownMessage — сообщение этого чата, написанное пользователем.
+func (s *Service) ownMessage(ctx context.Context, p middleware.Principal, chatID, msgID int64) (Message, error) {
+	if _, err := s.participant(ctx, p, chatID, errForbidden); err != nil {
 		return Message{}, err
 	}
-	m, err := s.ownMessage(ctx, chatID, msgID)
+	m, err := s.repo.GetMessage(ctx, msgID)
+	if apperr.IsNotFound(err) || (err == nil && m.ChatID != chatID) {
+		return Message{}, errMsgNotFound
+	}
 	if err != nil {
 		return Message{}, err
 	}
 	if m.SenderID != p.UserID {
-		return Message{}, errNotAuthor
+		return Message{}, errForbidden
+	}
+	return m, nil
+}
+
+// Edit — message.edit: свой текст; пустой допустим, только если есть вложения.
+// При параллельной правке сохраняется последняя запись.
+func (s *Service) Edit(ctx context.Context, p middleware.Principal, chatID, msgID int64, body string) (Message, error) {
+	m, err := s.ownMessage(ctx, p, chatID, msgID)
+	if err != nil {
+		return Message{}, err
 	}
 	body, err = normalizeBody(body, len(m.Files) > 0)
 	if err != nil {
 		return Message{}, err
 	}
 	if err := s.repo.UpdateMessageBody(ctx, msgID, body); err != nil {
+		if apperr.IsNotFound(err) {
+			return Message{}, errMsgNotFound
+		}
 		return Message{}, err
 	}
 	return s.repo.GetMessage(ctx, msgID)
 }
 
-// Delete: свои сообщения может удалять автор, любые — администратор.
-func (s *Service) Delete(ctx context.Context, p middleware.Principal, chatID, msgID int64) error {
-	if _, err := s.member(ctx, p, chatID); err != nil {
-		return err
-	}
-	m, err := s.ownMessage(ctx, chatID, msgID)
-	if err != nil {
-		return err
-	}
-	if m.SenderID != p.UserID && !p.IsAdmin() {
-		return errForbidden
+// Delete — message.delete: своё сообщение удаляется полностью вместе со связями вложений;
+// файл стирается, только если больше нигде не используется.
+func (s *Service) Delete(ctx context.Context, p middleware.Principal, chatID, msgID int64) (MessageRemoval, error) {
+	if _, err := s.ownMessage(ctx, p, chatID, msgID); err != nil {
+		return MessageRemoval{}, err
 	}
 	keys, err := s.repo.DeleteMessage(ctx, msgID)
-	s.removeBlobs(keys)
-	return err
-}
-
-func (s *Service) MarkRead(ctx context.Context, p middleware.Principal, chatID, messageID int64) error {
-	if _, err := s.member(ctx, p, chatID); err != nil {
-		return err
+	if apperr.IsNotFound(err) {
+		return MessageRemoval{}, errMsgNotFound
 	}
-	return s.repo.MarkRead(ctx, chatID, p.UserID, messageID)
+	if err != nil {
+		return MessageRemoval{}, err
+	}
+	s.removeBlobs(keys)
+	return MessageRemoval{ChatID: chatID, MessageID: msgID}, nil
 }

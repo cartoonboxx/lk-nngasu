@@ -5,8 +5,10 @@
 // заходить в любой групповой чат. Участники группового чата не хранятся, а вычисляются из
 // таблиц student и workload — состав меняется сам при переводе студента или смене нагрузки.
 //
-// Доставка — опросом: клиент раз в несколько секунд просит сообщения новее последнего
-// известного (GET /chats/:id/messages?after=<id>).
+// REST отдаёт контакты, список чатов и историю (GET /chats/:id/messages?before=<id>).
+// Отправка, правка и удаление — команды WebSocket (протокол lk-chat.v1, см. ws.go):
+// message.send / message.edit / message.delete; после COMMIT всем подключённым
+// участникам чата уходят события message.created / message.updated / message.deleted.
 package chat
 
 import "time"
@@ -41,19 +43,45 @@ type Preview struct {
 	SenderName string    `json:"sender_name"`
 	Body       string    `json:"body"`
 	HasFiles   bool      `json:"has_files"`
-	Deleted    bool      `json:"deleted"`
 	CreatedAt  time.Time `json:"created_at"`
 }
 
 // Chat — чат глазами конкретного пользователя.
 type Chat struct {
-	ID          int64    `json:"id"`
-	Kind        string   `json:"kind"`
-	Title       string   `json:"title"`    // группа — её название, личный — имя собеседника
-	GroupID     *int64   `json:"group_id"` // только у группового
-	Peer        *Person  `json:"peer"`     // только у личного
-	LastMessage *Preview `json:"last_message"`
-	Unread      int      `json:"unread"` // чужие непрочитанные сообщения
+	ID          int64     `json:"id"`
+	Kind        string    `json:"kind"`
+	Title       string    `json:"title"`    // группа — её название, личный — имя собеседника
+	GroupID     *int64    `json:"group_id"` // только у группового
+	Peer        *Person   `json:"peer"`     // только у личного
+	CreatedAt   time.Time `json:"created_at"`
+	LastMessage *Preview  `json:"last_message"`
+}
+
+// Contact — пользователь, которому можно написать (GET /contacts).
+type Contact struct {
+	ID          int64   `json:"id"`
+	Name        string  `json:"name"`
+	Avatar      *Avatar `json:"avatar"`
+	Description *string `json:"description"` // кафедра преподавателя или группа студента
+}
+
+type Avatar struct {
+	ID  int64  `json:"id"`
+	URL string `json:"url"`
+}
+
+// MessagePage — страница истории: items по возрастанию id; next_before — курсор
+// для следующей (более старой) страницы, null когда старше сообщений нет.
+type MessagePage struct {
+	Items      []Message `json:"items"`
+	HasMore    bool      `json:"has_more"`
+	NextBefore *int64    `json:"next_before"`
+}
+
+// ListQuery — q, limit, offset для /contacts и /chats.
+type ListQuery struct {
+	Q             string
+	Limit, Offset int
 }
 
 type Message struct {
@@ -65,7 +93,12 @@ type Message struct {
 	Files      []FileRef  `json:"files"`
 	CreatedAt  time.Time  `json:"created_at"`
 	EditedAt   *time.Time `json:"edited_at"`
-	Deleted    bool       `json:"deleted"`
+}
+
+// MessageRemoval — ack команды message.delete и данные события message.deleted.
+type MessageRemoval struct {
+	ChatID    int64 `json:"chat_id"`
+	MessageID int64 `json:"message_id"`
 }
 
 // chatRow — строка таблицы chat (для проверок доступа).
