@@ -51,12 +51,17 @@
           @click="navigate(item.route)"
         />
       </div>
-      <StudentCard name="Анна Иванова" role="Студент" @click="navigate('settings')" />
+      <StudentCard
+        :name="auth.user?.full_name || 'Аккаунт'"
+        :role="auth.roleLabel"
+        @click="navigate('settings')"
+      />
     </section>
   </Modal>
 </template>
 
 <script lang="ts">
+import { useAuthStore } from '@/stores/auth'
 import {
   PhBookOpen,
   PhCalendarBlank,
@@ -89,6 +94,7 @@ export default defineComponent({
   data() {
     return {
       style,
+      auth: useAuthStore(),
       isMobile: false,
       mobileOpen: false,
       mediaQuery: null as MediaQueryList | null,

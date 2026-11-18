@@ -9,16 +9,19 @@
         <TextInput
           size="lg"
           v-model="login"
-          :label="devPreview ? 'Логин или электронная почта' : 'Электронная почта'"
+          label="Электронная почта"
           name="username"
           autocomplete="username"
           placeholder="name@example.ru"
-          :type="devPreview ? 'text' : 'email'"
+          type="email"
+          required
+          :disabled="submitting"
           full-width
         />
         <TextInput
           size="lg"
           v-model="password"
+          :disabled="submitting"
           label="Пароль"
           name="password"
           autocomplete="current-password"
@@ -44,7 +47,15 @@
         size="sm"
       />
 
-      <Button :class="style.submit" variant="primary" size="lg" type="submit" full-width>
+      <Button
+        :class="style.submit"
+        variant="primary"
+        size="lg"
+        type="submit"
+        :loading="submitting"
+        :disabled="submitting"
+        full-width
+      >
         <span>Войти в кабинет</span>
       </Button>
       <p :class="style.footer">
@@ -52,8 +63,8 @@
         <RouterLink :class="style.link" to="/registration">Зарегистрироваться</RouterLink>
       </p>
       <p v-if="signInError" :class="style.error" role="alert">{{ signInError }}</p>
-      <p v-if="devPreview" :class="style.hint">
-        В разработке доступен временный вход в локальную административную панель.
+      <p v-if="$route.query.reason === 'server-unavailable'" :class="style.error" role="alert">
+        Не удалось восстановить сессию. Проверьте подключение к серверу и повторите вход.
       </p>
     </form>
   </AuthLayout>
@@ -69,7 +80,7 @@ import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 import Checkbox from '@/components/UI/inputs/Checkbox/Checkbox.vue'
 import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
 import style from '../AuthForm.module.scss'
-import { signInAdminDemo } from '../admin-demo'
+import { useAuthStore } from '@/stores/auth'
 
 export default defineComponent({
   name: 'AuthorizationPage',
@@ -86,7 +97,8 @@ export default defineComponent({
   data() {
     return {
       style,
-      devPreview: import.meta.env.DEV,
+      auth: useAuthStore(),
+      submitting: false,
       login: '',
       signInError: '',
       password: '',
@@ -96,17 +108,24 @@ export default defineComponent({
   },
   methods: {
     async signIn() {
+      if (this.submitting) return
+      this.submitting = true
       this.signInError = ''
-      if (signInAdminDemo(this.login, this.password)) {
+      try {
+        await this.auth.signIn(this.login, this.password, this.rememberMe)
         this.password = ''
-        await this.$router.replace('/admin')
-        return
+        const redirect = this.$route.query.redirect
+        await this.$router.replace(
+          typeof redirect === 'string' && redirect.startsWith('/') && !redirect.startsWith('//')
+            ? redirect
+            : { name: this.auth.user?.is_admin ? 'admin-requests' : 'dashboard' },
+        )
+      } catch (error) {
+        this.signInError =
+          error instanceof Error ? error.message : 'Не удалось войти. Повторите попытку.'
+      } finally {
+        this.submitting = false
       }
-      this.password = ''
-      this.signInError =
-        this.devPreview && this.login === 'root'
-          ? 'Неверный логин или пароль.'
-          : 'Серверный вход пока не подключён.'
     },
   },
 })
