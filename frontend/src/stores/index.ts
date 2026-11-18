@@ -7,6 +7,7 @@ import { useScheduleStore } from './schedule'
 import { useAdminStore } from './admin'
 import { useAuthStore } from './auth'
 import { useCabinetStore } from './cabinet'
+import { apiNotifications } from '@/api/client'
 
 const stores: Plugin = {
   install(app) {
@@ -41,6 +42,14 @@ const stores: Plugin = {
       { flush: 'sync' },
     )
     const utilityStore = app.config.globalProperties.$utilityStore
+    const reportedErrors = new WeakSet<object>()
+    apiNotifications.onError = (error) => {
+      if (error !== null && typeof error === 'object') {
+        if (reportedErrors.has(error)) return
+        reportedErrors.add(error)
+      }
+      utilityStore.notifyError(error)
+    }
     const stopThemeSync = watch(
       () => utilityStore.themePreference,
       (value) => {
@@ -61,6 +70,7 @@ const stores: Plugin = {
     }
     window.addEventListener('storage', syncTheme)
     const cleanup = () => {
+      apiNotifications.onError = null
       stopSessionSync()
       stopAvatarSync()
       stopThemeSync()

@@ -1,5 +1,11 @@
 import { defineStore } from 'pinia'
-import { ApiError, apiRequest, type ApiPage, type ApiRequestOptions } from '@/api/client'
+import {
+  ApiError,
+  apiRequest,
+  apiNotifications,
+  type ApiPage,
+  type ApiRequestOptions,
+} from '@/api/client'
 
 interface AuthUser {
   id: number
@@ -52,30 +58,51 @@ export const useAuthStore = defineStore('auth', {
   },
   actions: {
     async request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
-      await this.ensureSession()
-      if (!this.session) throw new ApiError(401, 'session_expired')
-      const userId = this.user?.id
-      const headers = new Headers(options.headers)
-      headers.set('Authorization', `Bearer ${this.session.access_token}`)
       try {
-        const result = await apiRequest<T>(path, { ...options, headers })
-        if (this.user?.id !== userId) throw new ApiError(401, 'session_expired')
-        return result
-      } catch (error) {
-        if (
-          error instanceof ApiError &&
-          error.code === 'token_expired' &&
-          this.user?.id === userId
-        ) {
-          await this.refresh()
-          if (!this.session || this.user?.id !== userId) throw new ApiError(401, 'session_expired')
-          headers.set('Authorization', `Bearer ${this.session.access_token}`)
-          const result = await apiRequest<T>(path, { ...options, headers })
+        await this.ensureSession()
+        if (!this.session) throw new ApiError(401, 'session_expired')
+        const userId = this.user?.id
+        const headers = new Headers(options.headers)
+        headers.set('Authorization', `Bearer ${this.session.access_token}`)
+        try {
+          const result = await apiRequest<T>(path, { ...options, headers, notifyOnError: false })
           if (this.user?.id !== userId) throw new ApiError(401, 'session_expired')
           return result
+        } catch (error) {
+          if (
+            error instanceof ApiError &&
+            error.code === 'token_expired' &&
+            this.user?.id === userId
+          ) {
+            await this.refresh()
+            if (!this.session || this.user?.id !== userId)
+              throw new ApiError(401, 'session_expired')
+            headers.set('Authorization', `Bearer ${this.session.access_token}`)
+            try {
+              const result = await apiRequest<T>(path, {
+                ...options,
+                headers,
+                notifyOnError: false,
+              })
+              if (this.user?.id !== userId) throw new ApiError(401, 'session_expired')
+              return result
+            } catch (retryError) {
+              if (
+                retryError instanceof ApiError &&
+                retryError.status === 401 &&
+                this.user?.id === userId
+              )
+                this.session = null
+              throw retryError
+            }
+          }
+          if (error instanceof ApiError && error.status === 401 && this.user?.id === userId)
+            this.session = null
+          throw error
         }
-        if (error instanceof ApiError && error.status === 401 && this.user?.id === userId)
-          this.session = null
+      } catch (error) {
+        if (options.notifyOnError !== false && !options.signal?.aborted)
+          apiNotifications.onError?.(error)
         throw error
       }
     },
@@ -105,12 +132,7 @@ export const useAuthStore = defineStore('auth', {
       return user
     },
 
-    async updateMe(values: {
-      last_name?: string
-      first_name?: string
-      middle_names?: string | null
-      avatar_file_id?: number | null
-    }) {
+    async updateMe(values: { avatar_file_id?: number | null }) {
       const userId = this.user?.id
       const user = await this.request<AuthUser>('/me', {
         method: 'PATCH',
@@ -151,8 +173,11 @@ export const useAuthStore = defineStore('auth', {
       if (this.refreshPromise) return this.refreshPromise
       this.refreshPromise = (async () => {
         try {
-          const csrf = await apiRequest<{ csrf_token: string }>('/auth/csrf')
+          const csrf = await apiRequest<{ csrf_token: string }>('/auth/csrf', {
+            notifyOnError: false,
+          })
           this.session = await apiRequest<AuthToken>('/auth/refresh', {
+            notifyOnError: false,
             method: 'POST',
             headers: { 'X-CSRF-Token': csrf.csrf_token },
           })
@@ -163,6 +188,7 @@ export const useAuthStore = defineStore('auth', {
             this.initialized = true
             if (error.status === 401) return
           }
+          apiNotifications.onError?.(error)
           throw error
         } finally {
           this.refreshPromise = null
@@ -193,13 +219,19 @@ export const useAuthStore = defineStore('auth', {
     async signOut() {
       if (this.refreshPromise) await this.refreshPromise
       try {
-        const csrf = await apiRequest<{ csrf_token: string }>('/auth/csrf')
+        const csrf = await apiRequest<{ csrf_token: string }>('/auth/csrf', {
+          notifyOnError: false,
+        })
         await apiRequest<void>('/auth/logout', {
+          notifyOnError: false,
           method: 'POST',
           headers: { 'X-CSRF-Token': csrf.csrf_token },
         })
       } catch (error) {
-        if (!(error instanceof ApiError) || error.status !== 401) throw error
+        if (!(error instanceof ApiError) || error.status !== 401) {
+          apiNotifications.onError?.(error)
+          throw error
+        }
       }
       this.session = null
       this.initialized = true

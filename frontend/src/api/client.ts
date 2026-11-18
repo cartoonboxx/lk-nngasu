@@ -1,4 +1,9 @@
+export const apiNotifications: { onError: ((error: unknown) => void) | null } = { onError: null }
+
 const messages: Record<string, string> = {
+  network_error: 'Не удалось связаться с сервером. Проверьте подключение и повторите попытку.',
+  invalid_response: 'Сервер вернул некорректный ответ. Повторите попытку позже.',
+  profile_name_admin_only: 'Изменить ФИО может только администратор.',
   request_already_reviewed:
     'Заявка уже рассмотрена другим администратором. Показано актуальное состояние.',
   registration_request_not_found: 'Заявка не найдена.',
@@ -76,39 +81,44 @@ export interface ApiPage<T> {
 }
 
 export interface ApiRequestOptions extends RequestInit {
+  notifyOnError?: boolean
   responseType?: 'blob'
   paginated?: boolean
 }
 
 export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
-  const { paginated, responseType, ...requestOptions } = options
+  const { paginated, responseType, notifyOnError = true, ...requestOptions } = options
   const headers = new Headers(options.headers)
   if (options.body && !(options.body instanceof FormData))
     headers.set('Content-Type', 'application/json')
-  let response: Response
   try {
-    response = await fetch(`/api/v1${path}`, {
-      ...requestOptions,
-      headers,
-      credentials: 'include',
-      cache: 'no-store',
-      signal: options.signal ?? AbortSignal.timeout(15000),
-    })
-  } catch {
-    throw new Error('Не удалось связаться с сервером. Проверьте подключение и повторите попытку.')
+    let response: Response
+    try {
+      response = await fetch(`/api/v1${path}`, {
+        ...requestOptions,
+        headers,
+        credentials: 'include',
+        cache: 'no-store',
+        signal: options.signal ?? AbortSignal.timeout(15000),
+      })
+    } catch (error) {
+      if (options.signal?.aborted) throw error
+      throw new ApiError(0, 'network_error')
+    }
+    if (response.status === 204) return undefined as T
+    if (response.ok && responseType === 'blob') return (await response.blob()) as T
+    const body = await response.json().catch(() => null)
+    if (!response.ok) {
+      throw new ApiError(
+        response.status,
+        body?.error?.code ?? 'service_unavailable',
+        body?.error?.details?.fields,
+      )
+    }
+    if (!body || !('data' in body)) throw new ApiError(response.status, 'invalid_response')
+    return (paginated ? body : body.data) as T
+  } catch (error) {
+    if (notifyOnError && !options.signal?.aborted) apiNotifications.onError?.(error)
+    throw error
   }
-  if (response.status === 204) return undefined as T
-  if (response.ok && responseType === 'blob') return (await response.blob()) as T
-  const body = await response.json().catch(() => null)
-  if (!response.ok) {
-    throw new ApiError(
-      response.status,
-      body?.error?.code ?? 'service_unavailable',
-      body?.error?.details?.fields,
-    )
-  }
-  if (!body || !('data' in body)) {
-    throw new Error('Сервер вернул некорректный ответ. Повторите попытку позже.')
-  }
-  return (paginated ? body : body.data) as T
 }

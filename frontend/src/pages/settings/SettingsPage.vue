@@ -51,17 +51,6 @@
       <p v-if="avatarError || auth.avatarError" :class="style.passwordError" role="alert">
         {{ avatarError || auth.avatarError }}
       </p>
-      <form :class="[style.settingsSection, style.profileForm]" @submit.prevent="saveProfile">
-        <h2>Личные данные</h2>
-        <TextInput v-model="lastName" label="Фамилия" required :maxlength="50" full-width />
-        <TextInput v-model="firstName" label="Имя" required :maxlength="50" full-width />
-        <TextInput v-model="middleNames" label="Отчество" :maxlength="50" full-width />
-        <p v-if="profileError" :class="style.passwordError" role="alert">{{ profileError }}</p>
-        <p v-if="profileSaved" role="status">Данные сохранены.</p>
-        <Button type="submit" :disabled="savingProfile" :loading="savingProfile"
-          >Сохранить данные</Button
-        >
-      </form>
       <div :class="style.settingsSectionRow">
         <div>
           <h2>Тема интерфейса</h2>
@@ -240,12 +229,6 @@ export default defineComponent({
       loggingOut: false,
       savingAvatar: false,
       avatarError: '',
-      savingProfile: false,
-      profileError: '',
-      profileSaved: false,
-      firstName: '',
-      lastName: '',
-      middleNames: '',
       savingPassword: false,
       logoutError: '',
       isPasswordModalOpen: false,
@@ -265,35 +248,7 @@ export default defineComponent({
     }
   },
 
-  watch: {
-    'auth.user': {
-      immediate: true,
-      handler() {
-        this.firstName = this.auth.user?.first_name ?? ''
-        this.lastName = this.auth.user?.last_name ?? ''
-        this.middleNames = this.auth.user?.middle_names ?? ''
-      },
-    },
-  },
   methods: {
-    async saveProfile() {
-      if (this.savingProfile) return
-      this.savingProfile = true
-      this.profileError = ''
-      this.profileSaved = false
-      try {
-        await this.auth.updateMe({
-          first_name: this.firstName.trim(),
-          last_name: this.lastName.trim(),
-          middle_names: this.middleNames.trim() || null,
-        })
-        this.profileSaved = true
-      } catch (error) {
-        this.profileError = error instanceof Error ? error.message : 'Не удалось сохранить профиль.'
-      } finally {
-        this.savingProfile = false
-      }
-    },
     async uploadAvatar(event: Event) {
       const input = event.target as HTMLInputElement
       const file = input.files?.[0]

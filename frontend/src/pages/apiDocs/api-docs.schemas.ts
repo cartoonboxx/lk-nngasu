@@ -473,14 +473,25 @@ export const apiSchemas: ApiSchema[] = [
   },
   {
     name: 'ProfilePatchInput',
-    description: 'Изменения собственного профиля. Учебные роли и документы меняет администратор.',
+    description:
+      'Изменения собственного профиля. ФИО, учебные роли и документы меняет только администратор.',
     fields: [
-      ['last_name', 'string', false, '1–50 символов.'],
-      ['first_name', 'string', false, '1–50 символов.'],
-      ['middle_names', 'string | null', false, 'До 50 символов; null очищает.'],
-      ['avatar', 'integer | null', false, 'Свой загруженный аватар; null удаляет привязку.'],
+      ['last_name', 'string', false, 'Только администратор; 1–50 символов.'],
+      ['first_name', 'string', false, 'Только администратор; 1–50 символов.'],
+      [
+        'middle_names',
+        'string | null',
+        false,
+        'Только администратор; до 50 символов, null очищает.',
+      ],
+      [
+        'avatar_file_id',
+        'integer | null',
+        false,
+        'Свой загруженный аватар; null удаляет привязку.',
+      ],
     ],
-    example: { avatar: 102 },
+    example: { avatar_file_id: 102 },
   },
   {
     name: 'PasswordInput',

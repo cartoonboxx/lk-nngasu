@@ -263,7 +263,7 @@ export const apiGroups: ApiGroup[] = [
       {
         method: 'PATCH',
         path: '/me',
-        title: 'Обновить ФИО или аватар',
+        title: 'Обновить свой аватар',
         access: 'session',
         stage: 'core',
         body: 'ProfilePatchInput',
@@ -271,10 +271,14 @@ export const apiGroups: ApiGroup[] = [
           status: 200,
           schema: 'Profile',
         },
-        errors: ['400 empty_patch / invalid_file', '404 file_not_found'],
+        errors: [
+          '400 empty_patch / invalid_file',
+          '403 profile_name_admin_only',
+          '404 file_not_found',
+        ],
         notes: [
           'Хотя бы один разрешённый ключ. Различать отсутствующий avatar и null: не менять / удалить.',
-          'Файлы загружаются отдельным запросом. Роль, группа, кафедра, документы здесь запрещены.',
+          'Файлы загружаются отдельным запросом. ФИО меняет только администратор; для обычного пользователя эти поля возвращают 403 profile_name_admin_only. Роль, группа, кафедра и документы здесь запрещены.',
         ],
       },
       {
