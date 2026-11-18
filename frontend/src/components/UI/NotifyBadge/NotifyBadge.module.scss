@@ -29,3 +29,27 @@
 .neutral {
   background: #374151;
 }
+
+.enterActive {
+  transition:
+    opacity 300ms ease-out,
+    transform 300ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.leaveActive {
+  transition:
+    opacity 200ms ease-in,
+    transform 200ms ease-in;
+}
+
+.hidden {
+  opacity: 0;
+  transform: translate(-50%, -10px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .enterActive,
+  .leaveActive {
+    transition: none;
+  }
+}

@@ -1,3 +1,4 @@
+import { ApiError } from '@/api/client'
 import { defineStore } from 'pinia'
 import breakpoints from '@/styles/breakpoints.module.scss'
 
@@ -23,6 +24,7 @@ export const useUtilityStore = defineStore('utility', {
   },
   actions: {
     notifyError(error: unknown) {
+      if (error instanceof ApiError && error.code === 'current_semester_not_set') return
       const message =
         error instanceof Error ? error.message : typeof error === 'string' ? error : ''
       this.notify(message || 'Не удалось выполнить действие. Попробуйте позже.', 'error')

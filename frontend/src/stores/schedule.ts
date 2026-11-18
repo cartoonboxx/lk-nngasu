@@ -1,3 +1,4 @@
+import { ApiError } from '@/api/client'
 import { defineStore } from 'pinia'
 import { useAuthStore } from './auth'
 import type { CalendarLesson } from '@/api/cabinet.types'
@@ -78,6 +79,7 @@ export const useScheduleStore = defineStore('schedule', {
         this.schedule = [...days.values()].sort((a, b) => a.date.localeCompare(b.date))
         this.schedule.forEach((day) => day.lessons.sort((a, b) => a.start.localeCompare(b.start)))
       } catch (error) {
+        if (error instanceof ApiError && error.code === 'current_semester_not_set') return
         if (version === this.requestVersion)
           this.error = error instanceof Error ? error.message : 'Не удалось загрузить расписание.'
       } finally {

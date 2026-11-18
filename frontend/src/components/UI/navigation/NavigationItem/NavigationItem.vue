@@ -33,13 +33,28 @@ export default defineComponent({
   name: 'NavigationItem',
   components: { Badge, RouterLink, PhCaretRight },
   props: {
-    text: { type: String, required: true },
-    icon: { type: [Object, Function] as PropType<Component>, required: true },
-    to: { type: [String, Object] as PropType<RouteLocationRaw>, default: undefined },
-    variant: { type: String as PropType<NavigationItemVariant>, default: 'list' },
+    text: {
+      type: String,
+      required: true,
+    },
+    icon: {
+      type: [Object, Function] as PropType<Component>,
+      required: true,
+    },
+    to: {
+      type: [String, Object] as PropType<RouteLocationRaw>,
+      default: undefined,
+    },
+    variant: {
+      type: String as PropType<NavigationItemVariant>,
+      default: 'list',
+    },
     active: Boolean,
     notification: Boolean,
-    badge: { type: Number, default: undefined },
+    badge: {
+      type: Number,
+      default: undefined,
+    },
   },
   data() {
     return { style }

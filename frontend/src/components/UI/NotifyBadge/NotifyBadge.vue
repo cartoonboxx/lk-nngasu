@@ -1,12 +1,22 @@
 <template>
   <Teleport :to="notificationTarget">
-    <p
-      v-if="$utilityStore.notification"
-      :class="[style.badge, style[$utilityStore.notification.variant]]"
-      :role="$utilityStore.notification.variant === 'error' ? 'alert' : 'status'"
+    <Transition
+      appear
+      mode="out-in"
+      :enter-active-class="style.enterActive"
+      :enter-from-class="style.hidden"
+      :leave-active-class="style.leaveActive"
+      :leave-to-class="style.hidden"
     >
-      {{ $utilityStore.notification.message }}
-    </p>
+      <p
+        v-if="$utilityStore.notification"
+        :key="$utilityStore.notification.variant + ':' + $utilityStore.notification.message"
+        :class="[style.badge, style[$utilityStore.notification.variant]]"
+        :role="$utilityStore.notification.variant === 'error' ? 'alert' : 'status'"
+      >
+        {{ $utilityStore.notification.message }}
+      </p>
+    </Transition>
   </Teleport>
 </template>
 <script lang="ts">
