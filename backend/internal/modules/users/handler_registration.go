@@ -2,6 +2,8 @@ package users
 
 import (
 	"strconv"
+	"strings"
+	"unicode/utf8"
 
 	"github.com/gin-gonic/gin"
 
@@ -32,6 +34,7 @@ type decisionBody struct {
 // Ключи student и teacher обязательны (значение может быть null),
 // при этом ровно одна роль должна быть объектом — это проверяет сервис.
 type approvalUserInput struct {
+	Role        string                  `json:"role" binding:"omitempty,oneof=student teacher admin"` // нет — по профилю
 	LastName    string                  `json:"last_name" binding:"required,max=50"`
 	FirstName   string                  `json:"first_name" binding:"required,max=50"`
 	MiddleNames *string                 `json:"middle_names" binding:"omitempty,max=50"`
@@ -63,7 +66,11 @@ func (h *Handler) SubmitRegistration(c *gin.Context) {
 func (h *Handler) ListRegistrations(c *gin.Context) {
 	c.Header("Cache-Control", "no-store") // в ответе паспорта и СНИЛС
 
-	f := RequestFilter{Q: c.Query("q"), Status: c.Query("status"), Newest: true, Limit: 50}
+	f := RequestFilter{Q: strings.TrimSpace(c.Query("q")), Status: c.Query("status"), Newest: true, Limit: 50}
+	if utf8.RuneCountInString(f.Q) > 200 {
+		failQuery(c, "q", "must be at most 200 characters")
+		return
+	}
 	switch f.Status {
 	case "", "pending", "approved", "rejected":
 	default:
@@ -149,7 +156,12 @@ func (h *Handler) DecideRegistration(c *gin.Context) {
 		return
 	case d.Approve:
 		u := req.User
+		if err := checkStudentBody(u.Student.Value); err != nil {
+			httpx.Fail(c, err)
+			return
+		}
 		d.User = &ApprovalUser{
+			Role:     u.Role,
 			LastName: u.LastName, FirstName: u.FirstName, MiddleNames: u.MiddleNames,
 			Passport: u.Passport, Snils: u.Snils,
 		}

@@ -42,13 +42,12 @@ func Register(public, r *gin.RouterGroup, pool *pgxpool.Pool, files FileOwnershi
 		password = append([]gin.HandlerFunc{opts.PasswordLimit}, password...)
 	}
 	r.POST("/me/password", password...)
-	r.POST("/me/email", h.ChangeEmail)
 
 	// Управление пользователями: только администратор.
 	r.GET("/users", admin, h.List)
 	r.POST("/users", admin, h.Create)
 	r.PATCH("/users/:id", admin, h.AdminUpdate)
-	r.POST("/users/:id/invitation", admin, h.ResendInvitation) // повторно отправить приглашение задать пароль
+	r.POST("/users/:id/invitations", admin, h.ResendInvitation) // повторно отправить приглашение задать пароль
 
 	// Заявки на регистрацию: только администратор.
 	r.GET("/registration-requests", admin, h.ListRegistrations)                // очередь заявок

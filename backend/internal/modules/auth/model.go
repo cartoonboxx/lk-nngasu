@@ -19,10 +19,13 @@
 // со ссылкой и задаёт пароль через POST /auth/activate.
 package auth
 
-import "time"
+import (
+	"time"
+
+	"university-api/internal/platform/database"
+)
 
 // Token — ответ входа и обновления сессии ({"data": Token}).
-// Роли в ответе нет: права определяются по независимым student, teacher и is_admin в user.
 type Token struct {
 	AccessToken string    `json:"access_token"` // JWT для заголовка Authorization: Bearer
 	TokenType   string    `json:"token_type"`   // всегда "Bearer"
@@ -30,27 +33,22 @@ type Token struct {
 	User        UserInfo  `json:"user"`
 }
 
-// UserInfo — кто вошёл. student, teacher и is_admin независимы: у пользователя может
-// быть несколько ролей сразу, и фронт не должен выбирать права по одной из них.
+// UserInfo — кто вошёл (схема Profile): одна роль role; профиль student или teacher
+// заполнен только у соответствующей роли, у администратора оба null.
 type UserInfo struct {
-	ID              int64        `json:"id"`
-	LastName        string       `json:"last_name"`
-	FirstName       string       `json:"first_name"`
-	MiddleNames     *string      `json:"middle_names"`
-	FullName        string       `json:"full_name"` // "Фамилия Имя Отчество"
-	Email           string       `json:"email"`
-	Avatar          *FileRef     `json:"avatar"` // null — аватара нет
-	IsActive        bool         `json:"is_active"`
-	CanManageAdmins bool         `json:"can_manage_admins"`
-	IsAdmin         bool         `json:"is_admin"`
-	Student         *StudentInfo `json:"student"` // null — не студент
-	Teacher         *TeacherInfo `json:"teacher"` // null — не преподаватель
-}
-
-// FileRef — файл аватара: id и адрес скачивания через модуль files.
-type FileRef struct {
-	ID  int64  `json:"id"`
-	URL string `json:"url"`
+	ID              int64              `json:"id"`
+	LastName        string             `json:"last_name"`
+	FirstName       string             `json:"first_name"`
+	MiddleNames     *string            `json:"middle_names"`
+	FullName        string             `json:"full_name"` // "Фамилия Имя Отчество"
+	Email           string             `json:"email"`
+	Avatar          *database.FileInfo `json:"avatar"` // null — аватара нет
+	IsActive        bool               `json:"is_active"`
+	IsAdmin         bool               `json:"is_admin"`
+	CanManageAdmins bool               `json:"can_manage_admins"`
+	Role            string             `json:"role"`    // student | teacher | admin
+	Student         *StudentInfo       `json:"student"` // null — не студент
+	Teacher         *TeacherInfo       `json:"teacher"` // null — не преподаватель
 }
 
 // StudentInfo — данные студента в профиле.

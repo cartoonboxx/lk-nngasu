@@ -5,7 +5,7 @@ package assignments
 
 import "time"
 
-// MaxFiles — сколько файлов можно прикрепить к заданию или к ответу (FR-HW-02, FR-HW-06).
+// MaxFiles — сколько файлов можно прикрепить к заданию или к ответу (AssignmentInput, SubmissionInput).
 const MaxFiles = 5
 
 // Статусы, которые видит клиент. Первые три совпадают с enum submission_state в БД;
@@ -17,9 +17,13 @@ const (
 	StatusReviewed     = "reviewed"      // оценено
 )
 
-type FileRef struct {
-	ID   int64  `json:"id"`
-	Name string `json:"name"`
+// FileInfo — файл задания или ответа (схема FileInfo, как у материалов).
+type FileInfo struct {
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	MimeType  string `json:"mime_type"`
+	SizeBytes int64  `json:"size_bytes"`
+	key       string // ключ хранения: по нему досчитывается размер старых файлов без size_bytes
 }
 
 // MySubmission — сводка по ответу студента на задание (в списке и карточке задания).
@@ -37,30 +41,33 @@ type Stats struct {
 	Reviewed      int `json:"reviewed"`
 }
 
+// Assignment — задание (схема Assignment). В одной теме — не более одного задания.
 type Assignment struct {
 	ID          int64         `json:"id"`
 	CourseID    int64         `json:"course_id"`
 	TopicID     int64         `json:"topic_id"`
-	CreatedBy   int64         `json:"created_by"`
+	CreatedBy   int64         `json:"-"` // автор (в контракте не отдаётся)
 	Title       string        `json:"title"`
 	Description *string       `json:"description"`
-	DeadlineAt  *time.Time    `json:"deadline_at"` // обязателен при создании; null только у старых записей
+	DeadlineAt  *time.Time    `json:"deadline_at"` // null — без срока
 	PublishedAt time.Time     `json:"published_at"`
-	Files       []FileRef     `json:"files"`
+	Files       []FileInfo    `json:"files"`
 	Mine        *MySubmission `json:"mine"`  // свой статус студента; null для преподавателя и админа
 	Stats       *Stats        `json:"stats"` // агрегаты для преподавателя курса и админа; иначе null
+}
 
-	// Submission — полный ответ студента (текст, файлы, комментарий преподавателя).
-	// Заполняется только в GET /assignments/:id для студента, если ответ уже есть;
-	// в списках заданий не отдаётся — там хватает сводки Mine.
-	Submission *Submission `json:"submission,omitempty"`
+// AssignmentDetail — карточка задания (GET /assignments/:id): студенту — его полный ответ
+// или null, если ответа ещё нет; преподавателю и админу — всегда null (работы — отдельным запросом).
+type AssignmentDetail struct {
+	Assignment
+	Submission *Submission `json:"submission"`
 }
 
 type AssignmentInput struct {
 	TopicID     int64
 	Title       string
 	Description *string
-	DeadlineAt  time.Time
+	DeadlineAt  *time.Time // nil — без срока
 	FileIDs     []int64
 }
 
@@ -78,13 +85,13 @@ type Submission struct {
 	ReviewedBy    *int64     `json:"reviewed_by"`
 	ReviewedAt    *time.Time `json:"reviewed_at"`
 	Grade         *float64   `json:"grade"`
-	Files         []FileRef  `json:"files"`
+	Files         []FileInfo `json:"files"`
 }
 
 type SubmissionInput struct {
 	AnswerText *string
 	FileIDs    []int64
-	Submit     bool // true — отправить на проверку; false — сохранить черновик
+	Submit     bool // true — отправить на проверку; false — сохранить черновик (только пока не отправлено)
 }
 
 // SubmissionRow — строка списка ответов: по одной на каждого студента группы, даже без ответа.
@@ -101,9 +108,10 @@ type SubmissionRow struct {
 
 // SubmissionFilter — фильтры списка ответов (nil — не фильтровать).
 type SubmissionFilter struct {
-	Status  *string // not_submitted | missing | submitted | reviewed
-	Late    *bool   // true — сдано после дедлайна; false — сдано вовремя
-	HasWork *bool   // true — есть отправленная работа; false — работы нет
+	Status        *string // not_submitted | missing | submitted | reviewed
+	Late          *bool   // true — сдано после дедлайна; false — только отправленные вовремя
+	HasWork       *bool   // true — есть отправленная работа; false — работы нет (черновик не в счёт)
+	Limit, Offset int
 }
 
 type ReviewInput struct {
@@ -111,20 +119,32 @@ type ReviewInput struct {
 	Comment *string
 }
 
-// GradeRow — одна выставленная оценка.
+// GradeRow — строка таблицы оценок: одно задание одного студента, даже если ответа нет
+// (status not_submitted/missing, submission_id = null). Черновик не считается работой.
 type GradeRow struct {
-	AssignmentID    int64     `json:"assignment_id"`
-	AssignmentTitle string    `json:"assignment_title"`
-	CourseID        int64     `json:"course_id"`
-	SubjectName     string    `json:"subject_name"`
-	StudentID       int64     `json:"student_id"`
-	StudentName     string    `json:"student_name"`
-	Grade           float64   `json:"grade"`
-	ReviewComment   *string   `json:"review_comment"`
-	ReviewedAt      time.Time `json:"reviewed_at"`
+	AssignmentID    int64      `json:"assignment_id"`
+	AssignmentTitle string     `json:"assignment_title"`
+	TopicTitle      string     `json:"topic_title"`
+	CourseID        int64      `json:"course_id"`
+	SubjectName     string     `json:"subject_name"`
+	SemesterID      int64      `json:"semester_id"`
+	SemesterName    string     `json:"semester_name"`
+	StudentID       int64      `json:"student_id"`
+	StudentName     string     `json:"student_name"`
+	SubmissionID    *int64     `json:"submission_id"`
+	Status          string     `json:"status"` // not_submitted | missing | submitted | reviewed
+	SubmittedAt     *time.Time `json:"submitted_at"`
+	Grade           *float64   `json:"grade"`
+	ReviewComment   *string    `json:"review_comment"`
+	ReviewedAt      *time.Time `json:"reviewed_at"`
 }
 
+// GradeFilter — выборка строк оценок; nil/пусто — без фильтра.
 type GradeFilter struct {
-	StudentID *int64
-	CourseID  *int64
+	StudentID     *int64
+	CourseID      *int64
+	SemesterID    *int64
+	Status        *string
+	Q             string // поиск по названию задания, темы и дисциплины
+	Limit, Offset int
 }

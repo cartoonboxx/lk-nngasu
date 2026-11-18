@@ -24,7 +24,6 @@ type lessonRequest struct {
 	WeekNumber int    `json:"week_number" binding:"required,oneof=1 2"`   // 1 — верхняя, 2 — нижняя неделя
 	DayOfWeek  int    `json:"day_of_week" binding:"required,min=1,max=6"` // 1 — понедельник … 6 — суббота
 	StartsAt   string `json:"starts_at" binding:"required"`               // начало пары по сетке звонков, "08:00"
-	EndsAt     string `json:"ends_at" binding:"required"`                 // конец той же пары, "09:30"
 	RoomID     int64  `json:"room_id" binding:"required,gt=0"`            // действующая аудитория
 }
 
@@ -47,7 +46,7 @@ type conflictRequest struct {
 
 // input переводит тело запроса в тип сервиса.
 func (r lessonRequest) input() LessonInput {
-	return LessonInput{WeekNumber: r.WeekNumber, DayOfWeek: r.DayOfWeek, StartsAt: r.StartsAt, EndsAt: r.EndsAt, RoomID: r.RoomID}
+	return LessonInput{WeekNumber: r.WeekNumber, DayOfWeek: r.DayOfWeek, StartsAt: r.StartsAt, RoomID: r.RoomID}
 }
 
 // parseQuery читает временной срез: ?week=1|2 &day=1..6 либо ?from=YYYY-MM-DD&to=YYYY-MM-DD.

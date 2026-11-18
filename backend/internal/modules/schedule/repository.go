@@ -124,27 +124,20 @@ func workloadSlot(ctx context.Context, q pgx.Tx, workloadID int64, in LessonInpu
 	return sl, database.Translate(err)
 }
 
-// errBadReference — ссылка на несуществующую или архивную запись (400 invalid_reference).
+// errBadReference — ссылка на несуществующую запись (400 invalid_reference).
 func errBadReference(field, problem string) error {
-	return apperr.NewInvalid("invalid_reference", "referenced record does not exist or is archived").
+	return apperr.NewInvalid("invalid_reference", "referenced record does not exist").
 		WithDetails(map[string]any{"fields": map[string][]string{field: {problem}}})
 }
 
-// checkRoom: аудитория существует и действует. keep — аудитория, в которой занятие
-// уже стоит: оставить её можно и после архивации.
-func checkRoom(ctx context.Context, tx pgx.Tx, roomID int64, keep *int64) error {
-	var archived bool
-	err := tx.QueryRow(ctx, `SELECT archived FROM room WHERE id = $1 FOR SHARE`, roomID).Scan(&archived)
+// checkRoom: аудитория существует; FOR SHARE не даёт удалить её параллельно.
+func checkRoom(ctx context.Context, tx pgx.Tx, roomID int64) error {
+	var found bool
+	err := tx.QueryRow(ctx, `SELECT true FROM room WHERE id = $1 FOR SHARE`, roomID).Scan(&found)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return errBadReference("room_id", "room does not exist")
 	}
-	if err != nil {
-		return database.Translate(err)
-	}
-	if archived && (keep == nil || *keep != roomID) {
-		return errBadReference("room_id", "room is archived")
-	}
-	return nil
+	return database.Translate(err)
 }
 
 // lockResources берёт транзакционные advisory-блокировки на группу, преподавателя
@@ -221,7 +214,7 @@ func (r *Repository) CheckConflicts(ctx context.Context, workloadID int64, in Le
 		if err != nil {
 			return err
 		}
-		if err := checkRoom(ctx, tx, in.RoomID, keepRoom); err != nil {
+		if err := checkRoom(ctx, tx, in.RoomID); err != nil {
 			return err
 		}
 		out, err = conflicts(ctx, tx, sl, except)
@@ -239,7 +232,7 @@ func (r *Repository) Create(ctx context.Context, workloadID int64, in LessonInpu
 		if err != nil {
 			return err
 		}
-		if err := checkRoom(ctx, tx, in.RoomID, nil); err != nil {
+		if err := checkRoom(ctx, tx, in.RoomID); err != nil {
 			return err
 		}
 		if err := lockResources(ctx, tx, sl); err != nil {
@@ -296,7 +289,7 @@ func (r *Repository) Update(ctx context.Context, id int64, in LessonInput) error
 		if err != nil {
 			return err
 		}
-		if err := checkRoom(ctx, tx, in.RoomID, &roomID); err != nil {
+		if err := checkRoom(ctx, tx, in.RoomID); err != nil {
 			return err
 		}
 		if err := lockResources(ctx, tx, sl); err != nil {
@@ -398,13 +391,13 @@ func (r *Repository) refPage(ctx context.Context, sql string, q RefQuery, withDe
 	return out, total, database.Translate(err)
 }
 
-// Groups — действующие группы: сначала младшие наборы, внутри набора — по названию.
+// Groups — учебные группы: сначала младшие наборы, внутри набора — по названию.
 // department_name у групп всегда null.
 func (r *Repository) Groups(ctx context.Context, q RefQuery) ([]ScheduleRef, int, error) {
 	return r.refPage(ctx, `
 		SELECT id, name, count(*) OVER ()
 		FROM study_group
-		WHERE NOT archived AND name ILIKE $1
+		WHERE name ILIKE $1
 		ORDER BY admission_year DESC, name, id
 		LIMIT $2 OFFSET $3`, q, false)
 }

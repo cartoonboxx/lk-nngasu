@@ -2,6 +2,7 @@ package assignments
 
 import (
 	"context"
+	"errors"
 	"io"
 	"strings"
 	"unicode/utf8"
@@ -23,7 +24,10 @@ type Guard interface {
 type Blobs interface {
 	Open(key string) (io.ReadCloser, error)
 	Remove(key string) error
+	Size(key string) (int64, error) // размер на диске — для старых файлов без size_bytes
 }
+
+var errCourseForbidden = apperr.NewForbidden("course_forbidden", "you have no access to this course")
 
 type Service struct {
 	repo  *Repository
@@ -51,7 +55,30 @@ func viewer(p middleware.Principal) int64 {
 	return 0
 }
 
-// checkFiles: не больше MaxFiles, без повторов, все файлы — свои.
+// withSizes дополняет FileInfo размером с диска там, где он не записан в БД (файлы до миграции 010).
+func (s *Service) withSizes(files []FileInfo) {
+	for i := range files {
+		if files[i].SizeBytes < 0 {
+			files[i].SizeBytes = 0
+			if n, err := s.blobs.Size(files[i].key); err == nil {
+				files[i].SizeBytes = n
+			}
+		}
+	}
+}
+
+func (s *Service) assignmentOut(a Assignment) Assignment {
+	s.withSizes(a.Files)
+	return a
+}
+
+func (s *Service) submissionOut(sub Submission) Submission {
+	s.withSizes(sub.Files)
+	return sub
+}
+
+// checkFiles: не больше MaxFiles, без повторов, все файлы — свои
+// (или уже привязанные к этому заданию/ответу — keep).
 func (s *Service) checkFiles(ctx context.Context, p middleware.Principal, ids []int64, keep map[int64]bool) error {
 	if len(ids) > MaxFiles {
 		return apperr.NewInvalid("too_many_files", "at most 5 files can be attached")
@@ -66,6 +93,10 @@ func (s *Service) checkFiles(ctx context.Context, p middleware.Principal, ids []
 			continue // уже привязан к этому объекту — владельца повторно не проверяем
 		}
 		if err := s.guard.OwnsFile(ctx, p.UserID, id); err != nil {
+			var ae *apperr.Error
+			if errors.As(err, &ae) && ae.Code == "invalid_file" {
+				return errFileNotFound // чужой и несуществующий файл неотличимы
+			}
 			return err
 		}
 	}
@@ -74,9 +105,8 @@ func (s *Service) checkFiles(ctx context.Context, p middleware.Principal, ids []
 
 func normalizeInput(in *AssignmentInput) error {
 	in.Title = strings.TrimSpace(in.Title)
-	if in.Title == "" || utf8.RuneCountInString(in.Title) > 255 {
-		return apperr.NewInvalid("invalid_request", "request body is invalid").
-			WithDetails(map[string]any{"fields": map[string][]string{"title": {"must be 1-255 characters after trim"}}})
+	if in.Title == "" || utf8.RuneCountInString(in.Title) > 200 {
+		return fieldErr("title", "must be 1-200 characters after trim")
 	}
 	if in.Description != nil {
 		d := strings.TrimSpace(*in.Description)
@@ -86,9 +116,6 @@ func normalizeInput(in *AssignmentInput) error {
 			in.Description = &d
 		}
 	}
-	if in.DeadlineAt.IsZero() {
-		return apperr.NewInvalid("deadline_required", "deadline_at is required")
-	}
 	return nil
 }
 
@@ -96,29 +123,36 @@ func (s *Service) ListAssignments(ctx context.Context, p middleware.Principal, c
 	if err := s.guard.CourseView(ctx, p, courseID); err != nil {
 		return nil, err
 	}
-	return s.repo.ListAssignments(ctx, courseID, s.staff(p), viewer(p))
+	list, err := s.repo.ListAssignments(ctx, courseID, s.staff(p), viewer(p))
+	for i := range list {
+		s.withSizes(list[i].Files)
+	}
+	return list, err
 }
 
-// GetAssignment — карточка задания. Студенту дополнительно отдаётся его ответ целиком
-// (Submission), чтобы модальному окну задания хватало одного запроса.
-func (s *Service) GetAssignment(ctx context.Context, p middleware.Principal, id int64) (Assignment, error) {
+// GetAssignment — карточка задания (AssignmentDetail). Студенту дополнительно отдаётся его
+// ответ целиком или null, чтобы модальному окну задания хватало одного запроса;
+// преподавателю и админу — stats, а список работ — отдельным запросом.
+func (s *Service) GetAssignment(ctx context.Context, p middleware.Principal, id int64) (AssignmentDetail, error) {
 	a, err := s.repo.GetAssignment(ctx, id, s.staff(p), viewer(p))
 	if err != nil {
-		return Assignment{}, err
+		return AssignmentDetail{}, err
 	}
 	if err := s.guard.CourseView(ctx, p, a.CourseID); err != nil {
-		return Assignment{}, err
+		return AssignmentDetail{}, err
 	}
+	out := AssignmentDetail{Assignment: s.assignmentOut(a)}
 	if p.IsStudent() {
 		sub, err := s.repo.GetSubmissionOf(ctx, id, p.UserID)
 		switch {
 		case err == nil:
-			a.Submission = &sub
-		case !apperr.IsNotFound(err): // «ответа ещё нет» — не ошибка, Submission остаётся nil
-			return Assignment{}, err
+			sub = s.submissionOut(sub)
+			out.Submission = &sub
+		case !apperr.IsNotFound(err): // «ответа ещё нет» — не ошибка: submission = null
+			return AssignmentDetail{}, err
 		}
 	}
-	return a, nil
+	return out, nil
 }
 
 // CreateAssignment: задание создаёт преподаватель курса или администратор
@@ -138,7 +172,8 @@ func (s *Service) CreateAssignment(ctx context.Context, p middleware.Principal, 
 	if err != nil {
 		return Assignment{}, err
 	}
-	return s.repo.GetAssignment(ctx, id, true, 0)
+	a, err := s.repo.GetAssignment(ctx, id, true, 0)
+	return s.assignmentOut(a), err
 }
 
 func (s *Service) UpdateAssignment(ctx context.Context, p middleware.Principal, id int64, in AssignmentInput) (Assignment, error) {
@@ -164,7 +199,8 @@ func (s *Service) UpdateAssignment(ctx context.Context, p middleware.Principal, 
 	if err != nil {
 		return Assignment{}, err
 	}
-	return s.repo.GetAssignment(ctx, id, true, 0)
+	a, err := s.repo.GetAssignment(ctx, id, true, 0)
+	return s.assignmentOut(a), err
 }
 
 func (s *Service) DeleteAssignment(ctx context.Context, p middleware.Principal, id int64) error {
@@ -182,16 +218,56 @@ func (s *Service) DeleteAssignment(ctx context.Context, p middleware.Principal, 
 
 // ---- оценки ----
 
-func (s *Service) MyGrades(ctx context.Context, p middleware.Principal, courseID *int64) ([]GradeRow, error) {
-	if !p.IsStudent() {
-		return nil, apperr.NewForbidden("students_only", "only students have personal grades")
+func checkGradeFilter(f GradeFilter) error {
+	if f.Status != nil && !validStatuses[*f.Status] {
+		return queryErr("status", "must be one of not_submitted, missing, submitted, reviewed")
 	}
-	return s.repo.ListGrades(ctx, GradeFilter{StudentID: &p.UserID, CourseID: courseID})
+	if utf8.RuneCountInString(f.Q) > 200 {
+		return queryErr("q", "must be at most 200 characters")
+	}
+	return nil
 }
 
-func (s *Service) CourseGrades(ctx context.Context, p middleware.Principal, courseID int64) ([]GradeRow, error) {
-	if err := s.guard.CourseManage(ctx, p, courseID); err != nil {
-		return nil, err
+// StudentGrades — GET /grades: все задания своих курсов семестра (по умолчанию текущего)
+// со статусами и оценками, включая несданные и непроверенные. student_id — только из сессии.
+func (s *Service) StudentGrades(ctx context.Context, p middleware.Principal, f GradeFilter) ([]GradeRow, int, error) {
+	if err := checkGradeFilter(f); err != nil {
+		return nil, 0, err
 	}
-	return s.repo.ListGrades(ctx, GradeFilter{CourseID: &courseID})
+	if f.SemesterID == nil {
+		id, ok, err := s.repo.CurrentSemester(ctx)
+		if err != nil {
+			return nil, 0, err
+		}
+		if !ok {
+			return nil, 0, apperr.NewConflict("current_semester_not_set", "current semester is not set")
+		}
+		f.SemesterID = &id
+	} else if err := s.repo.SemesterExists(ctx, *f.SemesterID); err != nil {
+		return nil, 0, err
+	}
+	if f.CourseID != nil {
+		ok, err := s.guard.StudentOfCourse(ctx, p.UserID, *f.CourseID)
+		if err != nil {
+			return nil, 0, err
+		}
+		if !ok {
+			return nil, 0, errCourseForbidden
+		}
+	}
+	f.StudentID = &p.UserID
+	return s.repo.ListGrades(ctx, f)
+}
+
+// CourseGrades — GET /courses/:id/grades: рабочая таблица результатов курса для его
+// преподавателя или администратора — все задания всех студентов группы, включая несданные.
+func (s *Service) CourseGrades(ctx context.Context, p middleware.Principal, courseID int64, f GradeFilter) ([]GradeRow, int, error) {
+	if err := checkGradeFilter(f); err != nil {
+		return nil, 0, err
+	}
+	if err := s.guard.CourseManage(ctx, p, courseID); err != nil {
+		return nil, 0, err
+	}
+	f.CourseID, f.SemesterID = &courseID, nil
+	return s.repo.ListGrades(ctx, f)
 }

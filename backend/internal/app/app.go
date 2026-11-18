@@ -3,14 +3,19 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"time"
-	"university-api/internal/modules/chat"
-	"university-api/internal/platform/middleware"
-	"university-api/migrations"
 
 	"github.com/gin-gonic/gin"
+
+	"university-api/internal/modules/chat"
+	"university-api/internal/modules/realtime"
+	"university-api/internal/modules/resources"
+	"university-api/internal/platform/middleware"
+	"university-api/migrations"
 
 	"university-api/internal/config"
 	"university-api/internal/modules/assignments"
@@ -18,12 +23,14 @@ import (
 	"university-api/internal/modules/content"
 	"university-api/internal/modules/courses"
 	"university-api/internal/modules/files"
-	"university-api/internal/modules/profile"
+	"university-api/internal/modules/news"
 	"university-api/internal/modules/schedule"
 	"university-api/internal/modules/structure"
 	"university-api/internal/modules/users"
 	"university-api/internal/platform/access"
 	"university-api/internal/platform/database"
+	"university-api/internal/platform/filegc"
+	"university-api/internal/platform/httpx"
 	"university-api/internal/platform/mail"
 	"university-api/internal/platform/ratelimit"
 )
@@ -43,13 +50,19 @@ func Run(ctx context.Context, cfg config.Config) error {
 		}
 	}
 
+	res, err := resources.Load(cfg.ResourcesFile)
+	if err != nil {
+		return err
+	}
+
 	storage, err := files.NewStorage(cfg.UploadDir)
 	if err != nil {
 		return err
 	}
 
 	r := gin.New()
-	r.Use(gin.Recovery(), gin.Logger())
+	r.Use(gin.Recovery(), gin.LoggerWithConfig(gin.LoggerConfig{Formatter: logLine}), httpx.NoBody(), httpx.KnownQuery(queryParams))
+	// Проверка HTTP-процесса (не БД): /api/healthz — через фронтенд-прокси, /healthz — для Docker.
 	for _, path := range []string{"/healthz", "/api/healthz"} {
 		r.GET(path, func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok"}) })
 	}
@@ -67,6 +80,8 @@ func Run(ctx context.Context, cfg config.Config) error {
 
 	// Фоновая отправка писем из очереди mail_outbox; останавливается вместе с сервером.
 	go mail.NewWorker(pool, mailer).Run(ctx)
+	// Забытые загрузки: файлы, не привязанные ни к чему за сутки, удаляются раз в час.
+	go filegc.Sweeper{DB: pool, Remove: storage.Remove, Every: time.Hour, Age: 24 * time.Hour}.Run(ctx)
 
 	// Публичные маршруты авторизации: вход, CSRF, refresh, logout, активация.
 	authSvc := auth.Register(v1, pool, auth.Options{
@@ -92,11 +107,14 @@ func Run(ctx context.Context, cfg config.Config) error {
 	// content и assignments — раньше courses: courses получает от них загрузчик тем.
 	contentSvc := content.Register(protected, pool, checker, storage)
 	assignSvc := assignments.Register(protected, pool, checker, storage)
-	coursesSvc := courses.Register(protected, pool, checker, courseTopics(contentSvc, assignSvc), int(cfg.LessonDuration.Minutes()))
-	schedule.Register(v1, protected, pool, cal)
+	courses.Register(protected, pool, checker, courseTopics(contentSvc, assignSvc))
+	scheduleSvc := schedule.Register(v1, protected, pool, cal)
 
 	// Остальные модули.
-	chat.Register(protected, pool, checker, storage)
+	// WebSocket lk-chat.v1: билеты, соединения и рассылка; команды сообщений регистрирует chat.
+	hub := realtime.NewHub()
+	realtime.Register(v1, protected, hub, authSvc, realtime.Options{AllowedOrigins: cfg.AllowedOrigins})
+	chatSvc := chat.Register(protected, pool, checker, storage, hub)
 	files.Register(protected, pool, storage, cfg.MaxUploadBytes)
 	structure.Register(protected, pool)                         // v1 — публичные списки кафедр и групп для регистрации
 	users.Register(v1, protected, pool, checker, users.Options{ // v1 — POST /auth/register
@@ -105,10 +123,12 @@ func Run(ctx context.Context, cfg config.Config) error {
 		RegisterLimit: limiter.Middleware("register", 10, 10*time.Minute),
 		PasswordLimit: limiter.Middleware("password", 5, 15*time.Minute),
 	})
-	profile.Register(protected, pool, "/api/v1/files/") // GET /auth/me
 
-	// Сборные страницы ЛК: /dashboard и /grades.
-	registerCabinet(protected, coursesSvc, assignSvc)
+	feed := news.Register(v1, protected, pool) // v1 — публичная лента /news
+	resources.Register(protected, res)
+
+	// Главная страница ЛК: неделя, пары на сегодня, последние чаты и новости (cabinet.go).
+	registerDashboard(protected, scheduleSvc, chatSvc, feed)
 
 	srv := &http.Server{
 		Addr:              cfg.HTTPAddr,
@@ -135,4 +155,25 @@ func Run(ctx context.Context, cfg config.Config) error {
 		defer cancel()
 		return srv.Shutdown(shutdownCtx)
 	}
+}
+
+// logLine — строка журнала запросов как у gin.Logger, но без секретов в URL:
+// одноразовый WebSocket-билет (?ticket=) в журнал не попадает.
+func logLine(p gin.LogFormatterParams) string {
+	path := p.Path
+	if u, err := url.Parse(path); err == nil && u.Query().Has("ticket") {
+		q := u.Query()
+		q.Set("ticket", "REDACTED")
+		u.RawQuery = q.Encode()
+		path = u.String()
+	}
+	if p.Latency > time.Minute {
+		p.Latency = p.Latency.Truncate(time.Second)
+	}
+	line := fmt.Sprintf("[GIN] %v | %3d | %13v | %15s | %-7s %#v\n",
+		p.TimeStamp.Format("2006/01/02 - 15:04:05"), p.StatusCode, p.Latency, p.ClientIP, p.Method, path)
+	if p.ErrorMessage != "" {
+		line += p.ErrorMessage
+	}
+	return line
 }

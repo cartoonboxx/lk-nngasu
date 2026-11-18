@@ -59,8 +59,9 @@ internal/app       сборка зависимостей и роутер (еди
 internal/platform  apperr, httpx, middleware (JWT, роли), database (DB/InTx/Collect, ошибки PG, Filter),
                    Migrate (миграции), access (права на курс и файл), filekey, filegc (удаление
                    неиспользуемых файлов), validate, mail (очередь писем), ratelimit
-internal/modules   auth, users, profile, structure, courses, schedule, content, assignments, files, chat
-migrations         001–010 *.sql, встроены в бинарник (embed.go)
+internal/modules   auth, users, structure, courses, schedule, content, assignments, files, chat,
+                   news, realtime (WebSocket), resources
+migrations         001–017 *.sql, встроены в бинарник (embed.go)
 ```
 
 Модуль = `module.go` (маршруты) → `handler` → `service` (правила и права) → `repository` (SQL).
@@ -69,12 +70,13 @@ migrations         001–010 *.sql, встроены в бинарник (embed.
 
 ## Роли и права
 
-Роль берётся из токена: `admin` (`app_user.is_admin`), `teacher` (есть запись в `teacher`), иначе `student`.
+Роль у пользователя одна (`role` в профиле и в токене): `admin` (`app_user.is_admin`, профилей нет), `teacher`
+(запись в `teacher`), `student` (запись в `student`). Выдать или снять роль `admin` может только владелец (`can_manage_admins`).
 
 - студент видит курсы своей группы; преподаватель — курсы, где у него есть нагрузка; админ — всё;
 - студент видит только свои ответы и оценки;
 - **админ** управляет справочниками, курсами, нагрузкой, расписанием и пользователями, может создавать и править
-  темы, материалы и задания (`created_by` ссылается на `app_user`); оценки ставит только преподаватель курса
+  темы, материалы и задания; оценки ставит только преподаватель курса
   (`reviewed_by` ссылается на `teacher`);
 - к материалу, заданию или ответу можно прикрепить только свой файл (папка `<user_id>/` в ключе хранения).
 
@@ -85,39 +87,42 @@ migrations         001–010 *.sql, встроены в бинарник (embed.
 ## Эндпоинты
 
 Префикс `/api/v1`. «Все» = любой авторизованный пользователь. Публичные — без токена.
+Полный контракт (поля, ошибки, правила) — `frontend/src/pages/apiDocs/api-docs.*.ts`; ниже — краткая карта.
 
 ### Аутентификация и профиль
 | Метод | Путь | Кто | Описание |
 |---|---|---|---|
 | POST | /auth/login | публично | вход по email и паролю |
-| GET / PATCH | /me | все | профиль / имя, отчество, аватар (`avatar_file_id`) |
-| POST | /me/password | все | смена пароля (`old_password`, `new_password`) |
-| POST | /me/email | все | смена email (нужен текущий пароль) |
-| GET / POST | /users | админ | список (фильтры) / создание пользователя (роль student, teacher, admin) |
-| GET | /users/:id | преподаватель, админ | карточка |
-| PATCH | /users/:id | админ | правка, блокировка (`is_active`), сброс пароля (`password`), группа, кафедра |
+| GET, POST | /auth/setup | публично | первый администратор-владелец по `ADMIN_SETUP_KEY` |
+| GET / PATCH | /me | все | профиль (`role`, `student`/`teacher`) / ФИО и аватар (`avatar`) |
+| POST | /me/password | все | смена пароля (`old_password`, `new_password`), отзывает все сессии |
+| GET / POST | /users | админ | список (`role`, `is_headman`, …) / создание: `role` и профиль; с `password` — сразу активен, без — приглашение |
+| GET | /users/:id | админ | карточка с документами |
+| PATCH | /users/:id | админ | правка, `role` вместе с профилем, блокировка (`is_active`) |
+| POST | /users/:id/invitations | админ | повторное приглашение (пароль ещё не задан) |
+| GET, POST | /admin/administrators… | владелец | администраторы, приглашение, назначение |
 | GET | /groups/:id/students | преподаватель, админ | студенты группы |
 
 ### Структура вуза
-Справочники: чтение — все, запись — админ.
+Справочники: чтение — все, запись — админ. Архива нет: DELETE удаляет только запись без ссылок (409 `catalog_in_use`).
 
 | Путь | Методы |
 |---|---|
-| /departments, /subjects | GET, POST; PUT и DELETE на /:id |
+| /departments, /catalog/subjects | GET, POST; PUT и DELETE на /:id |
 | /specializations | GET, POST; PUT и DELETE на /:id |
 | /groups | GET, POST; GET, PUT, DELETE на /:id |
 | /semesters | GET, POST; PUT, DELETE на /:id; GET /semesters/current; POST /semesters/:id/current (сделать текущим) |
-| /rooms | GET, POST; PUT и DELETE на /:id |
+| /rooms (`number`) | GET, POST; PUT и DELETE на /:id |
 
 ### Курсы
 | Метод | Путь | Кто | Описание |
 |---|---|---|---|
 | GET | /courses | все | список по роли; фильтры `group_id`, `semester_id`, `current=true` |
 | POST | /courses | админ | курс = предмет + группа + семестр |
-| GET / DELETE | /courses/:id | все / админ | |
+| GET / PATCH / DELETE | /courses/:id | все / админ / админ | страница предмета / замена дисциплины / удаление пустого |
 | GET | /courses/:id/students | все с доступом | студенты группы курса |
-| POST | /courses/:id/workloads | админ | нагрузка: преподаватель + вид занятий |
-| DELETE | /workloads/:id | админ | |
+| GET / POST | /courses/:id/workloads | все с доступом / админ | нагрузка: преподаватель, вид занятий, `planned_hours` (null — не задано) |
+| PUT / DELETE | /workloads/:id | админ | |
 
 ### Расписание
 Двухнедельный шаблон: `week_number` 1 — верхняя, 2 — нижняя. Неделя определяется от `WEEK_ONE_DATE` (или по чётности ISO-недели).
@@ -136,7 +141,7 @@ migrations         001–010 *.sql, встроены в бинарник (embed.
 | GET | /courses/:id/topics | все с доступом |
 | POST | /courses/:id/topics | преподаватель, админ |
 | PUT, DELETE | /topics/:id | преподаватель, админ |
-| POST | /topics/:id/materials | преподаватель курса (файл и/или ссылка) |
+| POST | /topics/:id/materials | преподаватель курса (`file_id` и/или `external_url`; порядок по id) |
 | PUT, DELETE | /materials/:id | преподаватель, админ |
 
 ### Задания, ответы, оценки
@@ -151,7 +156,7 @@ migrations         001–010 *.sql, встроены в бинарник (embed.
 | GET | /submissions/:id | автор, преподаватель, админ | |
 | GET | /submissions/:id/archive | автор, преподаватель, админ | ZIP одной работы |
 | PUT | /submissions/:id/review | преподаватель курса | оценка 0.0–5.0 (шаг 0.1) и комментарий |
-| GET | /me/grades | студент | свои оценки (`course_id`) |
+| GET | /grades | студент | свои оценки (`semester_id`, `course_id`, `status`, `q`) |
 | GET | /courses/:id/grades | преподаватель, админ | оценки курса |
 
 Статусы для клиента: `not_submitted`, `missing` (дедлайн прошёл, ответа нет), `submitted`, `reviewed`; `is_late` — отправлено после дедлайна.
@@ -162,6 +167,27 @@ migrations         001–010 *.sql, встроены в бинарник (embed.
 | POST | /files | multipart, поле `file`, `purpose=attachment|avatar`; проверка расширения и сигнатуры, лимит `MAX_UPLOAD_MB` |
 | GET | /files/:id, /files/:id/meta | скачать / метаданные (по правилам доступа) |
 | DELETE | /files/:id | только свой неиспользуемый файл |
+
+### Чаты, главная, ресурсы, WebSocket
+| Метод | Путь | Описание |
+|---|---|---|
+| GET | /contacts | кому можно написать (`q`, `limit`, `offset`) |
+| GET | /chats | свои чаты, страница (`q`, `limit`, `offset`) |
+| POST | /chats/direct, /chats/group | открыть личный / групповой чат (200) |
+| GET | /chats/:id, /chats/:id/messages | чат; история `before`, `limit` → `{items, has_more, next_before}` |
+| GET | /dashboard | неделя, пары на сегодня, последние чаты и новости |
+| GET | /resources | внешние сервисы и контакты из `RESOURCES_FILE` (по умолчанию — встроенный набор) |
+| POST | /realtime/tickets | одноразовый билет на WebSocket (30 с, привязан к сессии и Origin) |
+| GET | /realtime?ticket= | WebSocket, подпротокол `lk-chat.v1`; первое событие `session.ready` |
+
+WebSocket `lk-chat.v1`: команды `message.send`, `message.edit`, `message.delete` (`{type, request_id, data}`) →
+`ack` с тем же `request_id` или `error {code, message, details}`; после COMMIT всем подключённым участникам
+чата — `message.created` / `message.updated` / `message.deleted` с `occurred_at`. Ошибка команды соединение
+не закрывает; 4401 — истёк допуск (`expires_at` из `session.ready`) или сессия отозвана. Отправки сообщений через REST нет.
+
+nginx для `/api/v1/realtime` должен пропускать Upgrade и держать долгое соединение:
+`proxy_http_version 1.1; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade";
+proxy_read_timeout 1h;` и не писать query (`?ticket=`) в access-лог.
 
 ## Ключевые правила
 
@@ -184,5 +210,5 @@ migrations         001–010 *.sql, встроены в бинарник (embed.
 
 ## Не реализовано
 
-Новости, WebSocket, главная (`Dashboard`) и ресурсы, уведомления, сброс пароля по почте, задания для нескольких групп сразу.
-Задания, оценки, файлы и чаты работают, но ещё не сверены с текущим контрактом API.
+Непрочитанные, replay событий после обрыва, идемпотентная отправка (не входят в контракт), уведомления,
+сброс пароля по почте, задания для нескольких групп сразу.

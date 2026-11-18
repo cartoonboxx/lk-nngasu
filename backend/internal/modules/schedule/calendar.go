@@ -105,12 +105,20 @@ func (c Calendar) Week(date time.Time) WeekInfo {
 // Некорректное время возвращается как есть, без паники: в БД оно уже
 // проверено parseClock, так что этот случай не должен встречаться.
 func (c Calendar) EndTime(start string) string {
+	for _, b := range c.bells {
+		if b.Start == start {
+			return b.End
+		}
+	}
 	t, err := time.Parse("15:04", start)
 	if err != nil {
 		return start
 	}
 	return t.Add(c.lessonLen).Format("15:04")
 }
+
+// HasBells — сетка звонков задана (по умолчанию — 7 пар из контракта).
+func (c Calendar) HasBells() bool { return len(c.bells) > 0 }
 
 // parseClock проверяет время "H:MM"/"HH:MM" и приводит его к виду "HH:MM".
 // В раскладке "15:04" час допускает одну или две цифры, минуты — строго две;

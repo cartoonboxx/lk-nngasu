@@ -20,12 +20,12 @@ type Course struct {
 
 // Workload — назначение преподавателя и вида занятия на курс.
 type Workload struct {
-	ID           int64   `json:"id"`
-	CourseID     int64   `json:"course_id"`
-	TeacherID    int64   `json:"teacher_id"`
-	TeacherName  string  `json:"teacher_name"`
-	LessonType   string  `json:"lesson_type"`   // lecture | practice | laboratory | consultation | exam
-	PlannedHours float64 `json:"planned_hours"` // академические часы, шаг 0.25
+	ID           int64    `json:"id"`
+	CourseID     int64    `json:"course_id"`
+	TeacherID    int64    `json:"teacher_id"`
+	TeacherName  string   `json:"teacher_name"`
+	LessonType   string   `json:"lesson_type"`   // lecture | practice | laboratory | consultation | exam
+	PlannedHours *float64 `json:"planned_hours"` // академические часы; null — не задано
 	// ScheduledHours — часы двухнедельного шаблона расписания: сумма минут занятий / 45,
 	// округление до 2 знаков. Это не итог за семестр.
 	ScheduledHours float64 `json:"scheduled_hours"`

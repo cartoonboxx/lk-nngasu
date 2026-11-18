@@ -14,7 +14,7 @@ import (
 var (
 	errRequestNotFound = apperr.NewNotFound("registration_request_not_found")
 	errRequestPending  = apperr.NewConflict("registration_exists", "a registration request with this email is already waiting for review")
-	errBadReference    = apperr.NewInvalid("invalid_reference", "group or department does not exist or is archived")
+	errBadReference    = apperr.NewInvalid("invalid_reference", "group or department does not exist")
 )
 
 // errAlreadyReviewed — 409 при повторном решении; в details — актуальное состояние заявки.
@@ -142,7 +142,7 @@ func (r *Repository) ApproveRequest(ctx context.Context, id, adminID int64, u Ap
 			return err
 		}
 		// Пользователь получает email и хеш пароля из заявки, документы — уточнённые администратором.
-		in := CreateUser{LastName: u.LastName, FirstName: u.FirstName, MiddleNames: u.MiddleNames,
+		in := CreateUser{Role: u.Role, LastName: u.LastName, FirstName: u.FirstName, MiddleNames: u.MiddleNames,
 			Email: email, Passport: u.Passport, Snils: u.Snils}
 		in.Student, in.Teacher = u.Student, u.Teacher
 		userID, err := createUserTx(ctx, tx, in, hash)

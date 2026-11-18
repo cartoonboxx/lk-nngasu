@@ -2,6 +2,7 @@ package schedule
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"university-api/internal/platform/apperr"
@@ -223,9 +224,12 @@ func (s *Service) check(in LessonInput, stored *Stored) (LessonInput, error) {
 	if !ok {
 		return in, fieldErr("starts_at", "must look like 08:00")
 	}
-	end, ok := parseClock(in.EndsAt)
-	if !ok {
-		return in, fieldErr("ends_at", "must look like 09:30")
+	// ends_at не принимается (LessonInput): конец пары берётся из сетки звонков по starts_at.
+	// У сохранённого занятия с нестандартным временем прежний интервал остаётся при правке
+	// аудитории, недели или дня, если начало не менялось.
+	end := s.cal.EndTime(start)
+	if stored != nil && stored.StartsAt == start {
+		end = stored.EndsAt
 	}
 	if end <= start {
 		return in, periodErr("ends_at", "must be later than starts_at")
@@ -317,4 +321,30 @@ func (s *Service) Groups(ctx context.Context, q RefQuery) ([]ScheduleRef, int, e
 }
 func (s *Service) Teachers(ctx context.Context, q RefQuery) ([]ScheduleRef, int, error) {
 	return s.repo.Teachers(ctx, q)
+}
+
+// Today — главная страница: учебная неделя на сегодня и пары пользователя на сегодня
+// (студент — пары группы, преподаватель — пары нагрузки). Ничего не роняет:
+// у администратора, без текущего семестра или без настроенного календаря пар нет — [],
+// а без календаря и недели нет — week = nil.
+func (s *Service) Today(ctx context.Context, p middleware.Principal) (*WeekInfo, []Lesson, error) {
+	if !s.cal.Configured() {
+		return nil, []Lesson{}, nil
+	}
+	today := s.cal.Today()
+	week := s.cal.Week(today)
+	if !p.IsStudent() && !p.IsTeacher() {
+		return &week, []Lesson{}, nil
+	}
+	list, err := s.mine(ctx, p, LessonFilter{}, Query{From: &today, To: &today})
+	if errors.Is(err, errNoSemester) {
+		return &week, []Lesson{}, nil
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+	if list == nil {
+		list = []Lesson{}
+	}
+	return &week, list, nil
 }

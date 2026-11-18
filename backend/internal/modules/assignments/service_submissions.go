@@ -12,59 +12,78 @@ var validStatuses = map[string]bool{
 	StatusNotSubmitted: true, StatusMissing: true, StatusSubmitted: true, StatusReviewed: true,
 }
 
+// queryErr — 400 invalid_query с указанием параметра.
+func queryErr(name, problem string) error {
+	return apperr.NewInvalid("invalid_query", "invalid query parameters").
+		WithDetails(map[string]any{"fields": map[string][]string{name: {problem}}})
+}
+
 // ListSubmissions — таблица «студент — статус» по заданию (для преподавателя курса и админа).
-func (s *Service) ListSubmissions(ctx context.Context, p middleware.Principal, assignmentID int64, f SubmissionFilter) ([]SubmissionRow, error) {
+func (s *Service) ListSubmissions(ctx context.Context, p middleware.Principal, assignmentID int64, f SubmissionFilter) ([]SubmissionRow, int, error) {
 	if f.Status != nil && !validStatuses[*f.Status] {
-		return nil, apperr.NewInvalid("invalid_query", "invalid query parameter: status")
+		return nil, 0, queryErr("status", "must be one of not_submitted, missing, submitted, reviewed")
 	}
 	a, err := s.repo.GetAssignment(ctx, assignmentID, false, 0)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	if err := s.guard.CourseManage(ctx, p, a.CourseID); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	return s.repo.ListSubmissionRows(ctx, assignmentID, f)
 }
 
-// GetSubmission: ответ видит его автор и преподаватели курса (и админ).
+// GetSubmission: ответ видит его автор, преподаватель курса и админ.
 func (s *Service) GetSubmission(ctx context.Context, p middleware.Principal, id int64) (Submission, error) {
 	sub, err := s.repo.GetSubmission(ctx, id)
 	if err != nil {
 		return Submission{}, err
 	}
-	return sub, s.canReadSubmission(ctx, p, sub)
+	if err := s.canReadSubmission(ctx, p, sub); err != nil {
+		return Submission{}, err
+	}
+	return s.submissionOut(sub), nil
 }
 
+var errSubmissionNotFound = apperr.NewNotFound("submission_not_found")
+
+// canReadSubmission: автор видит свой ответ (и черновик); чужой ответ для студента — 404,
+// чтобы не раскрывать его существование. Преподавателю курса и админу черновики не
+// показываются (404): черновик — личное дело студента, пока он его не отправил.
 func (s *Service) canReadSubmission(ctx context.Context, p middleware.Principal, sub Submission) error {
-	if p.IsStudent() {
-		if sub.StudentID != p.UserID {
-			return apperr.NewNotFound("submission_not_found") // чужие ответы не раскрываем
-		}
+	if sub.StudentID == p.UserID {
 		return nil
 	}
-	return s.guard.CourseManage(ctx, p, sub.CourseID)
+	if p.IsStudent() {
+		return errSubmissionNotFound
+	}
+	if err := s.guard.CourseManage(ctx, p, sub.CourseID); err != nil {
+		return err
+	}
+	if sub.Status == StatusNotSubmitted {
+		return errSubmissionNotFound
+	}
+	return nil
 }
 
-// MySubmission — собственный ответ студента на задание; пока его нет, возвращается пустой черновик.
-func (s *Service) MySubmission(ctx context.Context, p middleware.Principal, assignmentID int64) (Submission, error) {
-	a, err := s.studentAssignment(ctx, p, assignmentID)
-	if err != nil {
-		return Submission{}, err
+// MySubmission — собственный ответ студента на задание; nil, если ответа ещё нет (data: null).
+func (s *Service) MySubmission(ctx context.Context, p middleware.Principal, assignmentID int64) (*Submission, error) {
+	if _, err := s.studentAssignment(ctx, p, assignmentID); err != nil {
+		return nil, err
 	}
 	sub, err := s.repo.GetSubmissionOf(ctx, assignmentID, p.UserID)
 	if apperr.IsNotFound(err) {
-		return Submission{AssignmentID: a.ID, CourseID: a.CourseID, StudentID: p.UserID,
-			Status: StatusNotSubmitted, Files: []FileRef{}}, nil
+		return nil, nil
 	}
-	return sub, err
+	if err != nil {
+		return nil, err
+	}
+	sub = s.submissionOut(sub)
+	return &sub, nil
 }
 
-// studentAssignment: задание существует и студент учится в группе его курса.
+// studentAssignment: задание существует и студент учится в группе его курса (иначе 403 course_forbidden).
 func (s *Service) studentAssignment(ctx context.Context, p middleware.Principal, assignmentID int64) (Assignment, error) {
-	if !p.IsStudent() {
-		return Assignment{}, apperr.NewForbidden("students_only", "only students submit answers")
-	}
 	a, err := s.repo.GetAssignment(ctx, assignmentID, false, 0)
 	if err != nil {
 		return Assignment{}, err
@@ -74,7 +93,7 @@ func (s *Service) studentAssignment(ctx context.Context, p middleware.Principal,
 		return Assignment{}, err
 	}
 	if !ok {
-		return Assignment{}, apperr.NewNotFound("assignment_not_found")
+		return Assignment{}, errCourseForbidden
 	}
 	return a, nil
 }
@@ -94,7 +113,7 @@ func (s *Service) SaveSubmission(ctx context.Context, p middleware.Principal, as
 		}
 	}
 	if in.Submit && in.AnswerText == nil && len(in.FileIDs) == 0 {
-		return Submission{}, apperr.NewInvalid("empty_answer", "attach a file or write an answer before submitting")
+		return Submission{}, apperr.NewInvalid("empty_submission", "attach a file or write an answer before submitting")
 	}
 
 	keep := map[int64]bool{}
@@ -114,10 +133,24 @@ func (s *Service) SaveSubmission(ctx context.Context, p middleware.Principal, as
 	if err != nil {
 		return Submission{}, err
 	}
-	return s.repo.GetSubmission(ctx, id)
+	sub, err := s.repo.GetSubmission(ctx, id)
+	return s.submissionOut(sub), err
 }
 
-// Review — оценка и комментарий; только преподаватель этого курса (reviewed_by ссылается на teacher).
+// DeleteSubmission — студент отзывает свой непроверенный ответ: удаляются текст и связи
+// с файлами, статус снова вычисляется как not_submitted/missing. Повтор без ответа — 204.
+func (s *Service) DeleteSubmission(ctx context.Context, p middleware.Principal, assignmentID int64) error {
+	if _, err := s.studentAssignment(ctx, p, assignmentID); err != nil {
+		return err
+	}
+	keys, err := s.repo.DeleteSubmission(ctx, assignmentID, p.UserID)
+	s.removeBlobs(keys)
+	return err
+}
+
+// Review — оценка и комментарий; только преподаватель этого курса (по нагрузке): администрирование
+// само по себе права оценивать не даёт. reviewed_by ссылается на teacher. Повторная оценка
+// уже проверенной работы разрешена.
 func (s *Service) Review(ctx context.Context, p middleware.Principal, id int64, in ReviewInput) (Submission, error) {
 	sub, err := s.repo.GetSubmission(ctx, id)
 	if err != nil {
@@ -132,5 +165,6 @@ func (s *Service) Review(ctx context.Context, p middleware.Principal, id int64, 
 	if err := s.repo.Review(ctx, id, p.UserID, in); err != nil {
 		return Submission{}, err
 	}
-	return s.repo.GetSubmission(ctx, id)
+	sub, err = s.repo.GetSubmission(ctx, id)
+	return s.submissionOut(sub), err
 }

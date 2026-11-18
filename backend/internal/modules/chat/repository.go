@@ -4,7 +4,10 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"slices"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -98,18 +101,18 @@ func (r *Repository) GetChat(ctx context.Context, id int64) (chatRow, error) {
 	return c, database.Translate(err)
 }
 
-// OpenDirect находит или создаёт личный чат пары пользователей.
-func (r *Repository) OpenDirect(ctx context.Context, a, b int64) (int64, error) {
+// OpenDirect находит или создаёт личный чат пары пользователей; created — чат новый.
+func (r *Repository) OpenDirect(ctx context.Context, a, b int64) (id int64, created bool, err error) {
 	low, high := pair(a, b)
-	if _, err := r.db.Exec(ctx, `
+	tag, err := r.db.Exec(ctx, `
 		INSERT INTO chat (kind, user_low, user_high) VALUES ('direct', $1, $2)
-		ON CONFLICT (user_low, user_high) WHERE kind = 'direct' DO NOTHING`, low, high); err != nil {
-		return 0, database.Translate(err)
+		ON CONFLICT (user_low, user_high) WHERE kind = 'direct' DO NOTHING`, low, high)
+	if err != nil {
+		return 0, false, database.Translate(err)
 	}
-	var id int64
-	err := r.db.QueryRow(ctx,
+	err = r.db.QueryRow(ctx,
 		`SELECT id FROM chat WHERE kind = 'direct' AND user_low = $1 AND user_high = $2`, low, high).Scan(&id)
-	return id, database.Translate(err)
+	return id, tag.RowsAffected() == 1, database.Translate(err)
 }
 
 // OpenGroup находит или создаёт чат группы и запоминает, что userID «в нём».
@@ -134,28 +137,28 @@ func (r *Repository) OpenGroup(ctx context.Context, groupID, userID int64) (int6
 	return id, database.Translate(err)
 }
 
-// $1 — зритель. Личный чат без сообщений в список не попадает (его видно только создателю по ответу POST).
-var chatSelect = `
-	SELECT ch.id, ch.kind::text, ch.group_id, g.name,
+// chatColumns/chatFrom — чат глазами зрителя $1. extra — дополнительные колонки в конце
+// (count(*) OVER () для страницы списка).
+func chatQuery(extra string) string {
+	return `
+	SELECT ch.id, ch.kind::text, ch.group_id, g.name, ch.created_at,
 	       peer.id, ` + database.FullName("peer") + `,
 	       lm.id, lm.sender_id, ` + database.FullName("ls") + `,
-	       lm.body, lm.created_at, lm.deleted_at IS NOT NULL,
-	       EXISTS (SELECT 1 FROM chat_message_file mf WHERE mf.message_id = lm.id),
-	       (SELECT count(*) FROM chat_message m
-	         WHERE m.chat_id = ch.id AND m.id > COALESCE(cr.last_read_message_id, 0)
-	           AND m.sender_id <> $1 AND m.deleted_at IS NULL)
+	       lm.body, lm.created_at,
+	       EXISTS (SELECT 1 FROM chat_message_file mf WHERE mf.message_id = lm.id)` + extra + `
 	FROM chat ch
 	LEFT JOIN study_group g ON g.id = ch.group_id
 	LEFT JOIN app_user peer ON ch.kind = 'direct'
 	                       AND peer.id = CASE WHEN ch.user_low = $1 THEN ch.user_high ELSE ch.user_low END
 	LEFT JOIN chat_read cr ON cr.chat_id = ch.id AND cr.user_id = $1
 	LEFT JOIN LATERAL (
-		SELECT m.id, m.sender_id, m.body, m.created_at, m.deleted_at
-		FROM chat_message m WHERE m.chat_id = ch.id ORDER BY m.id DESC LIMIT 1
+		SELECT m.id, m.sender_id, m.body, m.created_at
+		FROM chat_message m WHERE m.chat_id = ch.id AND m.deleted_at IS NULL ORDER BY m.id DESC LIMIT 1
 	) lm ON true
 	LEFT JOIN app_user ls ON ls.id = lm.sender_id`
+}
 
-func scanChat(row pgx.Row) (Chat, error) {
+func scanChat(row pgx.Row, extra ...any) (Chat, error) {
 	var (
 		c        Chat
 		groupNm  *string
@@ -166,11 +169,11 @@ func scanChat(row pgx.Row) (Chat, error) {
 		lmName   *string
 		lmBody   *string
 		lmAt     *time.Time
-		lmDel    bool
 		lmFiles  bool
 	)
-	if err := row.Scan(&c.ID, &c.Kind, &c.GroupID, &groupNm, &peerID, &peerName,
-		&lmID, &lmSender, &lmName, &lmBody, &lmAt, &lmDel, &lmFiles, &c.Unread); err != nil {
+	dest := append([]any{&c.ID, &c.Kind, &c.GroupID, &groupNm, &c.CreatedAt, &peerID, &peerName,
+		&lmID, &lmSender, &lmName, &lmBody, &lmAt, &lmFiles}, extra...)
+	if err := row.Scan(dest...); err != nil {
 		return Chat{}, err
 	}
 	switch {
@@ -182,28 +185,111 @@ func scanChat(row pgx.Row) (Chat, error) {
 	}
 	if lmID != nil && lmSender != nil && lmName != nil && lmBody != nil && lmAt != nil {
 		c.LastMessage = &Preview{ID: *lmID, SenderID: *lmSender, SenderName: *lmName, Body: *lmBody,
-			HasFiles: lmFiles, Deleted: lmDel, CreatedAt: *lmAt}
+			HasFiles: lmFiles, CreatedAt: *lmAt}
 	}
 	return c, nil
 }
 
-// ListChats — чаты пользователя: личные с перепиской и чаты его групп (по свежести).
-// Для администратора групповые чаты — только те, что он открывал сам (chat_read).
-func (r *Repository) ListChats(ctx context.Context, userID int64, isAdmin bool) ([]Chat, error) {
-	q := myGroupsCTE + chatSelect + `
-		WHERE (ch.kind = 'direct' AND $1::int IN (ch.user_low, ch.user_high) AND lm.id IS NOT NULL)
-		   OR (ch.kind = 'group' AND (ch.group_id IN (SELECT group_id FROM my_groups)
-		                              OR ($2::bool AND cr.chat_id IS NOT NULL)))
-		ORDER BY COALESCE(lm.created_at, ch.created_at) DESC, ch.id DESC`
-	return database.Collect(ctx, r.db, scanChat, q, userID, isAdmin)
+// ListChats — страница чатов пользователя: его личные чаты и чаты его групп; у администратора
+// вместо «своих групп» — групповые чаты, которые он открывал (chat_read). Чужие личные чаты
+// администратору не видны. q — подстрока названия (группа или имя собеседника).
+// Порядок: свежесть последнего сообщения, чаты без сообщений — в конце, затем id DESC.
+func (r *Repository) ListChats(ctx context.Context, userID int64, isAdmin bool, q ListQuery) ([]Chat, int, error) {
+	sql := myGroupsCTE + chatQuery(", count(*) OVER ()") + `
+		WHERE ((ch.kind = 'direct' AND $1::int IN (ch.user_low, ch.user_high))
+		    OR (ch.kind = 'group' AND (ch.group_id IN (SELECT group_id FROM my_groups)
+		                               OR ($2::bool AND cr.chat_id IS NOT NULL))))
+		  AND ($3::text = '' OR COALESCE(g.name, ` + database.FullName("peer") + `) ILIKE '%' || $3::text || '%')
+		ORDER BY lm.created_at DESC NULLS LAST, ch.id DESC` + pageTail(4)
+	total := 0
+	list, err := database.Collect(ctx, r.db, func(row pgx.Row) (Chat, error) {
+		return scanChat(row, &total)
+	}, sql, userID, isAdmin, likeEscape(q.Q), q.Limit, q.Offset)
+	if err != nil {
+		return nil, 0, err
+	}
+	if len(list) == 0 && q.Offset > 0 {
+		total, err = r.countPast(ctx, sql, userID, isAdmin, likeEscape(q.Q))
+	}
+	return list, total, err
 }
 
 func (r *Repository) ChatView(ctx context.Context, chatID, userID int64) (Chat, error) {
-	c, err := scanChat(r.db.QueryRow(ctx, chatSelect+` WHERE ch.id = $2`, userID, chatID))
+	c, err := scanChat(r.db.QueryRow(ctx, chatQuery("")+` WHERE ch.id = $2`, userID, chatID))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Chat{}, apperr.NewNotFound("chat_not_found")
 	}
 	return c, database.Translate(err)
+}
+
+// ---- контакты ----
+
+// ListContacts — активные пользователи, с которыми viewer может начать личный чат
+// (те же правила, что decideContact), кроме него самого. q — подстрока ФИО.
+func (r *Repository) ListContacts(ctx context.Context, viewerID int64, q ListQuery) ([]Contact, int, error) {
+	const teaches = `EXISTS (SELECT 1 FROM workload w JOIN course_offering c ON c.id = w.course_id
+	                         WHERE w.teacher_id = %s AND c.group_id = %s)`
+	sql := `
+	WITH me AS (
+		SELECT u.id, u.is_admin, t.user_id IS NOT NULL AS teacher, s.group_id
+		FROM app_user u
+		LEFT JOIN teacher t ON t.user_id = u.id
+		LEFT JOIN student s ON s.user_id = u.id
+		WHERE u.id = $1
+	)
+	SELECT u.id, ` + database.FullName("u") + `, u.avatar_file_id,
+	       CASE WHEN t.user_id IS NOT NULL THEN d.name ELSE g.name END,
+	       count(*) OVER ()
+	FROM me, app_user u
+	LEFT JOIN teacher t ON t.user_id = u.id
+	LEFT JOIN department d ON d.id = t.department_id
+	LEFT JOIN student s ON s.user_id = u.id
+	LEFT JOIN study_group g ON g.id = s.group_id
+	WHERE u.is_active AND u.id <> me.id
+	  AND (me.is_admin OR u.is_admin
+	       OR (me.teacher AND t.user_id IS NOT NULL)
+	       OR (me.teacher AND s.group_id IS NOT NULL AND ` + fmt.Sprintf(teaches, "me.id", "s.group_id") + `)
+	       OR (t.user_id IS NOT NULL AND me.group_id IS NOT NULL AND ` + fmt.Sprintf(teaches, "u.id", "me.group_id") + `)
+	       OR (NOT me.teacher AND t.user_id IS NULL AND me.group_id IS NOT NULL AND s.group_id = me.group_id))
+	  AND ($2::text = '' OR ` + database.FullName("u") + ` ILIKE '%' || $2::text || '%'
+	                     OR (u.first_name || ' ' || u.last_name) ILIKE '%' || $2::text || '%')
+	ORDER BY u.last_name, u.first_name, u.id` + pageTail(3)
+	total := 0
+	list, err := database.Collect(ctx, r.db, func(row pgx.Row) (Contact, error) {
+		var (
+			c      Contact
+			avatar *int64
+		)
+		if err := row.Scan(&c.ID, &c.Name, &avatar, &c.Description, &total); err != nil {
+			return Contact{}, err
+		}
+		if avatar != nil {
+			c.Avatar = &Avatar{ID: *avatar, URL: "/api/v1/files/" + strconv.FormatInt(*avatar, 10)}
+		}
+		return c, nil
+	}, sql, viewerID, likeEscape(q.Q), q.Limit, q.Offset)
+	if err == nil && len(list) == 0 && q.Offset > 0 {
+		total, err = r.countPast(ctx, sql, viewerID, likeEscape(q.Q))
+	}
+	return list, total, err
+}
+
+// pageTail — LIMIT/OFFSET с номерами параметров n и n+1. Отделён маркером, чтобы countPast
+// мог посчитать total той же выборки без страницы.
+func pageTail(n int) string {
+	return fmt.Sprintf("\n\t-- page\n\tLIMIT $%d OFFSET $%d", n, n+1)
+}
+
+// countPast — total, когда offset ушёл за конец выборки (страница пуста и count(*) OVER () не пришёл).
+func (r *Repository) countPast(ctx context.Context, sql string, args ...any) (int, error) {
+	base := sql[:strings.LastIndex(sql, "\n\t-- page")]
+	var n int
+	err := r.db.QueryRow(ctx, `SELECT count(*) FROM (`+base+`) x`, args...).Scan(&n)
+	return n, database.Translate(err)
+}
+
+func likeEscape(s string) string {
+	return strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(s)
 }
 
 // ---- сообщения ----
@@ -215,7 +301,7 @@ func filesJSON() string {
 
 var messageSelect = `
 	SELECT m.id, m.chat_id, m.sender_id, ` + database.FullName("u") + `, m.body, m.created_at, m.edited_at,
-	       m.deleted_at IS NOT NULL, ` + filesJSON() + `
+	       ` + filesJSON() + `
 	FROM chat_message m JOIN app_user u ON u.id = m.sender_id`
 
 func scanMessage(row pgx.Row) (Message, error) {
@@ -224,7 +310,7 @@ func scanMessage(row pgx.Row) (Message, error) {
 		raw []byte
 	)
 	if err := row.Scan(&m.ID, &m.ChatID, &m.SenderID, &m.SenderName, &m.Body,
-		&m.CreatedAt, &m.EditedAt, &m.Deleted, &raw); err != nil {
+		&m.CreatedAt, &m.EditedAt, &raw); err != nil {
 		return Message{}, err
 	}
 	m.Files = []FileRef{}
@@ -236,25 +322,32 @@ func scanMessage(row pgx.Row) (Message, error) {
 	return m, nil
 }
 
-// ListMessages: after — сообщения новее id (по возрастанию, для опроса); иначе последние limit
-// сообщений до before (или самые свежие) — тоже по возрастанию.
-func (r *Repository) ListMessages(ctx context.Context, chatID int64, before, after *int64, limit int) ([]Message, error) {
-	if after != nil {
-		return database.Collect(ctx, r.db, scanMessage,
-			messageSelect+` WHERE m.chat_id = $1 AND m.id > $2 ORDER BY m.id LIMIT $3`, chatID, *after, limit)
-	}
+// ListMessages — до limit сообщений старше before (или самые свежие), по возрастанию id.
+// Берёт на одно больше, чтобы узнать, есть ли ещё более старые.
+func (r *Repository) ListMessages(ctx context.Context, chatID int64, before *int64, limit int) (MessagePage, error) {
 	list, err := database.Collect(ctx, r.db, scanMessage,
-		messageSelect+` WHERE m.chat_id = $1 AND ($2::bigint IS NULL OR m.id < $2::bigint) ORDER BY m.id DESC LIMIT $3`,
-		chatID, before, limit)
+		messageSelect+` WHERE m.chat_id = $1 AND m.deleted_at IS NULL AND ($2::bigint IS NULL OR m.id < $2::bigint) ORDER BY m.id DESC LIMIT $3`,
+		chatID, before, limit+1)
 	if err != nil {
-		return nil, err
+		return MessagePage{}, err
+	}
+	page := MessagePage{HasMore: len(list) > limit}
+	if page.HasMore {
+		list = list[:limit]
 	}
 	slices.Reverse(list)
-	return list, nil
+	if list == nil {
+		list = []Message{}
+	}
+	page.Items = list
+	if page.HasMore {
+		page.NextBefore = &list[0].ID
+	}
+	return page, nil
 }
 
 func (r *Repository) GetMessage(ctx context.Context, id int64) (Message, error) {
-	m, err := scanMessage(r.db.QueryRow(ctx, messageSelect+` WHERE m.id = $1`, id))
+	m, err := scanMessage(r.db.QueryRow(ctx, messageSelect+` WHERE m.id = $1 AND m.deleted_at IS NULL`, id))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Message{}, apperr.NewNotFound("message_not_found")
 	}
@@ -303,19 +396,19 @@ func scanID(row pgx.Row) (int64, error) {
 	return id, err
 }
 
-// DeleteMessage помечает сообщение удалённым, стирает текст и вложения. Возвращает ключи файлов,
-// оставшихся без ссылок, — их нужно удалить с диска после коммита.
+// DeleteMessage удаляет сообщение и связи с вложениями (без tombstone). Возвращает ключи
+// файлов, оставшихся без ссылок, — их нужно удалить с диска после коммита; файл, который
+// используется ещё где-то, остаётся.
 func (r *Repository) DeleteMessage(ctx context.Context, id int64) ([]string, error) {
 	var keys []string
 	err := database.InTx(ctx, r.db, func(tx pgx.Tx) error {
-		tag, err := tx.Exec(ctx,
-			`UPDATE chat_message SET body = '', deleted_at = now() WHERE id = $1 AND deleted_at IS NULL`, id)
-		if err := database.Affected(tag, err, "message_not_found"); err != nil {
-			return err
-		}
 		fileIDs, err := database.Collect(ctx, tx, scanID,
 			`DELETE FROM chat_message_file WHERE message_id = $1 RETURNING file_id`, id)
 		if err != nil {
+			return err
+		}
+		tag, err := tx.Exec(ctx, `DELETE FROM chat_message WHERE id = $1`, id)
+		if err := database.Affected(tag, err, "message_not_found"); err != nil {
 			return err
 		}
 		keys, err = filegc.Purge(ctx, tx, fileIDs)
@@ -324,13 +417,25 @@ func (r *Repository) DeleteMessage(ctx context.Context, id int64) ([]string, err
 	return keys, err
 }
 
-// MarkRead сдвигает «прочитано до» вперёд (назад не двигает) и не выходит за последнее сообщение чата.
-func (r *Repository) MarkRead(ctx context.Context, chatID, userID, messageID int64) error {
-	_, err := r.db.Exec(ctx, `
-		INSERT INTO chat_read (chat_id, user_id, last_read_message_id)
-		VALUES ($1, $2, LEAST($3::bigint, COALESCE((SELECT MAX(m.id) FROM chat_message m WHERE m.chat_id = $1), 0)))
-		ON CONFLICT (chat_id, user_id)
-		DO UPDATE SET last_read_message_id = GREATEST(chat_read.last_read_message_id, EXCLUDED.last_read_message_id)`,
-		chatID, userID, messageID)
-	return database.Translate(err)
+// Members — кому доставлять события чата сейчас: оба собеседника личного чата; для группы —
+// студенты группы, преподаватели с нагрузкой у неё (в любом семестре, как CanAccessGroup)
+// и администраторы, открывавшие этот чат. Только активные пользователи.
+func (r *Repository) Members(ctx context.Context, chatID int64) ([]int64, error) {
+	return database.Collect(ctx, r.db, scanID, `
+		WITH m AS (
+			SELECT unnest(ARRAY[ch.user_low, ch.user_high]) AS user_id
+			FROM chat ch WHERE ch.id = $1 AND ch.kind = 'direct'
+			UNION
+			SELECT s.user_id FROM chat ch JOIN student s ON s.group_id = ch.group_id
+			WHERE ch.id = $1 AND ch.kind = 'group'
+			UNION
+			SELECT w.teacher_id FROM chat ch
+			JOIN course_offering c ON c.group_id = ch.group_id
+			JOIN workload w ON w.course_id = c.id
+			WHERE ch.id = $1 AND ch.kind = 'group'
+			UNION
+			SELECT cr.user_id FROM chat_read cr JOIN app_user a ON a.id = cr.user_id AND a.is_admin
+			WHERE cr.chat_id = $1
+		)
+		SELECT m.user_id::bigint FROM m JOIN app_user u ON u.id = m.user_id AND u.is_active`, chatID)
 }

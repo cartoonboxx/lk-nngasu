@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/golang-jwt/jwt/v5"
@@ -48,6 +49,8 @@ type Principal struct {
 	UserID int64
 	Role   string
 	Sid    string // id сессии из access-токена: нужен, чтобы не закрыть текущую сессию при смене пароля
+	// Expires — срок access-токена; WebSocket держит соединение не дольше (session.ready.expires_at).
+	Expires time.Time
 }
 
 const principalKey = "principal"
@@ -110,7 +113,11 @@ func Auth(secret []byte, sessions SessionChecker) gin.HandlerFunc {
 
 		// Ответы защищённых маршрутов — приватные данные: не кешировать (контракт, раздел «Заголовки»).
 		c.Header("Cache-Control", "no-store")
-		c.Set(principalKey, Principal{UserID: id, Role: claims.Role, Sid: claims.Sid})
+		p := Principal{UserID: id, Role: claims.Role, Sid: claims.Sid}
+		if claims.ExpiresAt != nil {
+			p.Expires = claims.ExpiresAt.Time
+		}
+		c.Set(principalKey, p)
 		c.Next()
 	}
 }

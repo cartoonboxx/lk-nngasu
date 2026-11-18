@@ -33,6 +33,8 @@ func statusOf(k apperr.Kind) int {
 		return http.StatusTooManyRequests
 	case apperr.Unavailable:
 		return http.StatusServiceUnavailable
+	case apperr.UpgradeRequired:
+		return http.StatusUpgradeRequired
 	default:
 		return http.StatusInternalServerError
 	}

@@ -164,11 +164,41 @@ func (s *Service) List(ctx context.Context, f ListFilter) ([]User, int, error) {
 
 // --- Администратор ---
 
-// Create создаёт пользователя без пароля и отправляет приглашение на email.
-// Учебные роли независимы: можно задать обе, одну или ни одной.
+// checkRoleProfiles — роль одна, профиль student/teacher только у своей роли.
+func checkRoleProfiles(role string, st *StudentRole, te *TeacherRole) error {
+	switch {
+	case role != RoleStudent && role != RoleTeacher && role != RoleAdmin:
+		return errInvalidRole("role", "must be student, teacher or admin")
+	case role == RoleStudent && st == nil:
+		return errInvalidRole("student", "is required for role student")
+	case role == RoleTeacher && te == nil:
+		return errInvalidRole("teacher", "is required for role teacher")
+	case role != RoleStudent && st != nil:
+		return errInvalidRole("student", "must be null unless role is student")
+	case role != RoleTeacher && te != nil:
+		return errInvalidRole("teacher", "must be null unless role is teacher")
+	}
+	return nil
+}
+
+// Create создаёт пользователя (UserCreateInput). С паролем учётка сразу активна
+// (хранится только хеш); без пароля — приглашение на email, пароль пользователь
+// задаёт сам (расширение /auth/activate). Роль admin выдаёт только владелец.
 // Аватар — только файл, загруженный самим администратором.
 func (s *Service) Create(ctx context.Context, in CreateUser) (AdminUser, error) {
-	if s.opts.Inviter == nil {
+	if err := checkRoleProfiles(in.Role, in.Student, in.Teacher); err != nil {
+		return AdminUser{}, err
+	}
+	if in.Role == RoleAdmin {
+		owner, err := s.repo.IsOwner(ctx, in.CreatedBy)
+		if err != nil {
+			return AdminUser{}, err
+		}
+		if !owner {
+			return AdminUser{}, errOwnerRequired
+		}
+	}
+	if in.Password == "" && s.opts.Inviter == nil {
 		return AdminUser{}, apperr.New(apperr.Unavailable, "invitations_disabled", "invitations are not configured")
 	}
 	var err error
@@ -197,9 +227,19 @@ func (s *Service) Create(ctx context.Context, in CreateUser) (AdminUser, error) 
 	}
 	in.Email = normEmail(in.Email)
 
-	// Пароль пустой (credential_state = invited): войти нельзя, пока пользователь
-	// не активирует приглашение. Пользователь и письмо в очереди создаются
-	// одной транзакцией: если что-то не удалось, не остаётся ни того, ни другого.
+	if in.Password != "" {
+		hash, err := hashPassword(in.Password)
+		if err != nil {
+			return AdminUser{}, fieldErr("password", "must be at most 72 bytes in UTF-8")
+		}
+		id, err := s.repo.Create(ctx, in, hash, nil)
+		if err != nil {
+			return AdminUser{}, err
+		}
+		return s.repo.Get(ctx, id)
+	}
+	// Без пароля войти нельзя, пока пользователь не активирует приглашение.
+	// Пользователь и письмо в очереди создаются одной транзакцией.
 	id, err := s.repo.Create(ctx, in, "", func(tx pgx.Tx, id int64) error {
 		return s.opts.Inviter.InviteTx(ctx, tx, id, in.CreatedBy, false)
 	})
@@ -229,13 +269,16 @@ func (s *Service) ResendInvitation(ctx context.Context, userID, adminID int64) (
 // Дополнительно администратор не может заблокировать себя или снять с себя права.
 func (s *Service) AdminUpdate(ctx context.Context, actor middleware.Principal, id int64, in AdminUpdate) (AdminUser, error) {
 	if !(in.LastName.Set || in.FirstName.Set || in.MiddleNames.Set || in.Email.Set || in.Passport.Set ||
-		in.Snils.Set || in.Student.Set || in.Teacher.Set || in.AvatarFileID.Set || in.IsActive.Set) {
+		in.Snils.Set || in.Student.Set || in.Teacher.Set || in.AvatarFileID.Set || in.IsActive.Set || in.Role.Set) {
 		return AdminUser{}, errEmptyPatch
+	}
+	if r := in.Role.Value; r != nil && *r != RoleStudent && *r != RoleTeacher && *r != RoleAdmin {
+		return AdminUser{}, errInvalidRole("role", "must be student, teacher or admin")
 	}
 	for _, e := range []error{
 		notNull("last_name", in.LastName), notNull("first_name", in.FirstName), notNull("email", in.Email),
 		notNull("passport", in.Passport), notNull("snils", in.Snils),
-		notNull("is_active", in.IsActive),
+		notNull("is_active", in.IsActive), notNull("role", in.Role),
 	} {
 		if e != nil {
 			return AdminUser{}, e
@@ -306,19 +349,10 @@ func (s *Service) GroupStudents(ctx context.Context, p middleware.Principal, gro
 
 // --- Свой профиль ---
 
-// UpdateProfile обновляет аватар и возвращает профиль; ФИО меняет только администратор.
+// UpdateProfile обновляет ФИО и аватар (ProfilePatchInput) и возвращает профиль.
 // Аватаром можно сделать только свой файл, иначе через этот метод
 // можно было бы получить доступ к чужому файлу.
 func (s *Service) UpdateProfile(ctx context.Context, id int64, in UpdateProfile) (User, error) {
-	if in.LastName.Set || in.FirstName.Set || in.MiddleNames.Set {
-		u, err := s.repo.Get(ctx, id)
-		if err != nil {
-			return User{}, err
-		}
-		if !u.IsAdmin {
-			return User{}, apperr.NewForbidden("profile_name_admin_only", "only administrators can change names")
-		}
-	}
 	if !(in.LastName.Set || in.FirstName.Set || in.MiddleNames.Set || in.AvatarFileID.Set) {
 		return User{}, errEmptyPatch
 	}
@@ -356,8 +390,6 @@ func (s *Service) UpdateProfile(ctx context.Context, id int64, in UpdateProfile)
 
 // verifyPassword сверяет пароль пользователя; неверный — 403 wrong_password.
 // 403, а не 401: сессия действительна, клиент не должен разлогинивать пользователя.
-// Используется как подтверждение перед чувствительными действиями
-// (смена пароля, смена email), даже при активной сессии.
 func (s *Service) verifyPassword(ctx context.Context, id int64, plain string) error {
 	hash, err := s.repo.PasswordHash(ctx, id)
 	if err != nil {
@@ -386,17 +418,4 @@ func (s *Service) ChangePassword(ctx context.Context, id int64, oldPass, newPass
 		return err
 	}
 	return s.repo.SetPassword(ctx, id, hash)
-}
-
-// ChangeEmail меняет почту после подтверждения паролем. Подтверждения самой почты нет:
-// в схеме нет поля email_verified_at.
-func (s *Service) ChangeEmail(ctx context.Context, id int64, password, newEmail string) (User, error) {
-	if err := s.verifyPassword(ctx, id, password); err != nil {
-		return User{}, err
-	}
-	if err := s.repo.SetEmail(ctx, id, normEmail(newEmail)); err != nil {
-		return User{}, err
-	}
-	u, err := s.repo.Get(ctx, id)
-	return u.User, err
 }

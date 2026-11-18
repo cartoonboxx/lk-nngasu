@@ -80,6 +80,7 @@ type Decision struct {
 // ApprovalUser — данные пользователя при одобрении (ApprovalUserInput).
 // Email и пароль берутся из заявки. Ровно одна учебная роль: Student или Teacher.
 type ApprovalUser struct {
+	Role                string // student | teacher; пусто — по переданному профилю
 	LastName, FirstName string
 	MiddleNames         *string
 	Passport, Snils     string
@@ -180,6 +181,19 @@ func (s *Service) DecideRegistration(ctx context.Context, admin middleware.Princ
 		u := d.User
 		if (u.Student == nil) == (u.Teacher == nil) {
 			return RegistrationRequest{}, errOneRole
+		}
+		if u.Role == "" {
+			u.Role = RoleStudent
+			if u.Teacher != nil {
+				u.Role = RoleTeacher
+			}
+		}
+		// Одобрение заявки административных прав не даёт.
+		if u.Role == RoleAdmin {
+			return RegistrationRequest{}, errInvalidRole("user.role", "must be student or teacher")
+		}
+		if err := checkRoleProfiles(u.Role, u.Student, u.Teacher); err != nil {
+			return RegistrationRequest{}, err
 		}
 		var err error
 		if u.LastName, err = normName("user.last_name", u.LastName); err != nil {

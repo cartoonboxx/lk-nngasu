@@ -33,6 +33,27 @@ var baselineMarkers = map[int]string{
 	9:  `EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'lesson' AND column_name = 'ends_at')`,
 	10: `EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'file' AND column_name = 'mime_type')`,
 	11: `to_regclass('public.admin_setup') IS NOT NULL`,
+	12: `EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'assignment_topic_unique')`,
+	13: `EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'file' AND column_name = 'created_at')`,
+	14: `to_regclass('public.news') IS NOT NULL`,
+	15: `NOT EXISTS (SELECT 1 FROM chat_message WHERE deleted_at IS NOT NULL)`,
+	16: `NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'department' AND column_name = 'archived')`,
+	17: `NOT EXISTS (SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'topic' AND column_name = 'position')`,
+}
+
+// renamedMigrations — миграции, сменившие номер при слиянии веток (011_admin_setup занял 011).
+// Базы, где они уже применены под старыми номерами, переводятся на новые до запуска,
+// иначе 011_admin_setup считался бы применённым. Порядок — от больших номеров к меньшим.
+var renamedMigrations = []struct {
+	oldVersion int
+	oldName    string
+	newVersion int
+	newName    string
+}{
+	{14, "014_chat_hard_delete.sql", 15, "015_chat_hard_delete.sql"},
+	{13, "013_news.sql", 14, "014_news.sql"},
+	{12, "012_file_created_at.sql", 13, "013_file_created_at.sql"},
+	{11, "011_assignment_per_topic.sql", 12, "012_assignment_per_topic.sql"},
 }
 
 var (
@@ -74,6 +95,14 @@ func Migrate(ctx context.Context, pool *pgxpool.Pool, fsys fs.FS) error {
 			applied_at timestamptz NOT NULL DEFAULT now()
 		)`); err != nil {
 		return fmt.Errorf("schema_migrations: %w", err)
+	}
+
+	for _, r := range renamedMigrations {
+		if _, err := conn.Exec(ctx,
+			`UPDATE schema_migrations SET version = $3, name = $4 WHERE version = $1 AND name = $2`,
+			r.oldVersion, r.oldName, r.newVersion, r.newName); err != nil {
+			return fmt.Errorf("schema_migrations rename %s: %w", r.oldName, err)
+		}
 	}
 
 	applied := map[int]bool{}

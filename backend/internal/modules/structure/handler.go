@@ -12,13 +12,13 @@ import (
 )
 
 // Handler — HTTP-слой справочников. Сервисного слоя нет: правила простые
-// (уникальность, ссылочная целостность, архив) и обеспечиваются БД и репозиторием.
+// (уникальность, ссылочная целостность) и обеспечиваются БД и репозиторием.
 // Права доступа (правка — только admin) навешиваются в Register.
 type Handler struct{ repo *Repository }
 
 // --- Тела запросов ---
 //
-// Создание — POST, полная замена — PUT, архивирование — PATCH с {"archived": true}.
+// Создание — POST, полная замена — PUT, удаление — DELETE (только без зависимостей).
 // Длины названий проверяются после trim в normText: тег max считал бы и пробелы.
 
 // namedBody — NamedInput: кафедра или дисциплина.
@@ -36,24 +36,18 @@ type specializationBody struct {
 type groupBody struct {
 	Name             string `json:"name" binding:"required"`
 	SpecializationID int64  `json:"specialization_id" binding:"required,gt=0"`
-	AdmissionYear    int    `json:"admission_year" binding:"required,min=2000,max=2100"`
+	AdmissionYear    int    `json:"admission_year" binding:"required,min=2000,max=32767"`
 }
 
-// semesterBody — SemesterInput. is_current меняется отдельной командой.
+// semesterBody — SemesterInput. Название вычисляется, is_current меняется отдельной командой.
 type semesterBody struct {
-	Name              string `json:"name" binding:"required"`
-	AcademicYearStart int    `json:"academic_year_start" binding:"required,min=2000,max=2100"`
-	Number            int    `json:"number" binding:"required,oneof=1 2"`
+	AcademicYearStart int `json:"academic_year_start" binding:"required,min=2000,max=32767"`
+	Number            int `json:"number" binding:"required,oneof=1 2"`
 }
 
-// roomBody — аудитория: обозначение, которое видят в расписании.
+// roomBody — RoomInput: обозначение аудитории.
 type roomBody struct {
-	Name string `json:"name" binding:"required"`
-}
-
-// archiveBody — ArchiveInput. Допустимо только true: восстановления пока нет.
-type archiveBody struct {
-	Archived *bool `json:"archived" binding:"required"`
+	Number string `json:"number" binding:"required"`
 }
 
 // normText обрезает пробелы и проверяет длину 1–max символов.
@@ -72,47 +66,12 @@ func failQuery(c *gin.Context, name, problem string) {
 		WithDetails(map[string]any{"fields": map[string][]string{name: {problem}}}))
 }
 
-// optBool читает "true"/"false"; пусто — nil. Другое значение — 400.
-func optBool(c *gin.Context, name string) (*bool, bool) {
-	switch c.Query(name) {
-	case "":
-		return nil, true
-	case "true":
-		v := true
-		return &v, true
-	case "false":
-		v := false
-		return &v, true
-	}
-	failQuery(c, name, "must be true or false")
-	return nil, false
-}
-
-// parseList читает общие параметры списков: q, archived, include_archived, limit, offset.
-//
-// По умолчанию — только действующие записи. archived=true — только архив,
-// include_archived=true — оба состояния; сочетать archived и include_archived нельзя.
+// parseList читает общие параметры списков: q (до 200 символов), limit (1–200, 50), offset.
 func parseList(c *gin.Context) (ListQuery, bool) {
 	lq := ListQuery{Q: strings.TrimSpace(c.Query("q")), Limit: 50}
-	archived, ok := optBool(c, "archived")
-	if !ok {
+	if utf8.RuneCountInString(lq.Q) > 200 {
+		failQuery(c, "q", "must be at most 200 characters")
 		return lq, false
-	}
-	include, ok := optBool(c, "include_archived")
-	if !ok {
-		return lq, false
-	}
-	switch {
-	case archived != nil && include != nil:
-		failQuery(c, "include_archived", "cannot be combined with archived")
-		return lq, false
-	case include != nil && *include:
-		lq.Archived = nil // оба состояния
-	case archived != nil:
-		lq.Archived = archived
-	default:
-		f := false
-		lq.Archived = &f
 	}
 	if raw := c.Query("limit"); raw != "" {
 		v, err := strconv.Atoi(raw)
@@ -138,24 +97,10 @@ func replyPage[T any](c *gin.Context, list []T, total int, lq ListQuery, err err
 	httpx.ReplyPage(c, list, httpx.Meta{Limit: lq.Limit, Offset: lq.Offset, Total: total}, err)
 }
 
-// bindArchive разбирает ArchiveInput; false — 400 (восстановление не поддерживается).
-func bindArchive(c *gin.Context) bool {
-	var req archiveBody
-	if !httpx.Bind(c, &req) {
-		return false
-	}
-	if !*req.Archived {
-		httpx.Fail(c, apperr.NewInvalid("invalid_request", "request body is invalid").
-			WithDetails(map[string]any{"fields": map[string][]string{"archived": {"only true is supported: restoring is not available"}}}))
-		return false
-	}
-	return true
-}
-
-// catalogHandlers строит хендлеры для справочника «id + название + archived».
+// catalogHandlers строит хендлеры для справочника «id + название».
 // Хендлеры замыкаются на cat, так что один код обслуживает любую таблицу такого вида.
-func catalogHandlers(cat catalog) (list, create, update, arch, remove gin.HandlerFunc) {
-	// GET path?q=&archived=&include_archived=&limit=&offset= — страница NamedCatalog.
+func catalogHandlers(cat catalog) (list, create, update, remove gin.HandlerFunc) {
+	// GET path?q=&limit=&offset= — страница NamedCatalog.
 	list = func(c *gin.Context) {
 		lq, ok := parseList(c)
 		if !ok {
@@ -170,7 +115,7 @@ func catalogHandlers(cat catalog) (list, create, update, arch, remove gin.Handle
 		if !httpx.Bind(c, &req) {
 			return
 		}
-		name, err := normText("name", req.Name, 200)
+		name, err := normText("name", req.Name, cat.maxName)
 		if err != nil {
 			httpx.Fail(c, err)
 			return
@@ -188,21 +133,12 @@ func catalogHandlers(cat catalog) (list, create, update, arch, remove gin.Handle
 		if !httpx.Bind(c, &req) {
 			return
 		}
-		name, err := normText("name", req.Name, 200)
+		name, err := normText("name", req.Name, cat.maxName)
 		if err != nil {
 			httpx.Fail(c, err)
 			return
 		}
 		n, err := cat.update(c.Request.Context(), id, name)
-		httpx.Reply(c, n, err)
-	}
-	// PATCH path/:id {"archived": true} — в архив.
-	arch = func(c *gin.Context) {
-		id, ok := httpx.ID(c, "id")
-		if !ok || !bindArchive(c) {
-			return
-		}
-		n, err := cat.archive(c.Request.Context(), id)
 		httpx.Reply(c, n, err)
 	}
 	// DELETE path/:id — удалить (204); используемую запись не удалить.
@@ -265,15 +201,6 @@ func (h *Handler) UpdateSpecialization(c *gin.Context) {
 	httpx.Reply(c, s, err)
 }
 
-func (h *Handler) ArchiveSpecialization(c *gin.Context) {
-	id, ok := httpx.ID(c, "id")
-	if !ok || !bindArchive(c) {
-		return
-	}
-	s, err := h.repo.ArchiveSpecialization(c.Request.Context(), id)
-	httpx.Reply(c, s, err)
-}
-
 func (h *Handler) DeleteSpecialization(c *gin.Context) {
 	id, ok := httpx.ID(c, "id")
 	if !ok {
@@ -284,9 +211,9 @@ func (h *Handler) DeleteSpecialization(c *gin.Context) {
 
 // ---- groups ----
 
-// ListGroups — страница групп (по умолчанию только действующие).
+// ListGroups — страница групп.
 //
-// GET /groups?q=&archived=&include_archived=&specialization_id=&admission_year=&limit=&offset=
+// GET /groups?q=&specialization_id=&admission_year=&limit=&offset=
 func (h *Handler) ListGroups(c *gin.Context) {
 	lq, ok := parseList(c)
 	if !ok {
@@ -318,7 +245,7 @@ func bindGroup(c *gin.Context) (GroupInput, bool) {
 	if !httpx.Bind(c, &req) {
 		return GroupInput{}, false
 	}
-	name, err := normText("name", req.Name, 200)
+	name, err := normText("name", req.Name, 50)
 	if err != nil {
 		httpx.Fail(c, err)
 		return GroupInput{}, false
@@ -326,7 +253,7 @@ func bindGroup(c *gin.Context) (GroupInput, bool) {
 	return GroupInput{Name: name, SpecializationID: req.SpecializationID, AdmissionYear: req.AdmissionYear}, true
 }
 
-// CreateGroup — направление должно быть действующим (иначе 400 invalid_reference).
+// CreateGroup — направление должно существовать (иначе 400 invalid_reference).
 func (h *Handler) CreateGroup(c *gin.Context) {
 	in, ok := bindGroup(c)
 	if !ok {
@@ -341,7 +268,7 @@ func (h *Handler) CreateGroup(c *gin.Context) {
 	httpx.ReplyCreated(c, g, err)
 }
 
-// UpdateGroup — полная замена; оставить прежнее направление можно, даже если оно в архиве.
+// UpdateGroup — полная замена; студенты и курсы остаются у группы.
 func (h *Handler) UpdateGroup(c *gin.Context) {
 	id, ok := httpx.ID(c, "id")
 	if !ok {
@@ -356,15 +283,6 @@ func (h *Handler) UpdateGroup(c *gin.Context) {
 		return
 	}
 	g, err := h.repo.GetGroup(c.Request.Context(), id)
-	httpx.Reply(c, g, err)
-}
-
-func (h *Handler) ArchiveGroup(c *gin.Context) {
-	id, ok := httpx.ID(c, "id")
-	if !ok || !bindArchive(c) {
-		return
-	}
-	g, err := h.repo.ArchiveGroup(c.Request.Context(), id)
 	httpx.Reply(c, g, err)
 }
 
@@ -397,12 +315,7 @@ func bindSemester(c *gin.Context) (SemesterInput, bool) {
 	if !httpx.Bind(c, &req) {
 		return SemesterInput{}, false
 	}
-	name, err := normText("name", req.Name, 200)
-	if err != nil {
-		httpx.Fail(c, err)
-		return SemesterInput{}, false
-	}
-	return SemesterInput{Name: name, AcademicYearStart: req.AcademicYearStart, Number: req.Number}, true
+	return SemesterInput{AcademicYearStart: req.AcademicYearStart, Number: req.Number}, true
 }
 
 func (h *Handler) CreateSemester(c *gin.Context) {
@@ -433,16 +346,6 @@ func (h *Handler) UpdateSemester(c *gin.Context) {
 		return
 	}
 	s, err := h.repo.GetSemester(c.Request.Context(), id)
-	httpx.Reply(c, s, err)
-}
-
-// ArchiveSemester — текущий семестр архивировать нельзя (409 current_semester_in_use).
-func (h *Handler) ArchiveSemester(c *gin.Context) {
-	id, ok := httpx.ID(c, "id")
-	if !ok || !bindArchive(c) {
-		return
-	}
-	s, err := h.repo.ArchiveSemester(c.Request.Context(), id)
 	httpx.Reply(c, s, err)
 }
 
@@ -484,12 +387,12 @@ func bindRoom(c *gin.Context) (string, bool) {
 	if !httpx.Bind(c, &req) {
 		return "", false
 	}
-	name, err := normText("name", req.Name, 200)
+	number, err := normText("number", req.Number, 30)
 	if err != nil {
 		httpx.Fail(c, err)
 		return "", false
 	}
-	return name, true
+	return number, true
 }
 
 func (h *Handler) CreateRoom(c *gin.Context) {
@@ -511,15 +414,6 @@ func (h *Handler) UpdateRoom(c *gin.Context) {
 		return
 	}
 	rm, err := h.repo.UpdateRoom(c.Request.Context(), id, name)
-	httpx.Reply(c, rm, err)
-}
-
-func (h *Handler) ArchiveRoom(c *gin.Context) {
-	id, ok := httpx.ID(c, "id")
-	if !ok || !bindArchive(c) {
-		return
-	}
-	rm, err := h.repo.ArchiveRoom(c.Request.Context(), id)
 	httpx.Reply(c, rm, err)
 }
 

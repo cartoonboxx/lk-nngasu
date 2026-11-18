@@ -17,7 +17,8 @@ func (m memBlobs) Open(k string) (io.ReadCloser, error) {
 	}
 	return io.NopCloser(strings.NewReader(v)), nil
 }
-func (memBlobs) Remove(string) error { return nil }
+func (memBlobs) Remove(string) error            { return nil }
+func (m memBlobs) Size(k string) (int64, error) { return int64(len(m[k])), nil }
 
 func TestUniqueName(t *testing.T) {
 	used := map[string]int{}

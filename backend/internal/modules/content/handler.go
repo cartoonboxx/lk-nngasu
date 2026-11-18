@@ -17,11 +17,10 @@ type Handler struct{ svc *Service }
 // Указатели отличают «поле не передано» (nil) от пустого значения.
 //
 // PUT — полная замена: если description не передано, описание стирается.
-// Position не указан — тема встаёт в конец списка (при обновлении — остаётся на месте).
+// Порядок тем — по id (ручного порядка в контракте нет).
 type topicRequest struct {
 	Title       string  `json:"title" binding:"required,max=200"`
 	Description *string `json:"description" binding:"omitempty,max=20000"` // при PUT отсутствие или null очищает
-	Position    *int    `json:"position" binding:"omitempty,min=1"`        // с 1; при создании по умолчанию в конец, при PUT отсутствие сохраняет порядок
 }
 
 // materialRequest — тело запроса на создание и изменение материала.
@@ -30,12 +29,10 @@ type topicRequest struct {
 //
 // PUT — полная замена: непереданные file_id и external_url обнуляются;
 // если файл убран или заменён, старый файл удаляется.
-// Position — как у темы: не указан → в конец списка (при обновлении — на месте).
+// Названия и порядка у материала нет: это файл и/или ссылка, порядок — по id.
 type materialRequest struct {
-	Title       string  `json:"title" binding:"required,max=200"`
 	FileID      *int64  `json:"file_id"`
 	ExternalURL *string `json:"external_url" binding:"omitempty,max=2048"`
-	Position    *int    `json:"position" binding:"omitempty,min=1"`
 }
 
 // input переводит HTTP-запрос во входные данные сервиса.

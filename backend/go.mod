@@ -3,6 +3,7 @@ module university-api
 go 1.25
 
 require (
+	github.com/coder/websocket v1.8.12
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-playground/validator/v10 v10.20.0
 	github.com/golang-jwt/jwt/v5 v5.2.1
@@ -42,3 +43,15 @@ require (
 	google.golang.org/protobuf v1.34.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
+
+replace (
+	golang.org/x/arch => github.com/golang/arch v0.8.0
+	golang.org/x/crypto => github.com/golang/crypto v0.28.0
+	golang.org/x/net => github.com/golang/net v0.25.0
+	golang.org/x/sync => github.com/golang/sync v0.8.0
+	golang.org/x/sys => github.com/golang/sys v0.26.0
+	golang.org/x/text => github.com/golang/text v0.19.0
+	google.golang.org/protobuf => github.com/protocolbuffers/protobuf-go v1.34.1
+)
+
+replace gopkg.in/yaml.v3 => github.com/go-yaml/yaml v0.0.0-20220527083530-f6f7691b1fde

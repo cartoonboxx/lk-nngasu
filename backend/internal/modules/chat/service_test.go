@@ -25,10 +25,10 @@ func TestNormalizeBody(t *testing.T) {
 		code     string
 	}{
 		{"trim", "  привет \n", false, "привет", ""},
-		{"empty", "   ", false, "", "empty_message"},
+		{"empty", "   ", false, "", "invalid_payload"},
 		{"empty with files", "", true, "", ""},
 		{"max runes ok", strings.Repeat("я", MaxBodyRunes), false, strings.Repeat("я", MaxBodyRunes), ""},
-		{"too long", strings.Repeat("я", MaxBodyRunes+1), false, "", "message_too_long"},
+		{"too long", strings.Repeat("я", MaxBodyRunes+1), false, "", "invalid_payload"},
 	}
 	for _, c := range cases {
 		got, err := normalizeBody(c.in, c.hasFiles)

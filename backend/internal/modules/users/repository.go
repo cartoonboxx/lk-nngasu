@@ -27,17 +27,18 @@ func newRepository(db *pgxpool.Pool) *Repository { return &Repository{db: db} }
 // userSelect — общий SELECT, который собирает AdminUser из app_user и ролей.
 // К нему дописываются WHERE / ORDER BY / LIMIT.
 //
-// Роли независимы: LEFT JOIN к student и teacher, у пользователя может быть
-// любая их комбинация; отсутствующая роль приходит NULL-ами.
-// credential_state: пустой хеш — пароль ещё не задан, пользователь приглашён.
+// Роль одна и вычисляется (database.RoleSQL): admin, иначе teacher, иначе student.
+// Профиль другой роли (строка, оставшаяся от старых данных) наружу не отдаётся.
 // Порядок колонок должен совпадать с scanUser.
 var userSelect = `
 	SELECT u.id, u.last_name, u.first_name, u.middle_names, ` + database.FullName("u") + `,
-	       u.email, u.avatar_file_id, u.is_active, u.is_admin,
+	       u.email, ` + database.FileInfoJSON("af") + `, u.is_active, u.is_admin, u.can_manage_admins,
+	       ` + database.RoleSQL("u", "t") + `,
 	       s.user_id IS NOT NULL, s.group_id, g.name, s.record_book_number, s.is_headman,
 	       t.user_id IS NOT NULL, t.department_id, d.name,
-	       u.passport, u.snils, u.password_hash = ''
+	       u.passport, u.snils
 	FROM app_user u
+	LEFT JOIN file af          ON af.id = u.avatar_file_id
 	LEFT JOIN teacher t        ON t.user_id = u.id
 	LEFT JOIN department d     ON d.id = t.department_id
 	LEFT JOIN student s        ON s.user_id = u.id
@@ -48,43 +49,35 @@ func likeEscape(s string) string {
 	return strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(s)
 }
 
-// avatarURL — адрес скачивания аватара (GET /files/:id, с авторизацией).
-const avatarURL = "/api/v1/files/"
-
 // scanUser читает одну строку userSelect в AdminUser.
 // Подходит и для QueryRow, и для строк из database.Collect.
 func scanUser(row pgx.Row) (AdminUser, error) {
 	var (
 		u                    AdminUser
-		avatar               *int64
+		avatar               []byte
 		isStudent, isTeacher bool
 		groupID, deptID      *int64
 		groupName, deptName  *string
 		isHeadman            *bool
 		recordBook           *string
-		invited              bool
 	)
 	err := row.Scan(&u.ID, &u.LastName, &u.FirstName, &u.MiddleNames, &u.FullName,
-		&u.Email, &avatar, &u.IsActive, &u.IsAdmin,
+		&u.Email, &avatar, &u.IsActive, &u.IsAdmin, &u.CanManageAdmins, &u.Role,
 		&isStudent, &groupID, &groupName, &recordBook, &isHeadman,
 		&isTeacher, &deptID, &deptName,
-		&u.Passport, &u.Snils, &invited)
+		&u.Passport, &u.Snils)
 	if err != nil {
 		return AdminUser{}, err
 	}
-	if avatar != nil {
-		u.Avatar = &FileRef{ID: *avatar, URL: avatarURL + strconv.FormatInt(*avatar, 10)}
+	if u.Avatar, err = database.ParseFileInfo(avatar); err != nil {
+		return AdminUser{}, err
 	}
-	if isStudent {
+	if isStudent && u.Role == RoleStudent {
 		u.Student = &StudentProfile{GroupID: *groupID, GroupName: deref(groupName),
 			RecordBookNumber: recordBook, IsHeadman: isHeadman != nil && *isHeadman}
 	}
-	if isTeacher {
+	if isTeacher && u.Role == RoleTeacher {
 		u.Teacher = &TeacherProfile{DepartmentID: *deptID, DepartmentName: deref(deptName)}
-	}
-	u.CredentialState = "active"
-	if invited {
-		u.CredentialState = "invited"
 	}
 	return u, nil
 }
@@ -130,13 +123,9 @@ var errUserNotFound = apperr.NewNotFound("user_not_found")
 func (r *Repository) List(ctx context.Context, f ListFilter) ([]User, int, error) {
 	var w database.Filter
 
-	// Фильтр по роли — по наличию строки роли; роли независимы,
-	// поэтому студент-преподаватель попадает в оба фильтра.
-	switch f.Role {
-	case "student":
-		w.Raw("s.user_id IS NOT NULL")
-	case "teacher":
-		w.Raw("t.user_id IS NOT NULL")
+	// Фильтр по единственной роли (студенты включают старост).
+	if f.Role != "" {
+		w.Add(database.RoleSQL("u", "t")+" = ?", f.Role)
 	}
 	// is_headman=false — студенты без признака старосты; пользователи без student не попадают.
 	if f.IsHeadman != nil {
@@ -144,9 +133,6 @@ func (r *Repository) List(ctx context.Context, f ListFilter) ([]User, int, error
 	}
 	if f.IsActive != nil {
 		w.Add("u.is_active = ?", *f.IsActive)
-	}
-	if f.IsAdmin != nil {
-		w.Add("u.is_admin = ?", *f.IsAdmin)
 	}
 	if f.GroupID != nil {
 		w.Add("s.group_id = ?", *f.GroupID)
@@ -202,35 +188,28 @@ func (r *Repository) Create(ctx context.Context, in CreateUser, passwordHash str
 // referencesExist проверяет группу и кафедру заранее, чтобы ответить
 // 400 invalid_reference, а не общей ошибкой внешнего ключа.
 //
-// Новая связь — только с действующей (неархивной) группой или кафедрой.
-// Если у пользователя userID роль уже ссылается на эту группу или кафедру,
-// её можно оставить и после архивации (например, поменять только is_headman).
-// FOR SHARE не даёт заархивировать запись параллельно с этой транзакцией.
-func referencesExist(ctx context.Context, tx pgx.Tx, userID int64, st *StudentRole, te *TeacherRole) error {
-	var exists, usable bool
+// referencesExist — группа и кафедра роли существуют. FOR SHARE не даёт удалить их
+// параллельно с этой транзакцией.
+func referencesExist(ctx context.Context, tx pgx.Tx, st *StudentRole, te *TeacherRole) error {
+	var found bool
 	if st != nil {
-		err := tx.QueryRow(ctx, `
-			SELECT true, NOT archived OR EXISTS (SELECT 1 FROM student WHERE user_id = $2 AND group_id = g.id)
-			FROM study_group g WHERE id = $1 FOR SHARE`, st.GroupID, userID).Scan(&exists, &usable)
-		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-			return database.Translate(err)
-		}
-		if !exists || !usable {
+		err := tx.QueryRow(ctx, `SELECT true FROM study_group WHERE id = $1 FOR SHARE`, st.GroupID).Scan(&found)
+		if errors.Is(err, pgx.ErrNoRows) {
 			return errBadReference.WithDetails(map[string]any{"fields": map[string][]string{
-				"student.group_id": {"group does not exist or is archived"}}})
+				"student.group_id": {"group does not exist"}}})
+		}
+		if err != nil {
+			return database.Translate(err)
 		}
 	}
-	exists, usable = false, false
 	if te != nil {
-		err := tx.QueryRow(ctx, `
-			SELECT true, NOT archived OR EXISTS (SELECT 1 FROM teacher WHERE user_id = $2 AND department_id = d.id)
-			FROM department d WHERE id = $1 FOR SHARE`, te.DepartmentID, userID).Scan(&exists, &usable)
-		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-			return database.Translate(err)
-		}
-		if !exists || !usable {
+		err := tx.QueryRow(ctx, `SELECT true FROM department WHERE id = $1 FOR SHARE`, te.DepartmentID).Scan(&found)
+		if errors.Is(err, pgx.ErrNoRows) {
 			return errBadReference.WithDetails(map[string]any{"fields": map[string][]string{
-				"teacher.department_id": {"department does not exist or is archived"}}})
+				"teacher.department_id": {"department does not exist"}}})
+		}
+		if err != nil {
+			return database.Translate(err)
 		}
 	}
 	return nil
@@ -241,14 +220,15 @@ func referencesExist(ctx context.Context, tx pgx.Tx, userID int64, st *StudentRo
 // чтобы создать пользователя и закрыть заявку одной транзакцией.
 // Пароль приходит уже хешированным; пустая строка — пользователь приглашён.
 func createUserTx(ctx context.Context, tx pgx.Tx, in CreateUser, passwordHash string) (int64, error) {
-	if err := referencesExist(ctx, tx, 0, in.Student, in.Teacher); err != nil {
+	if err := referencesExist(ctx, tx, in.Student, in.Teacher); err != nil {
 		return 0, err
 	}
 	var id int64
 	err := tx.QueryRow(ctx, `
-		INSERT INTO app_user (last_name, first_name, middle_names, email, password_hash, passport, snils, avatar_file_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-		in.LastName, in.FirstName, in.MiddleNames, in.Email, passwordHash, in.Passport, in.Snils, in.AvatarFileID).Scan(&id)
+		INSERT INTO app_user (last_name, first_name, middle_names, email, password_hash, passport, snils, avatar_file_id, is_admin)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+		in.LastName, in.FirstName, in.MiddleNames, in.Email, passwordHash, in.Passport, in.Snils, in.AvatarFileID,
+		in.Role == RoleAdmin).Scan(&id)
 	if err != nil {
 		return 0, userErr(err)
 	}
@@ -309,30 +289,91 @@ func (r *Repository) UpdateProfile(ctx context.Context, id int64, in UpdateProfi
 	return database.Affected(tag, err, "user_not_found")
 }
 
-// AdminUpdate частично обновляет пользователя и его роли одной транзакцией.
+// errInvalidRole — роль и профили student/teacher не согласованы.
+func errInvalidRole(field, problem string) error {
+	return apperr.NewInvalid("invalid_role", "role and student/teacher profiles do not match").
+		WithDetails(map[string]any{"fields": map[string][]string{field: {problem}}})
+}
+
+var errOwnerRequired = apperr.NewForbidden("owner_required", "only the system owner can grant or revoke administrator rights")
+
+// IsOwner — пользователь — владелец системы (can_manage_admins), право перечитывается из БД.
+func (r *Repository) IsOwner(ctx context.Context, userID int64) (bool, error) {
+	var ok bool
+	err := r.db.QueryRow(ctx, `SELECT can_manage_admins FROM app_user WHERE id = $1`, userID).Scan(&ok)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	return ok, database.Translate(err)
+}
+
+// AdminUpdate частично обновляет пользователя и его роль одной транзакцией.
+//
+// Роль одна: при смене role профиль новой роли нужно передать (если его ещё нет),
+// профиль прежней снимается автоматически; снять профиль с учебными данными нельзя
+// (409 role_in_use). Выдать или снять роль admin может только владелец; последнего
+// активного администратора нельзя заблокировать или лишить роли (409 last_active_admin).
 func (r *Repository) AdminUpdate(ctx context.Context, id, actorID int64, in AdminUpdate) error {
 	return database.InTx(ctx, r.db, func(tx pgx.Tx) error {
 		// 1. Блокируем строку пользователя: параллельная правка дождётся конца транзакции.
-		var isAdmin, isActive, isOwner bool
-		err := tx.QueryRow(ctx, `SELECT is_admin, is_active, can_manage_admins FROM app_user WHERE id = $1 FOR UPDATE`, id).Scan(&isAdmin, &isActive, &isOwner)
+		var isAdmin, isActive, isOwner, hasStudent, hasTeacher bool
+		err := tx.QueryRow(ctx, `
+			SELECT is_admin, is_active, can_manage_admins,
+			       EXISTS (SELECT 1 FROM student WHERE user_id = u.id),
+			       EXISTS (SELECT 1 FROM teacher WHERE user_id = u.id)
+			FROM app_user u WHERE id = $1 FOR UPDATE`, id).Scan(&isAdmin, &isActive, &isOwner, &hasStudent, &hasTeacher)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return errUserNotFound
 		}
 		if err != nil {
 			return database.Translate(err)
 		}
-
 		if isOwner && actorID != id {
 			return apperr.NewForbidden("owner_protected", "other administrators cannot edit the system owner")
 		}
 
-		// 2. Нельзя заблокировать последнего активного администратора.
-		// Блокируем всех активных админов, чтобы два запроса не прошли проверку одновременно.
-		blocking := in.IsActive.Value != nil && !*in.IsActive.Value
-		if isOwner && blocking {
-			return apperr.NewConflict("owner_protected", "the system owner cannot be blocked")
+		current := RoleStudent
+		switch {
+		case isAdmin:
+			current = RoleAdmin
+		case hasTeacher:
+			current = RoleTeacher
 		}
-		if isAdmin && isActive && blocking {
+		role := current
+		if in.Role.Value != nil {
+			role = *in.Role.Value
+		}
+
+		// 2. Профили согласованы с ролью: свой — передан или уже есть, чужой — не передан.
+		needStudent, needTeacher := role == RoleStudent, role == RoleTeacher
+		switch {
+		case !needStudent && in.Student.Value != nil:
+			return errInvalidRole("student", "must be null unless role is student")
+		case !needTeacher && in.Teacher.Value != nil:
+			return errInvalidRole("teacher", "must be null unless role is teacher")
+		case needStudent && (in.Student.Null() || (!in.Student.Set && !hasStudent)):
+			return errInvalidRole("student", "is required for role student")
+		case needTeacher && (in.Teacher.Null() || (!in.Teacher.Set && !hasTeacher)):
+			return errInvalidRole("teacher", "is required for role teacher")
+		}
+
+		// 3. Права администратора: выдать или снять — только владелец; владелец свою роль
+		// не меняет и себя не блокирует; последний активный администратор остаётся.
+		blocking := in.IsActive.Value != nil && !*in.IsActive.Value
+		leavingAdmin := isAdmin && role != RoleAdmin
+		if (role == RoleAdmin) != isAdmin {
+			owner, err := ownerTx(ctx, tx, actorID)
+			if err != nil {
+				return err
+			}
+			if !owner {
+				return errOwnerRequired
+			}
+		}
+		if isOwner && (blocking || leavingAdmin) {
+			return apperr.NewConflict("owner_protected", "the system owner cannot be blocked or lose administrator rights")
+		}
+		if isAdmin && isActive && (blocking || leavingAdmin) {
 			rows, err := tx.Query(ctx, `SELECT id FROM app_user WHERE is_admin AND is_active FOR UPDATE`)
 			if err != nil {
 				return database.Translate(err)
@@ -342,11 +383,11 @@ func (r *Repository) AdminUpdate(ctx context.Context, id, actorID int64, in Admi
 				return database.Translate(err)
 			}
 			if len(ids) <= 1 {
-				return apperr.NewConflict("last_active_admin", "cannot block the last active administrator")
+				return apperr.NewConflict("last_active_admin", "cannot block or demote the last active administrator")
 			}
 		}
 
-		// 3. Общие поля учётки — только переданные ключи.
+		// 4. Общие поля учётки — только переданные ключи.
 		var set setList
 		field(&set, "last_name", in.LastName)
 		field(&set, "first_name", in.FirstName)
@@ -356,6 +397,10 @@ func (r *Repository) AdminUpdate(ctx context.Context, id, actorID int64, in Admi
 		field(&set, "snils", in.Snils)
 		field(&set, "avatar_file_id", in.AvatarFileID)
 		field(&set, "is_active", in.IsActive)
+		if role != current {
+			admin := role == RoleAdmin
+			field(&set, "is_admin", Field[bool]{Set: true, Value: &admin})
+		}
 		if len(set.cols) > 0 {
 			q := `UPDATE app_user SET ` + set.sql() + ` WHERE id = ` + set.arg(id) // до чтения set.args
 			if _, err := tx.Exec(ctx, q, set.args...); err != nil {
@@ -363,39 +408,47 @@ func (r *Repository) AdminUpdate(ctx context.Context, id, actorID int64, in Admi
 			}
 		}
 
-		// 4. Роли: объект задаёт или заменяет роль, null снимает.
-		if err := referencesExist(ctx, tx, id, in.Student.Value, in.Teacher.Value); err != nil {
+		// 5. Профили: свой задаётся или заменяется, чужие снимаются.
+		if err := referencesExist(ctx, tx, in.Student.Value, in.Teacher.Value); err != nil {
 			return err
 		}
-		switch {
-		case in.Student.Value != nil:
+		if in.Student.Value != nil {
 			err = upsertStudent(ctx, tx, id, *in.Student.Value)
-		case in.Student.Set:
+		} else if !needStudent && hasStudent {
 			err = removeRole(ctx, tx, "student", id)
 		}
 		if err != nil {
 			return err
 		}
-		switch {
-		case in.Teacher.Value != nil:
+		if in.Teacher.Value != nil {
 			err = upsertTeacher(ctx, tx, id, *in.Teacher.Value)
-		case in.Teacher.Set:
+		} else if !needTeacher && hasTeacher {
 			err = removeRole(ctx, tx, "teacher", id)
 		}
 		if err != nil {
 			return err
 		}
 
-		// 5. Блокировка и изменение учебных ролей отзывают сессии (документация):
+		// 6. Блокировка и смена роли или профиля отзывают сессии:
 		// права в старом access-токене больше не верны, пользователь входит заново.
 		switch {
 		case blocking:
 			return revokeSessions(ctx, tx, id, "", "blocked")
-		case in.Student.Set || in.Teacher.Set:
+		case role != current || in.Student.Set || in.Teacher.Set:
 			return revokeSessions(ctx, tx, id, "", "roles_changed")
 		}
 		return nil
 	})
+}
+
+// ownerTx — actor — владелец системы; читается в транзакции изменения прав.
+func ownerTx(ctx context.Context, tx pgx.Tx, actorID int64) (bool, error) {
+	var ok bool
+	err := tx.QueryRow(ctx, `SELECT can_manage_admins FROM app_user WHERE id = $1 FOR SHARE`, actorID).Scan(&ok)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	return ok, database.Translate(err)
 }
 
 // setList собирает "col = $n, ..." для частичного UPDATE из полей Field.
@@ -508,14 +561,4 @@ func revokeSessions(ctx context.Context, tx pgx.Tx, userID int64, keepSid, reaso
 		UPDATE auth_session SET revoked_at = now(), revoke_reason = $3
 		WHERE user_id = $1 AND revoked_at IS NULL AND id::text <> $2`, userID, keepSid, reason)
 	return database.Translate(err)
-}
-
-// SetEmail меняет email. Ошибка проходит через userErr, чтобы занятый email
-// вернулся как 409 email_exists, а не как общая ошибка БД.
-func (r *Repository) SetEmail(ctx context.Context, id int64, email string) error {
-	tag, err := r.db.Exec(ctx, `UPDATE app_user SET email = $2 WHERE id = $1`, id, email)
-	if err != nil {
-		return userErr(err)
-	}
-	return database.Affected(tag, nil, "user_not_found")
 }

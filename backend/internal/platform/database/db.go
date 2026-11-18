@@ -2,6 +2,7 @@ package database
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -78,4 +79,40 @@ func FullName(alias string) string {
 // последний сегмент storage_key (см. internal/platform/filekey).
 func FileName(alias string) string {
 	return fmt.Sprintf("substring(%s.storage_key from '[^/]*$')", alias)
+}
+
+// FileInfo — метаданные файла в ответах API (схема FileInfo): без storage_key.
+type FileInfo struct {
+	ID        int64  `json:"id"`
+	Name      string `json:"name"`
+	MimeType  string `json:"mime_type"`
+	SizeBytes int64  `json:"size_bytes"`
+}
+
+// FileInfoJSON — SQL-выражение FileInfo (json) для строки таблицы file с алиасом alias
+// или NULL, если файла нет (LEFT JOIN). Старые записи без MIME и размера отдаются
+// как application/octet-stream и 0.
+func FileInfoJSON(alias string) string {
+	return fmt.Sprintf(`CASE WHEN %[1]s.id IS NULL THEN NULL ELSE json_build_object(
+		'id', %[1]s.id, 'name', %[2]s,
+		'mime_type', COALESCE(%[1]s.mime_type, 'application/octet-stream'),
+		'size_bytes', COALESCE(%[1]s.size_bytes, 0)) END`, alias, FileName(alias))
+}
+
+// ParseFileInfo разбирает результат FileInfoJSON; NULL — nil.
+func ParseFileInfo(raw []byte) (*FileInfo, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	var f FileInfo
+	if err := json.Unmarshal(raw, &f); err != nil {
+		return nil, err
+	}
+	return &f, nil
+}
+
+// RoleSQL — единственная роль пользователя (user_role): администратор, иначе
+// преподаватель, иначе студент. u — алиас app_user, t — LEFT JOIN teacher.
+func RoleSQL(u, t string) string {
+	return fmt.Sprintf(`CASE WHEN %s.is_admin THEN 'admin' WHEN %s.user_id IS NOT NULL THEN 'teacher' ELSE 'student' END`, u, t)
 }

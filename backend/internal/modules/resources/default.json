@@ -1,0 +1,13 @@
+{
+  "services": [
+    {
+      "id": "moodle",
+      "label": "Moodle LMS",
+      "description": "Учебные материалы и задания",
+      "url": "https://lms.nngasu.ru/",
+      "link_text": "Открыть Moodle",
+      "icon_key": "graduation-cap"
+    }
+  ],
+  "contacts": []
+}
