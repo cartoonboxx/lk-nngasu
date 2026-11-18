@@ -349,10 +349,19 @@ func (s *Service) GroupStudents(ctx context.Context, p middleware.Principal, gro
 
 // --- Свой профиль ---
 
-// UpdateProfile обновляет ФИО и аватар (ProfilePatchInput) и возвращает профиль.
+// UpdateProfile обновляет аватар и возвращает профиль; ФИО меняет только администратор.
 // Аватаром можно сделать только свой файл, иначе через этот метод
 // можно было бы получить доступ к чужому файлу.
 func (s *Service) UpdateProfile(ctx context.Context, id int64, in UpdateProfile) (User, error) {
+	if in.LastName.Set || in.FirstName.Set || in.MiddleNames.Set {
+		u, err := s.repo.Get(ctx, id)
+		if err != nil {
+			return User{}, err
+		}
+		if !u.IsAdmin {
+			return User{}, apperr.NewForbidden("profile_name_admin_only", "only administrators can change names")
+		}
+	}
 	if !(in.LastName.Set || in.FirstName.Set || in.MiddleNames.Set || in.AvatarFileID.Set) {
 		return User{}, errEmptyPatch
 	}
