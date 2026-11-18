@@ -1,8 +1,7 @@
 <template>
   <section :class="style.coursePage">
     <p v-if="$subjectsStore.loading">Загрузка курса…</p>
-    <p v-else-if="$subjectsStore.error" role="alert">
-      {{ $subjectsStore.error }}
+    <p v-else-if="$subjectsStore.error">
       <button @click="$subjectsStore.fetchSubject(String($route.params.id))">Повторить</button>
     </p>
     <p v-else-if="!subject">Предмет не найден</p>

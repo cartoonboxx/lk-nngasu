@@ -5,7 +5,7 @@
       paragraph="Приглашения и доступ к административной панели"
     />
     <p v-if="success" :class="style.success" role="status">{{ success }}</p>
-    <p v-if="error" :class="style.error" role="alert">{{ error }}</p>
+
     <div :class="style.toolbar">
       <h2>Аккаунты администраторов</h2>
       <Button variant="secondary" :loading="loading" :disabled="loading || submitting" @click="load"
@@ -134,6 +134,7 @@
 </template>
 
 <script lang="ts">
+import { apiNotifications } from '@/api/client'
 import { defineComponent } from 'vue'
 import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
@@ -158,15 +159,18 @@ interface Administrator {
 export default defineComponent({
   name: 'AdministratorsPage',
   components: { SectionHeader, TextInput, Button, StyleTab },
+  computed: {
+    auth() {
+      return useAuthStore()
+    },
+  },
   data() {
     return {
       style,
       pageStyle,
-      auth: useAuthStore(),
       administrators: [] as Administrator[],
       loading: false,
       submitting: false,
-      error: '',
       success: '',
       mode: 'invite' as 'invite' | 'promote',
       email: '',
@@ -175,19 +179,18 @@ export default defineComponent({
       currentPassword: '',
     }
   },
-  mounted() {
-    void this.load()
+  async mounted() {
+    await this.load()
   },
   methods: {
     async load() {
       if (this.loading) return
       this.loading = true
-      this.error = ''
+
       try {
         this.administrators = await this.auth.request<Administrator[]>('/admin/administrators')
       } catch (error) {
-        this.error =
-          error instanceof Error ? error.message : 'Не удалось загрузить администраторов.'
+        apiNotifications.onError?.(error)
       } finally {
         this.loading = false
       }
@@ -203,7 +206,7 @@ export default defineComponent({
     async submit() {
       if (this.submitting) return
       this.submitting = true
-      this.error = ''
+
       this.success = ''
       const mode = this.mode
       try {
@@ -229,7 +232,7 @@ export default defineComponent({
         this.lastName = ''
         await this.load()
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Не удалось предоставить доступ.'
+        apiNotifications.onError?.(error)
       } finally {
         this.currentPassword = ''
         this.submitting = false

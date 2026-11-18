@@ -67,12 +67,9 @@
           >Настроить первый аккаунт администратора</RouterLink
         >
       </p>
-      <p v-if="signInError" :class="style.error" role="alert">{{ signInError }}</p>
+
       <p v-if="$route.query.reason === 'password-changed'" role="status">
         Пароль изменён. Войдите с новым паролем.
-      </p>
-      <p v-if="$route.query.reason === 'server-unavailable'" :class="style.error" role="alert">
-        Не удалось восстановить сессию. Проверьте подключение к серверу и повторите вход.
       </p>
     </form>
   </AuthLayout>
@@ -89,7 +86,7 @@ import Checkbox from '@/components/UI/inputs/Checkbox/Checkbox.vue'
 import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
 import style from '../AuthForm.module.scss'
 import { useAuthStore } from '@/stores/auth'
-import { apiRequest } from '@/api/client'
+import { apiNotifications, apiRequest } from '@/api/client'
 
 export default defineComponent({
   name: 'AuthorizationPage',
@@ -103,20 +100,28 @@ export default defineComponent({
     PhEyeSlash,
     TextInput,
   },
+  computed: {
+    auth() {
+      return useAuthStore()
+    },
+  },
   data() {
     return {
       style,
-      auth: useAuthStore(),
       submitting: false,
       setupAvailable: false,
       login: '',
-      signInError: '',
       password: '',
       rememberMe: false,
       showPassword: false,
     }
   },
   async mounted() {
+    if (this.$route.query.reason === 'server-unavailable') {
+      this.$utilityStore.notifyError(
+        'Не удалось восстановить сессию. Проверьте подключение к серверу и повторите вход.',
+      )
+    }
     try {
       const status = await apiRequest<{ available: boolean }>('/auth/setup')
       this.setupAvailable = status.available
@@ -128,7 +133,7 @@ export default defineComponent({
     async signIn() {
       if (this.submitting) return
       this.submitting = true
-      this.signInError = ''
+
       try {
         await this.auth.signIn(this.login, this.password, this.rememberMe)
         this.password = ''
@@ -139,8 +144,7 @@ export default defineComponent({
             : { name: this.auth.user?.is_admin ? 'admin-requests' : 'dashboard' },
         )
       } catch (error) {
-        this.signInError =
-          error instanceof Error ? error.message : 'Не удалось войти. Повторите попытку.'
+        apiNotifications.onError?.(error)
       } finally {
         this.submitting = false
       }

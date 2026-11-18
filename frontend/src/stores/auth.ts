@@ -173,15 +173,24 @@ export const useAuthStore = defineStore('auth', {
       if (this.refreshPromise) return this.refreshPromise
       this.refreshPromise = (async () => {
         try {
-          const csrf = await apiRequest<{ csrf_token: string }>('/auth/csrf', {
-            notifyOnError: false,
-          })
-          this.session = await apiRequest<AuthToken>('/auth/refresh', {
-            notifyOnError: false,
-            method: 'POST',
-            headers: { 'X-CSRF-Token': csrf.csrf_token },
-          })
-          this.initialized = true
+          const renewSession = async () => {
+            // Cookie общая у вкладок: читаем CSRF только после получения блокировки.
+            const csrf = await apiRequest<{ csrf_token: string }>('/auth/csrf', {
+              notifyOnError: false,
+            })
+            const session = await apiRequest<AuthToken>('/auth/refresh', {
+              notifyOnError: false,
+              method: 'POST',
+              headers: { 'X-CSRF-Token': csrf.csrf_token },
+            })
+            this.initialized = true
+            this.session = session
+          }
+          if (typeof navigator !== 'undefined' && navigator.locks) {
+            await navigator.locks.request('lk-nngasu-auth-session', renewSession)
+          } else {
+            await renewSession()
+          }
         } catch (error) {
           if (error instanceof ApiError && (error.status === 401 || error.status === 403)) {
             this.session = null
@@ -208,33 +217,47 @@ export const useAuthStore = defineStore('auth', {
 
     async signIn(email: string, password: string, rememberMe: boolean) {
       if (this.refreshPromise) await this.refreshPromise
-      const session = await apiRequest<AuthToken>('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email: email.trim(), password, remember_me: rememberMe }),
-      })
-      this.initialized = true
-      this.session = session
+      const createSession = async () => {
+        const session = await apiRequest<AuthToken>('/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ email: email.trim(), password, remember_me: rememberMe }),
+        })
+        this.initialized = true
+        this.session = session
+      }
+      if (typeof navigator !== 'undefined' && navigator.locks) {
+        await navigator.locks.request('lk-nngasu-auth-session', createSession)
+      } else {
+        await createSession()
+      }
     },
 
     async signOut() {
       if (this.refreshPromise) await this.refreshPromise
-      try {
-        const csrf = await apiRequest<{ csrf_token: string }>('/auth/csrf', {
-          notifyOnError: false,
-        })
-        await apiRequest<void>('/auth/logout', {
-          notifyOnError: false,
-          method: 'POST',
-          headers: { 'X-CSRF-Token': csrf.csrf_token },
-        })
-      } catch (error) {
-        if (!(error instanceof ApiError) || error.status !== 401) {
-          apiNotifications.onError?.(error)
-          throw error
+      const endSession = async () => {
+        try {
+          const csrf = await apiRequest<{ csrf_token: string }>('/auth/csrf', {
+            notifyOnError: false,
+          })
+          await apiRequest<void>('/auth/logout', {
+            notifyOnError: false,
+            method: 'POST',
+            headers: { 'X-CSRF-Token': csrf.csrf_token },
+          })
+        } catch (error) {
+          if (!(error instanceof ApiError) || error.status !== 401) {
+            apiNotifications.onError?.(error)
+            throw error
+          }
         }
+        this.session = null
+        this.initialized = true
       }
-      this.session = null
-      this.initialized = true
+      if (typeof navigator !== 'undefined' && navigator.locks) {
+        await navigator.locks.request('lk-nngasu-auth-session', endSession)
+      } else {
+        await endSession()
+      }
     },
   },
 })

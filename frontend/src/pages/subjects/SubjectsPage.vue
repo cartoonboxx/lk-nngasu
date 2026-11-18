@@ -13,8 +13,8 @@
     </section>
 
     <p v-if="$subjectsStore.loading">Загрузка предметов…</p>
-    <p v-else-if="$subjectsStore.error" role="alert">
-      {{ $subjectsStore.error }} <button @click="$subjectsStore.fetchSubjects()">Повторить</button>
+    <p v-else-if="$subjectsStore.error">
+      <button @click="$subjectsStore.fetchSubjects()">Повторить</button>
     </p>
     <p v-else-if="!filteredSubjects.length">Предметы не найдены</p>
     <section v-else :class="style.pageSubjectSemester">
@@ -62,7 +62,6 @@ export default defineComponent({
       style,
       buttonStyle,
       baseButtonStyle,
-
       searchQuery: '',
       selectedSemester: 'all',
     }

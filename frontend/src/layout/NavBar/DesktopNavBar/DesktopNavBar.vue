@@ -135,16 +135,19 @@ export default defineComponent({
   components: { Badge, PhSidebarSimple, BrandHeader, StudentCard, NavTab, IconButton, Tooltip },
   emits: ['collapse-change'],
   data() {
-    return { style, collapsed: false, auth: useAuthStore() }
+    return { style, collapsed: false }
   },
   methods: {
-    navigate(routeName: string) {
+    async navigate(routeName: string) {
       if (this.$route.name !== routeName) {
-        void this.$router.push({ name: routeName })
+        await this.$router.push({ name: routeName })
       }
     },
   },
   computed: {
+    auth() {
+      return useAuthStore()
+    },
     unreadMessages(): number {
       return this.$messageStore.unreadMessages
     },

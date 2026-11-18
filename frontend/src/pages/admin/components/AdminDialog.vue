@@ -19,7 +19,7 @@
           <PhX :size="20" />
         </IconButton>
       </header>
-      <p v-if="$adminStore.error" :class="style.error" role="alert">{{ $adminStore.error }}</p>
+
       <slot />
     </section>
   </Modal>

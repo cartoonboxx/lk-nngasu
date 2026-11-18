@@ -108,8 +108,9 @@ export default defineComponent({
     },
     items: {
       deep: true,
-      handler() {
-        void this.$nextTick(this.updatePosition)
+      async handler() {
+        await this.$nextTick()
+        this.updatePosition()
       },
     },
   },
@@ -188,14 +189,14 @@ export default defineComponent({
           ?.querySelector<HTMLButtonElement>('button')
           ?.focus()
     },
-    toggle() {
+    async toggle() {
       if (this.open) this.close()
-      else void this.show()
+      else await this.show()
     },
-    onTriggerKeydown(event: KeyboardEvent) {
+    async onTriggerKeydown(event: KeyboardEvent) {
       if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return
       event.preventDefault()
-      void this.show(event.key === 'ArrowUp')
+      await this.show(event.key === 'ArrowUp')
     },
     select(item: FloatingPopupItem) {
       if (item.disabled) return

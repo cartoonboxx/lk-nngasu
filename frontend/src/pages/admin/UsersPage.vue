@@ -123,6 +123,7 @@
   </section>
 </template>
 <script lang="ts">
+import { apiNotifications } from '@/api/client'
 import StatusBadge from '@/components/UI/StatusBadge/StatusBadge.vue'
 import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import Select from '@/components/UI/inputs/Select/Select.vue'
@@ -169,7 +170,6 @@ export default defineComponent({
       ],
       columns: ['Пользователь', 'Принадлежность', 'Доступ', 'Действия'],
       style,
-      auth: useAuthStore(),
       detailLoading: false,
       search: '',
       active: '',
@@ -182,6 +182,9 @@ export default defineComponent({
     }
   },
   computed: {
+    auth() {
+      return useAuthStore()
+    },
     groupNames(): Record<number, string> {
       return Object.fromEntries(
         (this.$adminStore.data?.catalogs.groups ?? []).map((item) => [item.id, item.name]),
@@ -203,13 +206,13 @@ export default defineComponent({
       )
     },
   },
-  mounted() {
+  async mounted() {
     const user = this.$adminStore.data?.users.find(
       (item) => item.id === Number(this.$route.query.user),
     )
-    if (user) void this.openUser(user)
+    if (user) await this.openUser(user)
     else if (Number(this.$route.query.user) > 0)
-      void this.openUser({ id: Number(this.$route.query.user) } as AdminUser)
+      await this.openUser({ id: Number(this.$route.query.user) } as AdminUser)
   },
   methods: {
     async openUser(item?: AdminUser) {
@@ -235,6 +238,7 @@ export default defineComponent({
             }
         this.opened = true
       } catch (error) {
+        apiNotifications.onError?.(error)
         this.$adminStore.error =
           error instanceof Error ? error.message : 'Не удалось загрузить пользователя.'
       } finally {

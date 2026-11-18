@@ -79,7 +79,7 @@
         >
       </template>
       <p v-else-if="!loading && !error">Первоначальная настройка отключена или уже завершена.</p>
-      <p v-if="error" :class="style.error" role="alert">{{ error }}</p>
+
       <RouterLink :class="style.link" to="/authorization">Перейти ко входу</RouterLink>
     </form>
   </AuthLayout>
@@ -91,7 +91,7 @@ import { RouterLink } from 'vue-router'
 import AuthLayout from '../AuthLayout/AuthLayout.vue'
 import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
-import { ApiError, apiRequest } from '@/api/client'
+import { apiNotifications, ApiError, apiRequest } from '@/api/client'
 import style from '../AuthForm.module.scss'
 
 export default defineComponent({
@@ -118,6 +118,7 @@ export default defineComponent({
       const status = await apiRequest<{ available: boolean }>('/auth/setup')
       this.available = status.available
     } catch (error) {
+      apiNotifications.onError?.(error)
       this.error =
         error instanceof Error ? error.message : 'Не удалось проверить доступность настройки.'
     } finally {
@@ -130,10 +131,12 @@ export default defineComponent({
       this.error = ''
       if (this.password !== this.confirmation) {
         this.error = 'Пароли не совпадают.'
+        this.$utilityStore.notifyError('Пароли не совпадают.')
         return
       }
       if ([...this.password].length < 8 || new TextEncoder().encode(this.password).length > 72) {
         this.error = 'Пароль должен содержать от 8 символов до 72 байт UTF-8.'
+        this.$utilityStore.notifyError('Пароль должен содержать от 8 символов до 72 байт UTF-8.')
         return
       }
       this.submitting = true
@@ -153,6 +156,7 @@ export default defineComponent({
         this.password = ''
         this.confirmation = ''
       } catch (error) {
+        apiNotifications.onError?.(error)
         this.error = error instanceof Error ? error.message : 'Не удалось создать владельца.'
         if (error instanceof ApiError && error.code === 'setup_closed') this.available = false
       } finally {

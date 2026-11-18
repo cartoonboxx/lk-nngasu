@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ApiError, type ApiPage } from '@/api/client'
+import { apiNotifications, ApiError, type ApiPage } from '@/api/client'
 import { useAuthStore } from './auth'
 import {
   adminRepository,
@@ -191,6 +191,7 @@ export const useAdminStore = defineStore('adminStore', {
         return true
       } catch (error) {
         if (version === this.sessionVersion) {
+          apiNotifications.onError?.(error)
           this.error =
             error instanceof Error ? error.message : 'Не удалось сохранить изменения на сервере.'
         }

@@ -3,8 +3,8 @@
     <SectionHeader header="Новости" paragraph="Новости и объявления университета" />
     <StyleInput v-model="searchQuery" placeholder="Поиск новостей" full-width />
     <p v-if="cabinet.newsLoading">Загрузка новостей…</p>
-    <p v-else-if="cabinet.newsError" role="alert">
-      {{ cabinet.newsError }} <button @click="cabinet.fetchNews()">Повторить</button>
+    <p v-else-if="cabinet.newsError">
+      <button @click="cabinet.fetchNews()">Повторить</button>
     </p>
     <p v-else-if="!news.length" :class="style.empty">
       {{ searchQuery ? 'По вашему запросу ничего не найдено.' : 'Новостей пока нет.' }}
@@ -32,12 +32,15 @@ export default defineComponent({
   name: 'NewsPage',
   components: { SectionHeader, StyleInput, NewsCard },
   data() {
-    return { style, cabinet: useCabinetStore(), searchQuery: '' }
+    return { style, searchQuery: '' }
   },
-  created() {
-    void this.cabinet.fetchNews()
+  async created() {
+    await this.cabinet.fetchNews()
   },
   computed: {
+    cabinet() {
+      return useCabinetStore()
+    },
     news() {
       const query = this.searchQuery.trim().toLocaleLowerCase('ru')
       return this.cabinet.news.filter((item) =>

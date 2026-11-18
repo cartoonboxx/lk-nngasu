@@ -102,14 +102,14 @@
         variant="primary"
         size="lg"
         type="submit"
-        :disabled="submitting || !acceptedTerms || passwordMismatch"
+        :disabled="submitting || !acceptedTerms"
         :loading="submitting"
         full-width
       >
         <span>Отправить заявку</span>
       </Button>
       <p :class="style.hint">Вход станет доступен после одобрения заявки администратором.</p>
-      <p v-if="registrationError" :class="style.error" role="alert">{{ registrationError }}</p>
+
       <p :class="style.footer">
         Уже есть аккаунт? <RouterLink :class="style.link" to="/authorization">Войти</RouterLink>
       </p>
@@ -135,7 +135,7 @@ import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 import Checkbox from '@/components/UI/inputs/Checkbox/Checkbox.vue'
 import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
 import style from '../AuthForm.module.scss'
-import { ApiError, apiRequest } from '@/api/client'
+import { apiNotifications, ApiError, apiRequest } from '@/api/client'
 
 export default defineComponent({
   name: 'RegistrationComponent',
@@ -153,7 +153,6 @@ export default defineComponent({
     return {
       style,
       submitting: false,
-      registrationError: '',
       fieldErrors: {} as Record<string, string>,
       receipt: null as { id: number; status: 'pending'; created_at: string } | null,
       email: '',
@@ -169,7 +168,7 @@ export default defineComponent({
   methods: {
     async register() {
       if (this.submitting || this.receipt) return
-      this.registrationError = ''
+
       this.fieldErrors = {}
       const passport = this.passport.replace(/[^0-9]/g, '')
       const snils = this.snils.replace(/[^0-9]/g, '')
@@ -178,12 +177,19 @@ export default defineComponent({
       if ([...this.password].length < 8 || new TextEncoder().encode(this.password).length > 72) {
         this.fieldErrors.password = 'Пароль должен содержать от 8 символов до 72 байт UTF-8.'
       }
-      if (
-        Object.keys(this.fieldErrors).length ||
-        this.password !== this.confirmPassword ||
-        !this.acceptedTerms
-      )
+      if (this.password !== this.confirmPassword) {
+        this.$utilityStore.notifyError('Пароли не совпадают. Проверьте введённые значения.')
         return
+      }
+      if (!this.acceptedTerms) {
+        this.$utilityStore.notifyError('Примите условия использования личного кабинета.')
+        return
+      }
+      const validationError = Object.values(this.fieldErrors)[0]
+      if (validationError) {
+        this.$utilityStore.notifyError(validationError)
+        return
+      }
       this.submitting = true
       try {
         this.receipt = await apiRequest<{ id: number; status: 'pending'; created_at: string }>(
@@ -205,8 +211,8 @@ export default defineComponent({
         this.passport = ''
         this.snils = ''
       } catch (error) {
-        this.registrationError =
-          error instanceof Error ? error.message : 'Не удалось отправить заявку.'
+        apiNotifications.onError?.(error)
+
         if (error instanceof ApiError) {
           const fieldMessages: Record<string, string> = {
             email: 'Введите корректную электронную почту длиной до 255 символов.',
@@ -218,8 +224,9 @@ export default defineComponent({
             if (fieldMessages[field]) this.fieldErrors[field] = fieldMessages[field]
           }
           if (error.fields.terms_version) {
-            this.registrationError =
-              'Условия использования обновились. Обновите страницу или обратитесь к администратору.'
+            this.$utilityStore.notifyError(
+              'Условия использования обновились. Обновите страницу или обратитесь к администратору.',
+            )
           }
         }
       } finally {

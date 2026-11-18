@@ -19,8 +19,7 @@
         :class="style.input"
         @update:model-value="$scheduleStore.fetchSchedule()"
       />
-      <p v-if="$scheduleStore.groupsError" role="alert">
-        {{ $scheduleStore.groupsError }}
+      <p v-if="$scheduleStore.groupsError">
         <button @click="$scheduleStore.fetchGroups()">Повторить</button>
       </p>
     </div>
@@ -44,8 +43,8 @@ export default defineComponent({
     PhCaretLeft,
     PhCaretRight,
   },
-  created() {
-    void this.$scheduleStore.fetchGroups()
+  async created() {
+    await this.$scheduleStore.fetchGroups()
   },
   computed: {
     groupOptions() {

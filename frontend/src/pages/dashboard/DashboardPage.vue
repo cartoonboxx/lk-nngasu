@@ -4,8 +4,12 @@
     <section :class="style.content">
       <div :class="style.scheduler">
         <p v-if="$scheduleStore.loading">Загрузка расписания…</p>
-        <p v-else-if="$scheduleStore.error" role="alert">{{ $scheduleStore.error }}</p>
-        <ScheduleDay v-else :class="style.scheduleCard" :lessons="lessons" layout="list">
+        <ScheduleDay
+          v-else-if="!$scheduleStore.error"
+          :class="style.scheduleCard"
+          :lessons="lessons"
+          layout="list"
+        >
           <template #header>
             <div :class="style.headerScheduler">
               <PhCalendar size="24" />
@@ -42,10 +46,10 @@ export default defineComponent({
     SectionHeader,
   },
   directives: { press: pressFeedback },
-  created() {
+  async created() {
     this.$scheduleStore.groupId = ''
     const today = new Date()
-    void this.$scheduleStore.fetchSchedule(today, today)
+    await this.$scheduleStore.fetchSchedule(today, today)
   },
   computed: {
     lessons() {

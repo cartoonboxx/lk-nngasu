@@ -30,9 +30,6 @@
         <slot name="actions" />
       </template>
     </Input>
-    <p v-if="error" :id="`${fieldId}-error`" :class="style.error" role="alert">
-      {{ error }}
-    </p>
   </div>
 </template>
 

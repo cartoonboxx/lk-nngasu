@@ -48,9 +48,6 @@
         </div>
       </div>
 
-      <p v-if="avatarError || auth.avatarError" :class="style.passwordError" role="alert">
-        {{ avatarError || auth.avatarError }}
-      </p>
       <div :class="style.settingsSectionRow">
         <div>
           <h2>Тема интерфейса</h2>
@@ -97,7 +94,6 @@
           >Выйти из аккаунта</Button
         >
       </div>
-      <p v-if="logoutError" :class="style.passwordError" role="alert">{{ logoutError }}</p>
 
       <Modal v-model="isPasswordModalOpen" :width="460" @close="resetPasswordForm">
         <template #default="{ close }">
@@ -173,10 +169,6 @@
               </template>
             </TextInput>
 
-            <p v-if="passwordError" :class="style.passwordError" role="alert">
-              {{ passwordError }}
-            </p>
-
             <div :class="style.passwordActions">
               <Button variant="secondary" type="button" :disabled="savingPassword" @click="close">
                 Отмена
@@ -194,6 +186,7 @@
 </template>
 
 <script lang="ts">
+import { apiNotifications } from '@/api/client'
 import { useFilesStore } from '@/stores/files'
 import { useAuthStore } from '@/stores/auth'
 import { defineComponent } from 'vue'
@@ -222,15 +215,18 @@ export default defineComponent({
     PhEyeSlash,
   },
 
+  computed: {
+    auth() {
+      return useAuthStore()
+    },
+  },
   data() {
     return {
       style,
-      auth: useAuthStore(),
       loggingOut: false,
       savingAvatar: false,
-      avatarError: '',
       savingPassword: false,
-      logoutError: '',
+
       isPasswordModalOpen: false,
       showCurrentPassword: false,
       showNewPassword: false,
@@ -238,8 +234,6 @@ export default defineComponent({
       currentPassword: '',
       newPassword: '',
       confirmPassword: '',
-      passwordError: '',
-
       themeOptions: [
         { value: 'system', label: 'Системная' },
         { value: 'light', label: 'Светлая' },
@@ -254,12 +248,12 @@ export default defineComponent({
       const file = input.files?.[0]
       input.value = ''
       if (!file || this.savingAvatar) return
-      this.avatarError = ''
+
       if (
         file.size > 2 * 1024 * 1024 ||
         !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)
       ) {
-        this.avatarError = 'Выберите JPEG, PNG или WebP размером до 2 МБ.'
+        this.$utilityStore.notifyError('Выберите JPEG, PNG или WebP размером до 2 МБ.')
         return
       }
       const userId = this.auth.user?.id
@@ -269,7 +263,7 @@ export default defineComponent({
         if (this.auth.user?.id !== userId) return
         await this.auth.updateMe({ avatar_file_id: uploaded.id })
       } catch (error) {
-        this.avatarError = error instanceof Error ? error.message : 'Не удалось изменить фото.'
+        apiNotifications.onError?.(error)
       } finally {
         this.savingAvatar = false
       }
@@ -277,11 +271,11 @@ export default defineComponent({
     async removeAvatar() {
       if (this.savingAvatar) return
       this.savingAvatar = true
-      this.avatarError = ''
+
       try {
         await this.auth.updateMe({ avatar_file_id: null })
       } catch (error) {
-        this.avatarError = error instanceof Error ? error.message : 'Не удалось удалить фото.'
+        apiNotifications.onError?.(error)
       } finally {
         this.savingAvatar = false
       }
@@ -289,12 +283,12 @@ export default defineComponent({
     async signOut() {
       if (this.loggingOut) return
       this.loggingOut = true
-      this.logoutError = ''
+
       try {
         await this.auth.signOut()
         await this.$router.replace({ name: 'authorization' })
       } catch (error) {
-        this.logoutError = error instanceof Error ? error.message : 'Не удалось завершить сессию.'
+        apiNotifications.onError?.(error)
       } finally {
         this.loggingOut = false
       }
@@ -303,7 +297,6 @@ export default defineComponent({
       this.currentPassword = ''
       this.newPassword = ''
       this.confirmPassword = ''
-      this.passwordError = ''
 
       this.showCurrentPassword = false
       this.showNewPassword = false
@@ -312,15 +305,14 @@ export default defineComponent({
 
     async submitPasswordChange() {
       if (this.savingPassword) return
-      this.passwordError = ''
 
       if (this.newPassword !== this.confirmPassword) {
-        this.passwordError = 'Новые пароли не совпадают.'
+        this.$utilityStore.notifyError('Новые пароли не совпадают.')
         return
       }
 
       if (this.newPassword === this.currentPassword) {
-        this.passwordError = 'Новый пароль должен отличаться от текущего.'
+        this.$utilityStore.notifyError('Новый пароль должен отличаться от текущего.')
         return
       }
 
@@ -328,7 +320,7 @@ export default defineComponent({
         [...this.newPassword].length < 8 ||
         new TextEncoder().encode(this.newPassword).length > 72
       ) {
-        this.passwordError = 'Пароль должен содержать от 8 символов до 72 байт UTF-8.'
+        this.$utilityStore.notifyError('Пароль должен содержать от 8 символов до 72 байт UTF-8.')
         return
       }
       this.savingPassword = true
@@ -337,7 +329,7 @@ export default defineComponent({
         this.resetPasswordForm()
         await this.$router.replace({ name: 'authorization', query: { reason: 'password-changed' } })
       } catch (error) {
-        this.passwordError = error instanceof Error ? error.message : 'Не удалось изменить пароль.'
+        apiNotifications.onError?.(error)
       } finally {
         this.savingPassword = false
       }

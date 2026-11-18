@@ -19,7 +19,7 @@
         >
       </header>
       <p v-if="loading">Загрузка задания…</p>
-      <p v-if="error" :class="style.error" role="alert">{{ error }}</p>
+
       <Button v-if="!loading && !assignment" variant="secondary" @click="load">Повторить</Button>
       <template v-if="assignment && !loading">
         <section :class="style.task">
@@ -92,6 +92,7 @@
   </Modal>
 </template>
 <script lang="ts">
+import { apiNotifications } from '@/api/client'
 import { defineComponent } from 'vue'
 import Modal from '@/components/UI/modal/BaseModal/Modal.vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
@@ -113,18 +114,19 @@ export default defineComponent({
   data() {
     return {
       style,
-      auth: useAuthStore(),
       assignment: null as Assignment | null,
       attachments: [] as AssignmentAttachment[],
       comment: '',
       loading: false,
       saving: false,
-      error: '',
       success: false,
       version: 0,
     }
   },
   computed: {
+    auth() {
+      return useAuthStore()
+    },
     reviewed(): boolean {
       return this.assignment?.submission?.status === 'reviewed'
     },
@@ -132,8 +134,8 @@ export default defineComponent({
   watch: {
     modelValue: {
       immediate: true,
-      handler(open: boolean) {
-        if (open) void this.load()
+      async handler(open: boolean) {
+        if (open) await this.load()
         else this.version++
       },
     },
@@ -145,7 +147,7 @@ export default defineComponent({
     async load() {
       const version = ++this.version
       this.loading = true
-      this.error = ''
+
       this.success = false
       this.assignment = null
       this.attachments = []
@@ -161,22 +163,21 @@ export default defineComponent({
           size: 0,
         }))
       } catch (error) {
-        if (version === this.version)
-          this.error = error instanceof Error ? error.message : 'Не удалось загрузить задание.'
+        apiNotifications.onError?.(error)
       } finally {
         if (version === this.version) this.loading = false
       }
     },
     addFiles(event: Event) {
       const input = event.target as HTMLInputElement
-      this.error = ''
+
       for (const file of Array.from(input.files ?? [])) {
         if (
           this.attachments.length >= 5 ||
           file.size > 15 * 1024 * 1024 ||
           !/\.(pdf|docx|pptx|xlsx|xls|zip|rar)$/i.test(file.name)
         ) {
-          this.error = 'Проверьте тип, размер и количество файлов.'
+          this.$utilityStore.notifyError('Проверьте тип, размер и количество файлов.')
           continue
         }
         this.attachments.push({ id: crypto.randomUUID(), name: file.name, size: file.size, file })
@@ -194,18 +195,17 @@ export default defineComponent({
       } else await this.download(Number(attachment.id), attachment.name)
     },
     async download(id: number, name: string) {
-      this.error = ''
       try {
         await useFilesStore().download(id, name)
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Не удалось скачать файл.'
+        apiNotifications.onError?.(error)
       }
     },
     async submit() {
       if (this.saving || this.reviewed || !this.assignment) return
       const version = this.version
       this.saving = true
-      this.error = ''
+
       this.success = false
       try {
         const submission = await this.$subjectsStore.submitAnswer(this.assignment.id, {
@@ -217,7 +217,7 @@ export default defineComponent({
         this.success = true
         this.$emit('submitted')
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Не удалось отправить ответ.'
+        apiNotifications.onError?.(error)
       } finally {
         this.saving = false
       }

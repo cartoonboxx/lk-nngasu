@@ -28,7 +28,6 @@
           >
         </div>
       </div>
-      <p v-if="error" role="alert">{{ error }}</p>
     </section>
     <section :class="style.assignmentSection">
       <p v-if="!topic.assignments.length">Задания пока не добавлены</p>
@@ -59,6 +58,7 @@
   </section>
 </template>
 <script lang="ts">
+import { apiNotifications } from '@/api/client'
 import { defineComponent, type PropType } from 'vue'
 import MediaButton from '@/components/UI/buttons/MediaButton/MediaButton.vue'
 import { PhFileText } from '@phosphor-icons/vue'
@@ -76,7 +76,7 @@ export default defineComponent({
   },
   emits: ['previous', 'next', 'open-assignment'],
   data() {
-    return { style, error: '' }
+    return { style }
   },
   methods: {
     safeLink(url: string | null): boolean {
@@ -88,11 +88,10 @@ export default defineComponent({
       }
     },
     async download(id: number, name: string) {
-      this.error = ''
       try {
         await useFilesStore().download(id, name)
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Не удалось скачать файл.'
+        apiNotifications.onError?.(error)
       }
     },
   },

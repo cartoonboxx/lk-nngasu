@@ -349,10 +349,11 @@ export default defineComponent({
       if (this.modelValue) this.close()
       this.$emit('close')
     },
-    updateViewport() {
+    async updateViewport() {
       this.viewportHeight = window.visualViewport?.height ?? window.innerHeight
       this.viewportTop = window.visualViewport?.offsetTop ?? 0
-      void this.$nextTick(this.updatePosition)
+      await this.$nextTick()
+      this.updatePosition()
     },
     onViewportChange() {
       this.cancelDrag()

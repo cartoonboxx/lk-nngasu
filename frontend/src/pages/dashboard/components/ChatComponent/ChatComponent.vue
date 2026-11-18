@@ -7,8 +7,8 @@
       </RouterLink>
     </header>
     <p v-if="$messageStore.loading">Загрузка чатов…</p>
-    <p v-else-if="$messageStore.error" role="alert">
-      {{ $messageStore.error }} <button @click="$messageStore.fetchChats()">Повторить</button>
+    <p v-else-if="$messageStore.error">
+      <button @click="$messageStore.fetchChats()">Повторить</button>
     </p>
     <ul v-else-if="chats.length" :class="style.list">
       <li v-for="chat in chats" :key="chat.id">
@@ -67,8 +67,8 @@ export default defineComponent({
   name: 'ChatComponent',
   components: { Badge, RouterLink, PhChatsCircle, PhNotePencil, PhArrowUpRight, PhUsersThree },
   directives: { press: pressFeedback },
-  created() {
-    void this.$messageStore.fetchChats()
+  async created() {
+    await this.$messageStore.fetchChats()
   },
   data() {
     return {

@@ -10,11 +10,11 @@
       :semester-options="semesterOptions"
     />
     <p v-if="cabinet.gradesLoading">Загрузка оценок…</p>
-    <p v-else-if="cabinet.gradesError" role="alert">
-      {{ cabinet.gradesError }} <button @click="cabinet.fetchGrades()">Повторить</button>
+    <p v-else-if="cabinet.gradesError">
+      <button @click="cabinet.fetchGrades()">Повторить</button>
     </p>
     <p v-if="detailsLoading">Загрузка ответа…</p>
-    <p v-if="detailsError" role="alert">{{ detailsError }}</p>
+
     <GradesTable
       v-if="!cabinet.gradesLoading && !cabinet.gradesError"
       :assignments="filteredAssignments"
@@ -38,6 +38,7 @@
 </template>
 
 <script lang="ts">
+import { apiNotifications } from '@/api/client'
 import { defineComponent } from 'vue'
 import { PhInfo } from '@phosphor-icons/vue'
 import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
@@ -60,8 +61,6 @@ export default defineComponent({
   data() {
     return {
       style,
-      cabinet: useCabinetStore(),
-      detailsError: '',
       detailsLoading: false,
       detailsVersion: 0,
       search: '',
@@ -72,8 +71,8 @@ export default defineComponent({
       selectedAssignment: null as GradeAssignment | null,
     }
   },
-  created() {
-    void this.cabinet.fetchGrades()
+  async created() {
+    await this.cabinet.fetchGrades()
   },
   beforeUnmount() {
     this.detailsVersion++
@@ -82,7 +81,7 @@ export default defineComponent({
     async openDetails(row: GradeAssignment) {
       const version = ++this.detailsVersion
       this.detailsLoading = true
-      this.detailsError = ''
+
       try {
         const assignment = await this.$subjectsStore.getAssignment(row.id)
         if (version !== this.detailsVersion) return
@@ -96,14 +95,16 @@ export default defineComponent({
         }
         this.detailsOpen = true
       } catch (error) {
-        if (version === this.detailsVersion)
-          this.detailsError = error instanceof Error ? error.message : 'Не удалось загрузить ответ.'
+        apiNotifications.onError?.(error)
       } finally {
         if (version === this.detailsVersion) this.detailsLoading = false
       }
     },
   },
   computed: {
+    cabinet() {
+      return useCabinetStore()
+    },
     semesterOptions() {
       return [
         { label: 'Все семестры', value: 'all' },

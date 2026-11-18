@@ -10,8 +10,7 @@
         <p v-if="$adminStore.success" :class="style.success" role="status">
           {{ $adminStore.success }}
         </p>
-        <div v-if="$adminStore.error" :class="style.error" role="alert">
-          {{ $adminStore.error }}
+        <div v-if="$adminStore.error" :class="style.error">
           <Button
             v-if="!$adminStore.data"
             variant="ghost"
@@ -37,23 +36,28 @@ import layout from './AdminLayout.module.scss'
 import style from './Admin.module.scss'
 export default defineComponent({
   components: { RouterView, Button, AdminNavigation },
-  data() {
-    return { home, layout, style, auth: useAuthStore(), collapsed: false, mobileMenuOpen: false }
+  computed: {
+    auth() {
+      return useAuthStore()
+    },
   },
-  mounted() {
-    void this.$adminStore.initialize(String(this.$route.name))
+  data() {
+    return { home, layout, style, collapsed: false, mobileMenuOpen: false }
+  },
+  async mounted() {
+    await this.$adminStore.initialize(String(this.$route.name))
   },
   watch: {
-    'auth.user'() {
+    async 'auth.user'() {
       if (!this.auth.user) {
-        void this.$router.replace({
+        await this.$router.replace({
           name: 'authorization',
           query: { redirect: this.$route.fullPath },
         })
       }
     },
-    '$route.name'() {
-      void this.$adminStore.initialize(String(this.$route.name))
+    async '$route.name'() {
+      await this.$adminStore.initialize(String(this.$route.name))
     },
   },
 })

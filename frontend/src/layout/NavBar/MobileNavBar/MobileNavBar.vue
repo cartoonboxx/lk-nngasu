@@ -95,7 +95,6 @@ export default defineComponent({
   data() {
     return {
       style,
-      auth: useAuthStore(),
       isMobile: false,
       mobileOpen: false,
       mediaQuery: null as MediaQueryList | null,
@@ -132,10 +131,10 @@ export default defineComponent({
         if (menu === document.activeElement) menu.blur()
       }
     },
-    navigate(routeName: string) {
+    async navigate(routeName: string) {
       this.closeMobileMenu()
       if (this.$route.name !== routeName) {
-        void this.$router.push({ name: routeName })
+        await this.$router.push({ name: routeName })
       }
 
       this.scrollToStart()
@@ -145,6 +144,9 @@ export default defineComponent({
     },
   },
   computed: {
+    auth() {
+      return useAuthStore()
+    },
     conversationOpen(): boolean {
       return (
         this.$route.name === 'messages' &&

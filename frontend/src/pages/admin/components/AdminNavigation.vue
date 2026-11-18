@@ -119,7 +119,7 @@
   <AdminDialog v-model="accountOpen" title="Аккаунт администратора">
     <p>{{ auth.user?.full_name }} · {{ auth.roleLabel }}</p>
     <p :class="style.muted">{{ auth.user?.email }}</p>
-    <p v-if="logoutError" :class="style.error" role="alert">{{ logoutError }}</p>
+
     <div :class="style.dialogFooter">
       <Button :loading="loggingOut" :disabled="loggingOut" @click="signOut"
         >Выйти из аккаунта</Button
@@ -128,6 +128,7 @@
   </AdminDialog>
 </template>
 <script lang="ts">
+import { apiNotifications } from '@/api/client'
 import { useAuthStore } from '@/stores/auth'
 import Badge from '@/components/UI/Badge/Badge.vue'
 import { defineComponent, markRaw } from 'vue'
@@ -176,9 +177,7 @@ export default defineComponent({
       desktop,
       mobile,
       style,
-      auth: useAuthStore(),
       loggingOut: false,
-      logoutError: '',
       collapsed: false,
       menuOpen: false,
       accountOpen: false,
@@ -197,6 +196,9 @@ export default defineComponent({
     }
   },
   computed: {
+    auth() {
+      return useAuthStore()
+    },
     visibleNavigation() {
       return this.navigation.filter(
         (item) => item.path !== 'administrators' || this.auth.user?.can_manage_admins,
@@ -240,12 +242,12 @@ export default defineComponent({
     async signOut() {
       if (this.loggingOut) return
       this.loggingOut = true
-      this.logoutError = ''
+
       try {
         await this.auth.signOut()
         await this.$router.replace({ name: 'authorization' })
       } catch (error) {
-        this.logoutError = error instanceof Error ? error.message : 'Не удалось завершить сессию.'
+        apiNotifications.onError?.(error)
       } finally {
         this.loggingOut = false
       }

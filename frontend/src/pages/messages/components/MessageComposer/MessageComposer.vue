@@ -1,8 +1,5 @@
 <template>
   <form :class="style.composer" @submit.prevent="sendMessage">
-    <p v-if="error" :class="style.storageError" role="alert">
-      {{ error }} Черновик сохранён в форме; можно отправить повторно.
-    </p>
     <div :class="style.composerRow">
       <TextInput
         ref="messageField"
@@ -47,7 +44,6 @@ export default defineComponent({
   props: {
     modelValue: { type: String, required: true },
     maxHeight: { type: Number, default: 144 },
-    error: { type: String, default: '' },
     sending: Boolean,
   },
   emits: {

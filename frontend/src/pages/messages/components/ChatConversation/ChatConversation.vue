@@ -18,8 +18,7 @@
       </div>
     </header>
     <p v-if="$messageStore.messagesLoading">Загрузка сообщений…</p>
-    <p v-if="$messageStore.conversationError" role="alert">
-      {{ $messageStore.conversationError }}
+    <p v-if="$messageStore.conversationError">
       <button @click="$messageStore.fetchMessages(chat.id)">Повторить</button>
     </p>
     <Button
@@ -34,7 +33,6 @@
       ref="composer"
       v-model="draft"
       :max-height="composerMaxHeight"
-      :error="$messageStore.sendError"
       :sending="$messageStore.sending"
       @send="sendMessage"
     />
@@ -89,11 +87,10 @@ export default defineComponent({
     this.updateComposerLimit()
   },
   watch: {
-    'chat.id'() {
-      void this.$nextTick(() => {
-        ;(this.$refs.conversationTitle as HTMLElement | undefined)?.focus({ preventScroll: true })
-        this.updateComposerLimit()
-      })
+    async 'chat.id'() {
+      await this.$nextTick()
+      ;(this.$refs.conversationTitle as HTMLElement | undefined)?.focus({ preventScroll: true })
+      this.updateComposerLimit()
     },
   },
   methods: {
@@ -106,23 +103,20 @@ export default defineComponent({
       const minimum =
         parseFloat(getComputedStyle(conversation).getPropertyValue('--control-height-md')) || 46
       const padding = getComputedStyle(composer)
-      const warning = composer.querySelector('[role="alert"]')?.getBoundingClientRect().height ?? 0
       const available =
         conversation.clientHeight -
         (header.closest('header')?.getBoundingClientRect().height ?? 80) -
         parseFloat(padding.paddingTop) -
         parseFloat(padding.paddingBottom) -
-        warning -
         32
       this.composerMaxHeight = Math.max(minimum, Math.min(144, available))
     },
-    sendMessage() {
+    async sendMessage() {
       const text = this.draft.trim()
       if (!text || text.length > 4000) return
-      void this.$messageStore.send(this.chat.id, text)
-      void this.$nextTick(() => {
-        ;(this.$refs.composer as InstanceType<typeof MessageComposer> | undefined)?.focus()
-      })
+      await this.$messageStore.send(this.chat.id, text)
+      await this.$nextTick()
+      ;(this.$refs.composer as InstanceType<typeof MessageComposer> | undefined)?.focus()
     },
   },
 })

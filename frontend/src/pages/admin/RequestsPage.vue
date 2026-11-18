@@ -143,6 +143,7 @@
   </section>
 </template>
 <script lang="ts">
+import { apiNotifications } from '@/api/client'
 import StatusBadge from '@/components/UI/StatusBadge/StatusBadge.vue'
 import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import Select from '@/components/UI/inputs/Select/Select.vue'
@@ -193,7 +194,6 @@ export default defineComponent({
       style,
       statusLabels,
       statusVariants,
-      auth: useAuthStore(),
       page: 1,
       reloadTimer: undefined as ReturnType<typeof setTimeout> | undefined,
       detailLoading: false,
@@ -208,6 +208,9 @@ export default defineComponent({
     }
   },
   computed: {
+    auth() {
+      return useAuthStore()
+    },
     requestDates(): Record<number, { created: string; reviewed: string }> {
       return Object.fromEntries(
         [...(this.$adminStore.data?.requests ?? []), ...(this.selected ? [this.selected] : [])].map(
@@ -222,8 +225,8 @@ export default defineComponent({
       )
     },
   },
-  mounted() {
-    void this.loadPage(1)
+  async mounted() {
+    await this.loadPage(1)
   },
   beforeUnmount() {
     clearTimeout(this.reloadTimer)
@@ -232,15 +235,15 @@ export default defineComponent({
   watch: {
     search() {
       clearTimeout(this.reloadTimer)
-      this.reloadTimer = setTimeout(() => void this.loadPage(1), 300)
+      this.reloadTimer = setTimeout(async () => await this.loadPage(1), 300)
     },
-    status() {
+    async status() {
       clearTimeout(this.reloadTimer)
-      void this.loadPage(1)
+      await this.loadPage(1)
     },
-    sort() {
+    async sort() {
       clearTimeout(this.reloadTimer)
-      void this.loadPage(1)
+      await this.loadPage(1)
     },
     opened(value: boolean) {
       if (!value) {
@@ -294,6 +297,7 @@ export default defineComponent({
           teacher: null,
         }
       } catch (error) {
+        apiNotifications.onError?.(error)
         if (version === this.detailVersion)
           this.$adminStore.error =
             error instanceof Error ? error.message : 'Не удалось загрузить заявку.'

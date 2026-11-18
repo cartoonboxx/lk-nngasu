@@ -36,8 +36,8 @@ const stores: Plugin = {
     )
     const stopAvatarSync = watch(
       () => [authStore.user?.id, authStore.user?.avatar?.id],
-      () => {
-        void authStore.loadAvatar()
+      async () => {
+        await authStore.loadAvatar()
       },
       { flush: 'sync' },
     )

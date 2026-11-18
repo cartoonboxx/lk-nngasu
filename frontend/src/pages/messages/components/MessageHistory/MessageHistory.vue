@@ -1,6 +1,5 @@
 <template>
   <div ref="history" :class="style.history" role="log" @scroll.passive="onScroll">
-    <p v-if="error" role="alert">{{ error }}</p>
     <div v-if="!chat.messages.length" :class="style.startConversation">
       <PhChatCircleText :size="32" />
       <p>Начните разговор</p>
@@ -30,6 +29,7 @@
 </template>
 
 <script lang="ts">
+import { apiNotifications } from '@/api/client'
 import { defineComponent, type PropType } from 'vue'
 import style from './MessageHistory.module.scss'
 import { PhChatCircleText, PhCheck } from '@phosphor-icons/vue'
@@ -45,7 +45,7 @@ export default defineComponent({
   data() {
     return {
       style,
-      error: '',
+
       messageTimeFormatter,
       followingLatest: true,
       historyHeight: 0,
@@ -53,38 +53,36 @@ export default defineComponent({
       resizeObserver: null as ResizeObserver | null,
     }
   },
-  mounted() {
+  async mounted() {
     const history = this.$refs.history as HTMLElement
     this.historyHeight = history.clientHeight
     this.historyWidth = history.clientWidth
     this.resizeObserver = new ResizeObserver(this.onResize)
     this.resizeObserver.observe(history)
-    void this.scrollToEnd()
+    await this.scrollToEnd()
   },
   beforeUnmount() {
     this.resizeObserver?.disconnect()
   },
   watch: {
-    'chat.id'() {
-      void this.scrollToEnd()
+    async 'chat.id'() {
+      await this.scrollToEnd()
     },
-    'chat.messages'(messages: Message[], previous: Message[]) {
+    async 'chat.messages'(messages: Message[], previous: Message[]) {
       const history = this.$refs.history as HTMLElement | undefined
       const before = history?.scrollHeight ?? 0
       if (previous[0] && messages[0] && Number(messages[0].id) < Number(previous[0].id)) {
-        void this.$nextTick(() => {
-          if (history) history.scrollTop += history.scrollHeight - before
-        })
-      } else if (this.followingLatest || messages.at(-1)?.own) void this.scrollToEnd()
+        await this.$nextTick()
+        if (history) history.scrollTop += history.scrollHeight - before
+      } else if (this.followingLatest || messages.at(-1)?.own) await this.scrollToEnd()
     },
   },
   methods: {
     async download(id: number, name: string) {
-      this.error = ''
       try {
         await useFilesStore().download(id, name)
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Не удалось скачать файл.'
+        apiNotifications.onError?.(error)
       }
     },
     dayLabel,
@@ -95,12 +93,12 @@ export default defineComponent({
         return
       this.followingLatest = history.scrollHeight - history.clientHeight - history.scrollTop <= 48
     },
-    onResize() {
+    async onResize() {
       const history = this.$refs.history as HTMLElement
       this.historyHeight = history.clientHeight
       this.historyWidth = history.clientWidth
       // Keep the bottom anchored when the keyboard or the growing composer changes the viewport.
-      if (this.followingLatest) void this.scrollToEnd()
+      if (this.followingLatest) await this.scrollToEnd()
     },
     isNewDay(index: number): boolean {
       const messages = this.chat.messages

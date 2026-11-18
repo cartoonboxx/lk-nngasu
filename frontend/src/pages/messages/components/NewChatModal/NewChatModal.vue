@@ -20,10 +20,10 @@
     <Button v-if="auth.user?.student" variant="secondary" :disabled="opening" @click="openGroup"
       >Чат группы {{ auth.user.student.group_name }}</Button
     >
-    <p v-if="error" role="alert">{{ error }}</p>
   </Modal>
 </template>
 <script lang="ts">
+import { apiNotifications } from '@/api/client'
 import { defineComponent } from 'vue'
 import Modal from '@/components/UI/modal/BaseModal/Modal.vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
@@ -35,14 +35,18 @@ export default defineComponent({
   components: { Modal, Button, TextInput },
   props: { modelValue: Boolean },
   emits: ['update:modelValue', 'select'],
+  computed: {
+    auth() {
+      return useAuthStore()
+    },
+  },
   data() {
-    return { style, auth: useAuthStore(), userId: '', opening: false, error: '' }
+    return { style, userId: '', opening: false }
   },
   watch: {
     modelValue(open: boolean) {
       if (open) {
         this.userId = ''
-        this.error = ''
       }
     },
   },
@@ -51,13 +55,13 @@ export default defineComponent({
       if (this.opening || !Number.isSafeInteger(Number(this.userId)) || Number(this.userId) <= 0)
         return
       this.opening = true
-      this.error = ''
+
       try {
         const id = await this.$messageStore.openDirect(Number(this.userId))
         this.$emit('select', id)
         this.$emit('update:modelValue', false)
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Не удалось открыть диалог.'
+        apiNotifications.onError?.(error)
       } finally {
         this.opening = false
       }
@@ -65,13 +69,13 @@ export default defineComponent({
     async openGroup() {
       if (this.opening || !this.auth.user?.student) return
       this.opening = true
-      this.error = ''
+
       try {
         const id = await this.$messageStore.openGroup(this.auth.user.student.group_id)
         this.$emit('select', id)
         this.$emit('update:modelValue', false)
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Не удалось открыть чат группы.'
+        apiNotifications.onError?.(error)
       } finally {
         this.opening = false
       }

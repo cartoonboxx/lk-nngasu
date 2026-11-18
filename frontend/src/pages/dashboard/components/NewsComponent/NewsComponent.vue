@@ -5,8 +5,8 @@
       <RouterLink to="/news">Все новости</RouterLink>
     </header>
     <p v-if="cabinet.newsLoading">Загрузка новостей…</p>
-    <p v-else-if="cabinet.newsError" role="alert">
-      {{ cabinet.newsError }} <button @click="cabinet.fetchNews()">Повторить</button>
+    <p v-else-if="cabinet.newsError">
+      <button @click="cabinet.fetchNews()">Повторить</button>
     </p>
     <p v-else-if="!cabinet.news.length">Новостей пока нет</p>
     <ul v-else :class="style.list">
@@ -32,11 +32,16 @@ import style from './NewsComponent.module.scss'
 export default defineComponent({
   name: 'NewsComponent',
   components: { RouterLink },
-  data() {
-    return { style, cabinet: useCabinetStore() }
+  computed: {
+    cabinet() {
+      return useCabinetStore()
+    },
   },
-  created() {
-    void this.cabinet.fetchNews()
+  data() {
+    return { style }
+  },
+  async created() {
+    await this.cabinet.fetchNews()
   },
 })
 </script>

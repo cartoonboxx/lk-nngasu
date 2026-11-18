@@ -16,8 +16,8 @@
     </SectionHeader>
     <ScheduleControls />
     <p v-if="$scheduleStore.loading">Загрузка расписания…</p>
-    <p v-else-if="$scheduleStore.error" role="alert">
-      {{ $scheduleStore.error }} <button @click="$scheduleStore.fetchSchedule()">Повторить</button>
+    <p v-else-if="$scheduleStore.error">
+      <button @click="$scheduleStore.fetchSchedule()">Повторить</button>
     </p>
     <MobileSchedule v-if="!$scheduleStore.loading && !$scheduleStore.error" />
     <ScheduleTable v-if="!$scheduleStore.loading && !$scheduleStore.error" />
@@ -46,11 +46,16 @@ export default defineComponent({
     ScheduleTable,
     ScheduleLegend,
   },
-  created() {
-    void this.$scheduleStore.fetchSchedule()
+  async created() {
+    await this.$scheduleStore.fetchSchedule()
+  },
+  computed: {
+    auth() {
+      return useAuthStore()
+    },
   },
   data() {
-    return { style, auth: useAuthStore() }
+    return { style }
   },
 })
 </script>

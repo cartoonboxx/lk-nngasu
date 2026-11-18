@@ -192,15 +192,10 @@
             placeholder="Выберите аудиторию"
           />
         </label>
-        <p v-if="conflicts.length" :class="style.error">{{ conflicts.join(' ') }}</p>
         <div :class="style.dialogFooter">
           <Button v-if="draft.id" variant="danger" @click="confirmOpen = true">Удалить</Button>
           <Button variant="ghost" @click="opened = false">Отмена</Button>
-          <Button
-            type="submit"
-            :disabled="!draft.workload_id || Boolean(conflicts.length)"
-            :loading="$adminStore.saving"
-          >
+          <Button type="submit" :disabled="!draft.workload_id" :loading="$adminStore.saving">
             Сохранить
           </Button>
         </div>
@@ -480,6 +475,10 @@ export default defineComponent({
       this.opened = true
     },
     async save() {
+      if (this.conflicts.length) {
+        this.$utilityStore.notifyError(this.conflicts.join(' '))
+        return
+      }
       const saved = await this.$adminStore.saveLesson(this.draft)
       if (saved) {
         this.opened = false

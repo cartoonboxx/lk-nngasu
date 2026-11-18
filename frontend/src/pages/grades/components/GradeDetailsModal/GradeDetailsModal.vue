@@ -38,7 +38,7 @@
           }}
         </p>
       </section>
-      <p v-if="error" role="alert">{{ error }}</p>
+
       <Button
         v-for="file in assignment.files"
         :key="file.id"
@@ -62,6 +62,7 @@
 </template>
 
 <script lang="ts">
+import { apiNotifications } from '@/api/client'
 import { defineComponent, type PropType } from 'vue'
 import { PhX } from '@phosphor-icons/vue'
 import Modal from '@/components/UI/modal/BaseModal/Modal.vue'
@@ -81,23 +82,20 @@ export default defineComponent({
     assignment: { type: Object as PropType<GradeAssignment | null>, default: null },
   },
   watch: {
-    modelValue() {
-      this.error = ''
-    },
+    modelValue() {},
   },
   methods: {
     async download(id: number, name: string) {
-      this.error = ''
       try {
         await useFilesStore().download(id, name)
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Не удалось скачать файл.'
+        apiNotifications.onError?.(error)
       }
     },
   },
   emits: { 'update:modelValue': (value: boolean) => typeof value === 'boolean' },
   data() {
-    return { style, gradeDateFormatter, error: '' }
+    return { style, gradeDateFormatter }
   },
 })
 </script>
