@@ -98,6 +98,7 @@
 
     <Tooltip :class="style.tabTooltip" :isShow="collapsed" text="Аккаунт" position="right">
       <StudentCard
+        :image-src="auth.avatarUrl || undefined"
         :compact="collapsed"
         :name="auth.user?.full_name || 'Аккаунт'"
         :role="auth.roleLabel"

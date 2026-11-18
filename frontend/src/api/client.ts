@@ -15,6 +15,22 @@ const messages: Record<string, string> = {
   in_use: 'Запись используется в других данных.',
   course_exists: 'Дисциплина уже назначена этой группе в выбранном семестре.',
   schedule_conflict: 'Занятие пересекается с другим занятием группы, преподавателя или аудитории.',
+  current_semester_not_set: 'Текущий семестр пока не назначен.',
+  academic_calendar_not_configured: 'Учебный календарь пока не настроен.',
+  course_forbidden: 'Нет доступа к этому курсу.',
+  chat_not_found: 'Чат не найден.',
+  chat_with_self: 'Нельзя открыть диалог с самим собой.',
+  contact_not_allowed:
+    'Нельзя начать диалог с этим пользователем. Доступны одногруппники и преподаватели вашей группы.',
+  peer_inactive: 'Аккаунт собеседника заблокирован.',
+  empty_answer: 'Прикрепите файл или напишите ответ.',
+  password_unchanged: 'Новый пароль должен отличаться от текущего.',
+  file_not_found: 'Файл не найден или недоступен.',
+  file_too_large: 'Файл превышает допустимый размер.',
+  unsupported_file_type: 'Этот тип файла не поддерживается.',
+  invalid_file_content: 'Содержимое файла не соответствует его расширению.',
+  submission_reviewed: 'Проверенный ответ нельзя изменить.',
+  no_personal_schedule: 'У аккаунта нет личного расписания.',
   forbidden: 'Недостаточно прав для выполнения действия.',
 
   invitations_disabled: 'Для приглашения администраторов нужно настроить SMTP на сервере.',
@@ -60,13 +76,15 @@ export interface ApiPage<T> {
 }
 
 export interface ApiRequestOptions extends RequestInit {
+  responseType?: 'blob'
   paginated?: boolean
 }
 
 export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
-  const { paginated, ...requestOptions } = options
+  const { paginated, responseType, ...requestOptions } = options
   const headers = new Headers(options.headers)
-  if (options.body) headers.set('Content-Type', 'application/json')
+  if (options.body && !(options.body instanceof FormData))
+    headers.set('Content-Type', 'application/json')
   let response: Response
   try {
     response = await fetch(`/api/v1${path}`, {
@@ -80,6 +98,7 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions = {
     throw new Error('Не удалось связаться с сервером. Проверьте подключение и повторите попытку.')
   }
   if (response.status === 204) return undefined as T
+  if (response.ok && responseType === 'blob') return (await response.blob()) as T
   const body = await response.json().catch(() => null)
   if (!response.ok) {
     throw new ApiError(

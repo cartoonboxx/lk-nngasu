@@ -1,6 +1,6 @@
 <template>
   <section :class="style.subjectPage">
-    <SectionHeader header="Предметы" paragraph="Дисциплины текущего семестра" />
+    <SectionHeader header="Предметы" paragraph="Доступные вам дисциплины" />
 
     <section :class="style.pageInput">
       <StyleInput v-model="searchQuery" placeholder="Поиск дисциплины" :full-width="true">
@@ -12,7 +12,11 @@
       <StyleSelect v-model="selectedSemester" :options="semesterOptions" />
     </section>
 
-    <p v-if="!filteredSubjects.length">Предметы не найдены</p>
+    <p v-if="$subjectsStore.loading">Загрузка предметов…</p>
+    <p v-else-if="$subjectsStore.error" role="alert">
+      {{ $subjectsStore.error }} <button @click="$subjectsStore.fetchSubjects()">Повторить</button>
+    </p>
+    <p v-else-if="!filteredSubjects.length">Предметы не найдены</p>
     <section v-else :class="style.pageSubjectSemester">
       <RouterLink
         v-press
@@ -60,23 +64,30 @@ export default defineComponent({
       baseButtonStyle,
 
       searchQuery: '',
-      selectedSemester: '1',
-
-      semesterOptions: [
-        { label: '1 семестр', value: '1' },
-        { label: '2 семестр', value: '2' },
-      ],
+      selectedSemester: 'all',
     }
   },
   created() {
     this.$subjectsStore.fetchSubjects()
   },
   computed: {
+    semesterOptions() {
+      return [
+        { label: 'Все семестры', value: 'all' },
+        ...new Map(
+          this.$subjectsStore.subjects.map((subject) => [
+            subject.semester,
+            { value: subject.semester, label: subject.semesterLabel },
+          ]),
+        ).values(),
+      ]
+    },
     filteredSubjects(): Subject[] {
       const query = this.searchQuery.trim().toLowerCase()
 
       return this.$subjectsStore.subjects.filter((subject) => {
-        const matchesSemester = subject.semester === this.selectedSemester
+        const matchesSemester =
+          this.selectedSemester === 'all' || subject.semester === this.selectedSemester
 
         const matchesSearch = subject.label.toLowerCase().includes(query)
 

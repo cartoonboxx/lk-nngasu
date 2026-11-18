@@ -10,7 +10,7 @@
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
 import { PhUser } from '@phosphor-icons/vue'
-import { lessonTypes } from '../../schedule.data'
+import { lessonTypes } from '../../schedule.types'
 import type { ScheduleLesson } from '../../schedule.types'
 import style from './LessonCard.module.scss'
 

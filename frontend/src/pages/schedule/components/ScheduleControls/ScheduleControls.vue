@@ -13,11 +13,16 @@
       </div>
     </div>
     <div :class="style.inputGroup">
-      <Input placeholder="Введите группу" :class="style.input">
-        <template #prefix>
-          <PhMagnifyingGlass />
-        </template>
-      </Input>
+      <Select
+        v-model="$scheduleStore.groupId"
+        :options="groupOptions"
+        :class="style.input"
+        @update:model-value="$scheduleStore.fetchSchedule()"
+      />
+      <p v-if="$scheduleStore.groupsError" role="alert">
+        {{ $scheduleStore.groupsError }}
+        <button @click="$scheduleStore.fetchGroups()">Повторить</button>
+      </p>
     </div>
   </div>
 </template>
@@ -26,8 +31,8 @@
 import { defineComponent } from 'vue'
 import style from './ScheduleControls.module.scss'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
-import Input from '@/components/UI/inputs/Input/Input.vue'
-import { PhCaretLeft, PhCaretRight, PhMagnifyingGlass } from '@phosphor-icons/vue'
+import Select from '@/components/UI/inputs/Select/Select.vue'
+import { PhCaretLeft, PhCaretRight } from '@phosphor-icons/vue'
 import SchedulePeriodPicker from '../SchedulePeriodPicker/SchedulePeriodPicker.vue'
 
 export default defineComponent({
@@ -35,16 +40,27 @@ export default defineComponent({
   components: {
     SchedulePeriodPicker,
     IconButton,
-    Input,
+    Select,
     PhCaretLeft,
     PhCaretRight,
-    PhMagnifyingGlass,
+  },
+  created() {
+    void this.$scheduleStore.fetchGroups()
   },
   computed: {
+    groupOptions() {
+      return [
+        { label: 'Личное расписание', value: '' },
+        ...this.$scheduleStore.groups.map((group) => ({
+          label: group.name,
+          value: String(group.id),
+        })),
+      ]
+    },
     weekLabel() {
       const start = this.$scheduleStore.weekStart
       const end = new Date(start)
-      end.setDate(end.getDate() + 5)
+      end.setDate(end.getDate() + 6)
       return new Intl.DateTimeFormat('ru-RU', {
         day: 'numeric',
         month: 'long',

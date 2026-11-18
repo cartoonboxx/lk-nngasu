@@ -76,12 +76,12 @@
     </ul>
     <div v-else :class="style.listEmpty">
       <PhMagnifyingGlass :size="25" />
-      <p>{{ search ? 'Чаты не найдены' : 'Всё прочитано' }}</p>
+      <p>{{ search ? 'Чаты не найдены' : unreadOnly ? 'Всё прочитано' : 'Пока нет диалогов' }}</p>
       <span>
         {{ search ? 'Попробуйте другое имя или название' : 'Новые сообщения появятся здесь' }}
       </span>
     </div>
-    <p :class="style.localNote">Переписки сохраняются в этом браузере</p>
+    <p :class="style.localNote">Переписки сохраняются на сервере</p>
   </aside>
 </template>
 
@@ -128,7 +128,7 @@ export default defineComponent({
             chat.name.toLocaleLowerCase('ru').includes(query),
         )
         .map((chat) => {
-          const message = chat.messages[chat.messages.length - 1]
+          const message = chat.lastMessage
           return {
             ...chat,
             lastMessage: message,

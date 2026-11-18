@@ -6,7 +6,11 @@
         Все <PhArrowUpRight :size="15" />
       </RouterLink>
     </header>
-    <ul v-if="chats.length" :class="style.list">
+    <p v-if="$messageStore.loading">Загрузка чатов…</p>
+    <p v-else-if="$messageStore.error" role="alert">
+      {{ $messageStore.error }} <button @click="$messageStore.fetchChats()">Повторить</button>
+    </p>
+    <ul v-else-if="chats.length" :class="style.list">
       <li v-for="chat in chats" :key="chat.id">
         <RouterLink
           v-press
@@ -63,6 +67,9 @@ export default defineComponent({
   name: 'ChatComponent',
   components: { Badge, RouterLink, PhChatsCircle, PhNotePencil, PhArrowUpRight, PhUsersThree },
   directives: { press: pressFeedback },
+  created() {
+    void this.$messageStore.fetchChats()
+  },
   data() {
     return {
       style,
@@ -72,7 +79,7 @@ export default defineComponent({
     chats() {
       return this.$messageStore.chats
         .map((chat) => {
-          const last = chat.messages[chat.messages.length - 1]
+          const last = chat.lastMessage
           return {
             ...chat,
             sender: last?.own ? 'Вы' : chat.group ? last?.sender.split(' ')[0] : undefined,

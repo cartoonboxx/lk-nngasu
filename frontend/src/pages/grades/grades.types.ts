@@ -10,5 +10,12 @@ export interface GradeAssignment {
   grade: number | null
   status: GradeStatus
   teacherComment: string
+  files: { id: number; name: string }[]
   answer: string
+}
+
+export const gradeStatuses: Record<GradeStatus, string> = {
+  reviewed: 'Проверено',
+  pending: 'На проверке',
+  'not-submitted': 'Не отправлено',
 }

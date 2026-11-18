@@ -18,6 +18,7 @@
       :model-value="currentValue"
       :placeholder="placeholder"
       :maxlength="maxlength"
+      :mask="mask"
       :size="size"
       :type="type"
       :disabled="disabled || variant === 'disabled'"
@@ -49,6 +50,10 @@ export default defineComponent({
     BaseInput,
   },
   props: {
+    mask: {
+      type: String,
+      default: '',
+    },
     id: {
       type: String,
       default: undefined,

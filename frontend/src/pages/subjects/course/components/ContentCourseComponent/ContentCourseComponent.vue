@@ -3,73 +3,72 @@
     <header :class="style.topicHeader">
       <p :class="style.eyebrow">Тема {{ topicIndex + 1 }}</p>
       <h2>{{ topic.title }}</h2>
-      <p :class="style.description" v-html="topic.description" />
+      <p :class="style.description">{{ topic.description }}</p>
     </header>
-
     <section :class="style.materials">
       <h3>Материалы</h3>
+      <p v-if="!topic.materials.length">Материалы пока не добавлены</p>
       <div :class="style.materialList">
-        <MediaButton
-          v-for="material in materials"
-          :key="material.kind"
-          :title="material.title"
-          :meta="material.meta"
-          :src="material.file"
-        >
-          <template #icon>
-            <component :is="material.icon" :class="style[material.kind]" :size="30" weight="fill" />
-          </template>
-        </MediaButton>
+        <div v-for="material in topic.materials" :key="material.id">
+          <MediaButton
+            v-if="material.file"
+            :title="material.title"
+            :filename="material.file.name"
+            :meta="`${material.file.name} · ${(material.file.size_bytes / 1024).toFixed(1)} КБ`"
+            @click="download(material.file.id, material.file.name)"
+          >
+            <template #icon><PhFileText /></template>
+          </MediaButton>
+          <a
+            v-if="safeLink(material.external_url)"
+            :href="material.external_url!"
+            target="_blank"
+            rel="noopener noreferrer"
+            >{{ material.title }}</a
+          >
+        </div>
       </div>
+      <p v-if="error" role="alert">{{ error }}</p>
     </section>
-
     <section :class="style.assignmentSection">
-      <div :class="style.assignment">
-        <p :class="style.assignmentLabel">Практическая работа №{{ topicIndex + 1 }}</p>
-        <p :class="style.assignmentText">{{ topic.task }}</p>
-
+      <p v-if="!topic.assignments.length">Задания пока не добавлены</p>
+      <div v-for="assignment in topic.assignments" :key="assignment.id" :class="style.assignment">
+        <h3>{{ assignment.title }}</h3>
+        <p :class="style.assignmentText">{{ assignment.description }}</p>
         <div :class="style.assignmentFooter">
           <p :class="style.deadline">
-            <PhCalendarBlank :size="19" />
-            <span>Срок сдачи: {{ topic.deadline }}, 23:59</span>
+            Срок сдачи:
+            {{
+              assignment.deadline_at
+                ? new Date(assignment.deadline_at).toLocaleString('ru-RU')
+                : 'не указан'
+            }}
           </p>
-
-          <Button @click="$emit('open-assignment')">Открыть задание</Button>
+          <Button @click="$emit('open-assignment', assignment.id)">Открыть задание</Button>
         </div>
       </div>
     </section>
-
     <footer :class="style.footer">
-      <Button variant="secondary" :disabled="topicIndex === 0" @click="$emit('previous')">
-        <PhCaretLeft :size="18" />
-        <span>Предыдущая тема</span>
-      </Button>
-      <Button variant="secondary" :disabled="topicIndex === topicCount - 1" @click="$emit('next')">
-        <span>Следующая тема</span>
-        <PhCaretRight :size="18" />
-      </Button>
+      <Button variant="secondary" :disabled="topicIndex === 0" @click="$emit('previous')"
+        >Предыдущая тема</Button
+      >
+      <Button variant="secondary" :disabled="topicIndex === topicCount - 1" @click="$emit('next')"
+        >Следующая тема</Button
+      >
     </footer>
   </section>
 </template>
-
 <script lang="ts">
-import { defineComponent, markRaw, type PropType } from 'vue'
-import {
-  PhCalendarBlank,
-  PhCaretLeft,
-  PhCaretRight,
-  PhFileCode,
-  PhFileText,
-  PhPresentationChart,
-} from '@phosphor-icons/vue'
-import Button from '@/components/UI/buttons/Button/Button.vue'
+import { defineComponent, type PropType } from 'vue'
 import MediaButton from '@/components/UI/buttons/MediaButton/MediaButton.vue'
-import type { CourseTopic, CourseMaterial } from '../../course.types.ts'
+import { PhFileText } from '@phosphor-icons/vue'
+import Button from '@/components/UI/buttons/Button/Button.vue'
+import { useFilesStore } from '@/stores/files'
+import type { CourseTopic } from '../../course.types'
 import style from './ContentCourseComponent.module.scss'
-
 export default defineComponent({
   name: 'ContentCourseComponent',
-  components: { Button, MediaButton, PhCalendarBlank, PhCaretLeft, PhCaretRight },
+  components: { Button, MediaButton, PhFileText },
   props: {
     topic: { type: Object as PropType<CourseTopic>, required: true },
     topicIndex: { type: Number, required: true },
@@ -77,40 +76,24 @@ export default defineComponent({
   },
   emits: ['previous', 'next', 'open-assignment'],
   data() {
-    return { style }
+    return { style, error: '' }
   },
-  computed: {
-    materials(): (CourseMaterial & { file: File })[] {
-      const materials: CourseMaterial[] = [
-        {
-          kind: 'lecture',
-          title: `Лекция ${this.topicIndex + 1}`,
-          meta: 'Конспект · MD',
-          icon: markRaw(PhFileText),
-        },
-        {
-          kind: 'presentation',
-          title: 'План темы',
-          meta: 'Учебный материал · MD',
-          icon: markRaw(PhPresentationChart),
-        },
-        {
-          kind: 'practice',
-          title: `Практическая работа №${this.topicIndex + 1}`,
-          meta: 'Задание · MD',
-          icon: markRaw(PhFileCode),
-        },
-      ]
-      return materials.map((material) => {
-        const topic = this.topic
-        const content = `# ${material.title}\n\n## ${topic.title}\n\n${topic.description}\n\n${material.kind === 'practice' ? topic.task : 'План изучения темы'}\n\n${topic.steps.map((step, index) => `${index + 1}. ${step}`).join('\n')}\n`
-        return {
-          ...material,
-          file: new File([content], `${topic.id}-${material.kind}.md`, {
-            type: 'text/markdown;charset=utf-8',
-          }),
-        }
-      })
+  methods: {
+    safeLink(url: string | null): boolean {
+      if (!url) return false
+      try {
+        return ['http:', 'https:'].includes(new URL(url).protocol)
+      } catch {
+        return false
+      }
+    },
+    async download(id: number, name: string) {
+      this.error = ''
+      try {
+        await useFilesStore().download(id, name)
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Не удалось скачать файл.'
+      }
     },
   },
 })

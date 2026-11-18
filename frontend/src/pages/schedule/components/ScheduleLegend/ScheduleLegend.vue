@@ -9,7 +9,7 @@
 <script lang="ts">
 import { defineComponent } from 'vue'
 import style from './ScheduleLegend.module.scss'
-import { lessonTypes } from '../../schedule.data'
+import { lessonTypes } from '../../schedule.types'
 
 export default defineComponent({
   name: 'ScheduleLegend',

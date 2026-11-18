@@ -146,3 +146,11 @@
     }
   }
 }
+
+.description,
+.assignmentText {
+  white-space: pre-wrap;
+}
+.assignment + .assignment {
+  margin-top: var(--space-4);
+}

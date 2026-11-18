@@ -1,4 +1,4 @@
-export type LessonType = 'lecture' | 'practice' | 'lab'
+export type LessonType = 'lecture' | 'practice' | 'lab' | 'consultation' | 'exam'
 
 export interface ScheduleLesson {
   id: string | number
@@ -16,3 +16,11 @@ export interface ScheduleDay {
 }
 
 export type SchedulePeriodPickerLocation = 'header' | 'controls'
+
+export const lessonTypes: { type: LessonType; label: string }[] = [
+  { type: 'lecture', label: 'Лекция' },
+  { type: 'practice', label: 'Практика' },
+  { type: 'lab', label: 'Лабораторная' },
+  { type: 'consultation', label: 'Консультация' },
+  { type: 'exam', label: 'Экзамен' },
+]

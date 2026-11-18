@@ -30,7 +30,7 @@
           <td data-label="Сдано" :class="style.date">
             {{
               assignment.submittedAt
-                ? gradeDateFormatter.format(new Date(`${assignment.submittedAt}T12:00:00`))
+                ? gradeDateFormatter.format(new Date(assignment.submittedAt))
                 : '—'
             }}
           </td>

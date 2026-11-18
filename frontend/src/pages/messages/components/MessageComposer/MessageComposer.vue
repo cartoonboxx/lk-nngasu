@@ -1,17 +1,8 @@
 <template>
   <form :class="style.composer" @submit.prevent="sendMessage">
-    <div v-if="storageError || draftError" :class="style.storageError" role="alert">
-      <span>
-        {{
-          storageError
-            ? 'Не удалось сохранить изменения. Не перезагружайте страницу.'
-            : 'Не удалось сохранить черновик. Он доступен до перезагрузки страницы.'
-        }}
-      </span>
-      <Button v-if="storageError" variant="ghost" size="sm" @click="$emit('retry')">
-        Повторить
-      </Button>
-    </div>
+    <p v-if="error" :class="style.storageError" role="alert">
+      {{ error }} Черновик сохранён в форме; можно отправить повторно.
+    </p>
     <div :class="style.composerRow">
       <TextInput
         ref="messageField"
@@ -29,7 +20,7 @@
         type="submit"
         variant="primary"
         round
-        :disabled="!draft.trim()"
+        :disabled="sending || !draft.trim()"
         @pointerdown="onSendPointerDown"
         @pointerup="onSendPointerUp"
         @pointercancel="sendPointer = null"
@@ -48,22 +39,20 @@ import type { SendPointer } from '../../messages.types'
 import { defineComponent } from 'vue'
 import { PhPaperPlaneRight } from '@phosphor-icons/vue'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
-import Button from '@/components/UI/buttons/Button/Button.vue'
 import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
 import style from './MessageComposer.module.scss'
 export default defineComponent({
   name: 'MessageComposer',
-  components: { PhPaperPlaneRight, IconButton, Button, TextInput },
+  components: { PhPaperPlaneRight, IconButton, TextInput },
   props: {
     modelValue: { type: String, required: true },
     maxHeight: { type: Number, default: 144 },
-    storageError: Boolean,
-    draftError: Boolean,
+    error: { type: String, default: '' },
+    sending: Boolean,
   },
   emits: {
     'update:modelValue': (value: string) => typeof value === 'string',
     send: () => true,
-    retry: () => true,
   },
   data() {
     return { style, sendPointer: null as SendPointer | null }
@@ -83,7 +72,7 @@ export default defineComponent({
       ;(this.$refs.messageField as InstanceType<typeof TextInput> | undefined)?.focus()
     },
     sendMessage() {
-      if (this.draft.trim()) this.$emit('send')
+      if (!this.sending && this.draft.trim()) this.$emit('send')
     },
     onSendPointerDown(event: PointerEvent) {
       if (event.pointerType !== 'mouse') {

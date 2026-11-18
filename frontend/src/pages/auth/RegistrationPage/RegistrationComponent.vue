@@ -28,6 +28,7 @@
           name="snils"
           autocomplete="snils"
           placeholder="112-233-445 95"
+          mask="###-###-### ##"
           type="text"
           required
           full-width
@@ -41,6 +42,7 @@
           name="passport"
           autocomplete="passport"
           placeholder="45 09 123456"
+          mask="## ## ######"
           type="text"
           required
           full-width

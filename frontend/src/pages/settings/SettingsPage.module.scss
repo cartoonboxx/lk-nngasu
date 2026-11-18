@@ -89,8 +89,6 @@
   min-width: 0;
 }
 
-
-
 .passwordError {
   margin: 0;
   color: var(--color-status-error-content);
@@ -232,4 +230,14 @@
   .settingsPage {
     --profile-mobile-avatar: 52px;
   }
+}
+
+.profileForm {
+  display: grid;
+  gap: var(--space-4);
+  justify-items: start;
+}
+
+.profileRow {
+  flex-wrap: wrap;
 }

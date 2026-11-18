@@ -17,6 +17,7 @@
         label="Паспорт (серия и номер)"
         name="passport"
         placeholder="45 09 123456"
+        mask="## ## ######"
         :maxlength="12"
         required
         full-width
@@ -26,6 +27,7 @@
         label="СНИЛС"
         name="snils"
         placeholder="112-233-445 95"
+        mask="###-###-### ##"
         :maxlength="14"
         required
         full-width

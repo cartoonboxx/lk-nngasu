@@ -4,7 +4,7 @@
 
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
-import { gradeStatuses } from '../../grades.data'
+import { gradeStatuses } from '../../grades.types'
 import type { GradeStatus } from '../../grades.types'
 import StatusBadge from '@/components/UI/StatusBadge/StatusBadge.vue'
 

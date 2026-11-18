@@ -52,6 +52,7 @@
         />
       </div>
       <StudentCard
+        :image-src="auth.avatarUrl || undefined"
         :name="auth.user?.full_name || 'Аккаунт'"
         :role="auth.roleLabel"
         @click="navigate('settings')"

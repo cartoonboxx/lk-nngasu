@@ -7,22 +7,25 @@
       v-model:status="status"
       v-model:semester="semester"
       :subject-options="subjectOptions"
+      :semester-options="semesterOptions"
     />
+    <p v-if="cabinet.gradesLoading">Загрузка оценок…</p>
+    <p v-else-if="cabinet.gradesError" role="alert">
+      {{ cabinet.gradesError }} <button @click="cabinet.fetchGrades()">Повторить</button>
+    </p>
+    <p v-if="detailsLoading">Загрузка ответа…</p>
+    <p v-if="detailsError" role="alert">{{ detailsError }}</p>
     <GradesTable
+      v-if="!cabinet.gradesLoading && !cabinet.gradesError"
       :assignments="filteredAssignments"
       :total="semesterAssignments.length"
-      @select="
-        ($event) => {
-          selectedAssignment = $event
-          detailsOpen = true
-        }
-      "
+      @select="openDetails"
       @reset="
         () => {
           search = ''
           subject = 'all'
           status = 'all'
-          semester = '7'
+          semester = 'all'
         }
       "
     />
@@ -41,7 +44,7 @@ import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import GradesFilters from './components/GradesFilters/GradesFilters.vue'
 import GradesTable from './components/GradesTable/GradesTable.vue'
 import GradeDetailsModal from './components/GradeDetailsModal/GradeDetailsModal.vue'
-import { gradeAssignments } from './grades.data'
+import { useCabinetStore } from '@/stores/cabinet'
 import type { GradeAssignment } from './grades.types'
 import style from './GradesPage.module.scss'
 
@@ -57,22 +60,68 @@ export default defineComponent({
   data() {
     return {
       style,
+      cabinet: useCabinetStore(),
+      detailsError: '',
+      detailsLoading: false,
+      detailsVersion: 0,
       search: '',
       subject: 'all',
       status: 'all',
-      semester: '7',
+      semester: 'all',
       detailsOpen: false,
       selectedAssignment: null as GradeAssignment | null,
     }
   },
+  created() {
+    void this.cabinet.fetchGrades()
+  },
+  beforeUnmount() {
+    this.detailsVersion++
+  },
+  methods: {
+    async openDetails(row: GradeAssignment) {
+      const version = ++this.detailsVersion
+      this.detailsLoading = true
+      this.detailsError = ''
+      try {
+        const assignment = await this.$subjectsStore.getAssignment(row.id)
+        if (version !== this.detailsVersion) return
+        this.selectedAssignment = {
+          ...row,
+          answer: assignment.submission?.answer_text ?? '',
+          teacherComment: assignment.submission?.review_comment ?? '',
+          files: assignment.submission?.files ?? [],
+          submittedAt: assignment.submission?.submitted_at ?? null,
+          grade: assignment.submission?.grade ?? null,
+        }
+        this.detailsOpen = true
+      } catch (error) {
+        if (version === this.detailsVersion)
+          this.detailsError = error instanceof Error ? error.message : 'Не удалось загрузить ответ.'
+      } finally {
+        if (version === this.detailsVersion) this.detailsLoading = false
+      }
+    },
+  },
   computed: {
+    semesterOptions() {
+      return [
+        { label: 'Все семестры', value: 'all' },
+        ...[...new Set(this.cabinet.grades.map((row) => row.semester))].map((semester) => ({
+          label: semester,
+          value: semester,
+        })),
+      ]
+    },
     semesterAssignments(): GradeAssignment[] {
-      return gradeAssignments.filter((assignment) => assignment.semester === this.semester)
+      return this.cabinet.grades.filter(
+        (assignment) => this.semester === 'all' || assignment.semester === this.semester,
+      )
     },
     subjectOptions() {
       return [
         { label: 'Все дисциплины', value: 'all' },
-        ...[...new Set(gradeAssignments.map((assignment) => assignment.subject))].map(
+        ...[...new Set(this.cabinet.grades.map((assignment) => assignment.subject))].map(
           (subject) => ({ label: subject, value: subject }),
         ),
       ]

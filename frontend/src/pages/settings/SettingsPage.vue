@@ -9,8 +9,8 @@
         <div :class="style.profileRow">
           <div :class="style.profileAvatar">
             <img
-              v-if="photoPreview"
-              :src="photoPreview"
+              v-if="auth.avatarUrl"
+              :src="auth.avatarUrl"
               alt="Фото профиля"
               :class="style.profileAvatarImage"
             />
@@ -24,10 +24,44 @@
             <p>{{ auth.roleLabel }}</p>
           </div>
 
-          <Button variant="secondary">Изменить фото</Button>
+          <input
+            ref="avatarInput"
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            hidden
+            @change="uploadAvatar"
+          />
+          <Button
+            variant="secondary"
+            :disabled="savingAvatar"
+            :loading="savingAvatar"
+            @click="($refs.avatarInput as HTMLInputElement).click()"
+            >Изменить фото</Button
+          >
+          <Button
+            v-if="auth.user?.avatar"
+            variant="ghost"
+            :disabled="savingAvatar"
+            @click="removeAvatar"
+            >Удалить фото</Button
+          >
         </div>
       </div>
 
+      <p v-if="avatarError || auth.avatarError" :class="style.passwordError" role="alert">
+        {{ avatarError || auth.avatarError }}
+      </p>
+      <form :class="[style.settingsSection, style.profileForm]" @submit.prevent="saveProfile">
+        <h2>Личные данные</h2>
+        <TextInput v-model="lastName" label="Фамилия" required :maxlength="50" full-width />
+        <TextInput v-model="firstName" label="Имя" required :maxlength="50" full-width />
+        <TextInput v-model="middleNames" label="Отчество" :maxlength="50" full-width />
+        <p v-if="profileError" :class="style.passwordError" role="alert">{{ profileError }}</p>
+        <p v-if="profileSaved" role="status">Данные сохранены.</p>
+        <Button type="submit" :disabled="savingProfile" :loading="savingProfile"
+          >Сохранить данные</Button
+        >
+      </form>
       <div :class="style.settingsSectionRow">
         <div>
           <h2>Тема интерфейса</h2>
@@ -118,10 +152,10 @@
                   size="sm"
                   variant="ghost"
                   type="button"
-                  :title="showCurrentPassword ? 'Скрыть пароль' : 'Показать пароль'"
-                  @click="showCurrentPassword = !showCurrentPassword"
+                  :title="showNewPassword ? 'Скрыть пароль' : 'Показать пароль'"
+                  @click="showNewPassword = !showNewPassword"
                 >
-                  <PhEyeSlash v-if="showCurrentPassword" />
+                  <PhEyeSlash v-if="showNewPassword" />
                   <PhEye v-else />
                 </IconButton>
               </template>
@@ -141,10 +175,10 @@
                   size="sm"
                   variant="ghost"
                   type="button"
-                  :title="showCurrentPassword ? 'Скрыть пароль' : 'Показать пароль'"
-                  @click="showCurrentPassword = !showCurrentPassword"
+                  :title="showConfirmPassword ? 'Скрыть пароль' : 'Показать пароль'"
+                  @click="showConfirmPassword = !showConfirmPassword"
                 >
-                  <PhEyeSlash v-if="showCurrentPassword" />
+                  <PhEyeSlash v-if="showConfirmPassword" />
                   <PhEye v-else />
                 </IconButton>
               </template>
@@ -155,9 +189,13 @@
             </p>
 
             <div :class="style.passwordActions">
-              <Button variant="secondary" type="button" @click="close"> Отмена </Button>
+              <Button variant="secondary" type="button" :disabled="savingPassword" @click="close">
+                Отмена
+              </Button>
 
-              <Button type="submit"> Сохранить </Button>
+              <Button type="submit" :disabled="savingPassword" :loading="savingPassword">
+                Сохранить
+              </Button>
             </div>
           </form>
         </template>
@@ -167,6 +205,7 @@
 </template>
 
 <script lang="ts">
+import { useFilesStore } from '@/stores/files'
 import { useAuthStore } from '@/stores/auth'
 import { defineComponent } from 'vue'
 import { PhEye, PhEyeSlash } from '@phosphor-icons/vue'
@@ -199,6 +238,15 @@ export default defineComponent({
       style,
       auth: useAuthStore(),
       loggingOut: false,
+      savingAvatar: false,
+      avatarError: '',
+      savingProfile: false,
+      profileError: '',
+      profileSaved: false,
+      firstName: '',
+      lastName: '',
+      middleNames: '',
+      savingPassword: false,
       logoutError: '',
       isPasswordModalOpen: false,
       showCurrentPassword: false,
@@ -208,7 +256,6 @@ export default defineComponent({
       newPassword: '',
       confirmPassword: '',
       passwordError: '',
-      photoPreview: null as string | null,
 
       themeOptions: [
         { value: 'system', label: 'Системная' },
@@ -218,7 +265,72 @@ export default defineComponent({
     }
   },
 
+  watch: {
+    'auth.user': {
+      immediate: true,
+      handler() {
+        this.firstName = this.auth.user?.first_name ?? ''
+        this.lastName = this.auth.user?.last_name ?? ''
+        this.middleNames = this.auth.user?.middle_names ?? ''
+      },
+    },
+  },
   methods: {
+    async saveProfile() {
+      if (this.savingProfile) return
+      this.savingProfile = true
+      this.profileError = ''
+      this.profileSaved = false
+      try {
+        await this.auth.updateMe({
+          first_name: this.firstName.trim(),
+          last_name: this.lastName.trim(),
+          middle_names: this.middleNames.trim() || null,
+        })
+        this.profileSaved = true
+      } catch (error) {
+        this.profileError = error instanceof Error ? error.message : 'Не удалось сохранить профиль.'
+      } finally {
+        this.savingProfile = false
+      }
+    },
+    async uploadAvatar(event: Event) {
+      const input = event.target as HTMLInputElement
+      const file = input.files?.[0]
+      input.value = ''
+      if (!file || this.savingAvatar) return
+      this.avatarError = ''
+      if (
+        file.size > 2 * 1024 * 1024 ||
+        !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)
+      ) {
+        this.avatarError = 'Выберите JPEG, PNG или WebP размером до 2 МБ.'
+        return
+      }
+      const userId = this.auth.user?.id
+      this.savingAvatar = true
+      try {
+        const uploaded = await useFilesStore().upload(file, 'avatar')
+        if (this.auth.user?.id !== userId) return
+        await this.auth.updateMe({ avatar_file_id: uploaded.id })
+      } catch (error) {
+        this.avatarError = error instanceof Error ? error.message : 'Не удалось изменить фото.'
+      } finally {
+        this.savingAvatar = false
+      }
+    },
+    async removeAvatar() {
+      if (this.savingAvatar) return
+      this.savingAvatar = true
+      this.avatarError = ''
+      try {
+        await this.auth.updateMe({ avatar_file_id: null })
+      } catch (error) {
+        this.avatarError = error instanceof Error ? error.message : 'Не удалось удалить фото.'
+      } finally {
+        this.savingAvatar = false
+      }
+    },
     async signOut() {
       if (this.loggingOut) return
       this.loggingOut = true
@@ -243,7 +355,8 @@ export default defineComponent({
       this.showConfirmPassword = false
     },
 
-    submitPasswordChange() {
+    async submitPasswordChange() {
+      if (this.savingPassword) return
       this.passwordError = ''
 
       if (this.newPassword !== this.confirmPassword) {
@@ -256,7 +369,23 @@ export default defineComponent({
         return
       }
 
-      this.passwordError = 'Сервис смены пароля пока не подключён.'
+      if (
+        [...this.newPassword].length < 8 ||
+        new TextEncoder().encode(this.newPassword).length > 72
+      ) {
+        this.passwordError = 'Пароль должен содержать от 8 символов до 72 байт UTF-8.'
+        return
+      }
+      this.savingPassword = true
+      try {
+        await this.auth.changePassword(this.currentPassword, this.newPassword)
+        this.resetPasswordForm()
+        await this.$router.replace({ name: 'authorization', query: { reason: 'password-changed' } })
+      } catch (error) {
+        this.passwordError = error instanceof Error ? error.message : 'Не удалось изменить пароль.'
+      } finally {
+        this.savingPassword = false
+      }
     },
   },
 })

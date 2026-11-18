@@ -17,15 +17,26 @@
         <p>{{ chat.description }}</p>
       </div>
     </header>
-    <MessageHistory :chat="chat" :is-saved="$messageStore.isSaved" @retry="$messageStore.retry()" />
+    <p v-if="$messageStore.messagesLoading">Загрузка сообщений…</p>
+    <p v-if="$messageStore.conversationError" role="alert">
+      {{ $messageStore.conversationError }}
+      <button @click="$messageStore.fetchMessages(chat.id)">Повторить</button>
+    </p>
+    <Button
+      v-if="$messageStore.hasOlder[chat.id]"
+      variant="ghost"
+      :disabled="$messageStore.messagesLoading"
+      @click="$messageStore.fetchMessages(chat.id, true)"
+      >Предыдущие сообщения</Button
+    >
+    <MessageHistory :chat="chat" />
     <MessageComposer
       ref="composer"
       v-model="draft"
       :max-height="composerMaxHeight"
-      :storage-error="storageError"
-      :draft-error="$messageStore.draftError"
+      :error="$messageStore.sendError"
+      :sending="$messageStore.sending"
       @send="sendMessage"
-      @retry="$messageStore.retry()"
     />
   </section>
 </template>
@@ -34,6 +45,7 @@
 import { defineComponent, type PropType } from 'vue'
 import style from './ChatConversation.module.scss'
 import { PhArrowLeft } from '@phosphor-icons/vue'
+import Button from '@/components/UI/buttons/Button/Button.vue'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 import ChatAvatar from '../ChatAvatar/ChatAvatar.vue'
 import MessageHistory from '../MessageHistory/MessageHistory.vue'
@@ -42,6 +54,7 @@ import type { Chat } from '../../messages.types'
 export default defineComponent({
   name: 'ChatConversation',
   components: {
+    Button,
     PhArrowLeft,
     IconButton,
     ChatAvatar,
@@ -62,15 +75,12 @@ export default defineComponent({
     }
   },
   computed: {
-    storageError(): boolean {
-      return this.$messageStore.storageError
-    },
     draft: {
       get(): string {
         return this.$messageStore.drafts[this.chat.id] ?? ''
       },
       set(value: string) {
-        this.$messageStore.setDraft(this.chat.id, value)
+        this.$messageStore.drafts[this.chat.id] = value
       },
     },
   },
@@ -84,12 +94,6 @@ export default defineComponent({
         ;(this.$refs.conversationTitle as HTMLElement | undefined)?.focus({ preventScroll: true })
         this.updateComposerLimit()
       })
-    },
-    storageError() {
-      void this.$nextTick(this.updateComposerLimit)
-    },
-    '$messageStore.draftError'() {
-      void this.$nextTick(this.updateComposerLimit)
     },
   },
   methods: {
@@ -115,7 +119,7 @@ export default defineComponent({
     sendMessage() {
       const text = this.draft.trim()
       if (!text || text.length > 4000) return
-      this.$messageStore.send(this.chat.id, text)
+      void this.$messageStore.send(this.chat.id, text)
       void this.$nextTick(() => {
         ;(this.$refs.composer as InstanceType<typeof MessageComposer> | undefined)?.focus()
       })

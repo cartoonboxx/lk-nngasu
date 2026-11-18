@@ -1,5 +1,6 @@
 <template>
   <div ref="history" :class="style.history" role="log" @scroll.passive="onScroll">
+    <p v-if="error" role="alert">{{ error }}</p>
     <div v-if="!chat.messages.length" :class="style.startConversation">
       <PhChatCircleText :size="32" />
       <p>Начните разговор</p>
@@ -14,14 +15,14 @@
           {{ message.sender }}
         </span>
         <p>{{ message.text }}</p>
+        <button v-for="file in message.files" :key="file.id" @click="download(file.id, file.name)">
+          {{ file.name }}
+        </button>
         <div :class="style.messageMeta">
           <time :datetime="message.sentAt">
             {{ messageTimeFormatter.format(new Date(message.sentAt)) }}
           </time>
-          <PhCheck v-if="message.own && isSaved(chat.id, message)" :size="14" title="Сохранено" />
-          <Button v-else-if="message.own" variant="ghost" size="sm" @click="$emit('retry')"
-            >Повторить сохранение</Button
-          >
+          <PhCheck v-if="message.own" :size="14" title="Сохранено на сервере" />
         </div>
       </article>
     </template>
@@ -32,23 +33,19 @@
 import { defineComponent, type PropType } from 'vue'
 import style from './MessageHistory.module.scss'
 import { PhChatCircleText, PhCheck } from '@phosphor-icons/vue'
-import Button from '@/components/UI/buttons/Button/Button.vue'
-import type { Chat, MessageSavedChecker } from '../../messages.types'
+import { useFilesStore } from '@/stores/files'
+import type { Chat, Message } from '../../messages.types'
 import { messageTimeFormatter, dayLabel } from '../../messages.format'
 export default defineComponent({
   name: 'MessageHistory',
-  components: { PhChatCircleText, PhCheck, Button },
+  components: { PhChatCircleText, PhCheck },
   props: {
     chat: { type: Object as PropType<Chat>, required: true },
-    isSaved: {
-      type: Function as PropType<MessageSavedChecker>,
-      required: true,
-    },
   },
-  emits: ['retry'],
   data() {
     return {
       style,
+      error: '',
       messageTimeFormatter,
       followingLatest: true,
       historyHeight: 0,
@@ -71,12 +68,25 @@ export default defineComponent({
     'chat.id'() {
       void this.scrollToEnd()
     },
-    'chat.messages.length'() {
-      const lastMessage = this.chat.messages[this.chat.messages.length - 1]
-      if (this.followingLatest || lastMessage?.own) void this.scrollToEnd()
+    'chat.messages'(messages: Message[], previous: Message[]) {
+      const history = this.$refs.history as HTMLElement | undefined
+      const before = history?.scrollHeight ?? 0
+      if (previous[0] && messages[0] && Number(messages[0].id) < Number(previous[0].id)) {
+        void this.$nextTick(() => {
+          if (history) history.scrollTop += history.scrollHeight - before
+        })
+      } else if (this.followingLatest || messages.at(-1)?.own) void this.scrollToEnd()
     },
   },
   methods: {
+    async download(id: number, name: string) {
+      this.error = ''
+      try {
+        await useFilesStore().download(id, name)
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Не удалось скачать файл.'
+      }
+    },
     dayLabel,
     onScroll() {
       const history = this.$refs.history as HTMLElement

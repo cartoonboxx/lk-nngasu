@@ -1,10 +1,15 @@
 <template>
   <section :class="style.coursePage">
-    <p v-if="!subject">Предмет не найден</p>
+    <p v-if="$subjectsStore.loading">Загрузка курса…</p>
+    <p v-else-if="$subjectsStore.error" role="alert">
+      {{ $subjectsStore.error }}
+      <button @click="$subjectsStore.fetchSubject(String($route.params.id))">Повторить</button>
+    </p>
+    <p v-else-if="!subject">Предмет не найден</p>
     <template v-else>
       <SectionHeader
         :header="subject.label"
-        :paragraph="`${subject.semester} семестр · Учебные материалы курса`"
+        :paragraph="`${subject.semesterLabel} · Учебные материалы курса`"
       />
       <p v-if="!activeTopic">Задания пока не добавлены</p>
       <template v-else>
@@ -18,19 +23,22 @@
             :topic="activeTopic"
             :topic-index="activeTopicIndex"
             :topic-count="topics.length"
-            @open-assignment="assignmentOpen = true"
+            @open-assignment="
+              (id: number) => {
+                selectedAssignmentId = id
+                assignmentOpen = true
+              }
+            "
             @previous="activeTopicIndex = Math.max(0, activeTopicIndex - 1)"
             @next="activeTopicIndex = Math.min(topics.length - 1, activeTopicIndex + 1)"
           />
         </div>
         <AssignmentModal
+          v-if="selectedAssignmentId !== null"
+          :key="selectedAssignmentId"
           v-model="assignmentOpen"
           :course-title="subject.label"
-          :topic="activeTopic"
-          :topic-index="activeTopicIndex"
-          :answer="activeAnswer"
-          @submit="submitAnswer"
-          @delete="!activeAnswer?.review && delete assignmentAnswers[answerKey]"
+          :assignment-id="selectedAssignmentId"
         />
       </template>
     </template>
@@ -44,8 +52,7 @@ import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import AsideCoursePanel from './components/AsideCoursePanel/AsideCoursePanel.vue'
 import ContentCourseComponent from './components/ContentCourseComponent/ContentCourseComponent.vue'
 import AssignmentModal from './components/AssignmentModal/AssignmentModal.vue'
-import type { AssignmentAnswer, AssignmentAnswerDraft, CourseTopic } from './course.types'
-import { assignmentAnswers } from './assignmentAnswers'
+import type { CourseTopic } from './course.types'
 import style from './CoursePage.module.scss'
 
 export default defineComponent({
@@ -56,24 +63,18 @@ export default defineComponent({
       style,
       activeTopicIndex: 0,
       assignmentOpen: false,
-      assignmentAnswers,
+      selectedAssignmentId: null as number | null,
     }
   },
   beforeUnmount() {
-    this.$subjectsStore.currentSubject = null
+    this.$subjectsStore.clearSession()
   },
   computed: {
     subject(): SubjectDetails | null {
       return this.$subjectsStore.currentSubject
     },
     topics(): CourseTopic[] {
-      return this.$subjectsStore.assignments
-    },
-    answerKey(): string {
-      return JSON.stringify([this.subject?.id, this.activeTopic?.id])
-    },
-    activeAnswer(): AssignmentAnswer | null {
-      return this.assignmentAnswers[this.answerKey] ?? null
+      return this.$subjectsStore.topics
     },
     activeTopic(): CourseTopic | undefined {
       return this.topics[this.activeTopicIndex]
@@ -86,14 +87,9 @@ export default defineComponent({
         if (this.$route.name !== 'course') return
         this.activeTopicIndex = 0
         this.assignmentOpen = false
+        this.selectedAssignmentId = null
         this.$subjectsStore.fetchSubject(String(this.$route.params.id))
       },
-    },
-  },
-  methods: {
-    submitAnswer(draft: AssignmentAnswerDraft) {
-      if (!this.activeTopic || this.activeAnswer?.review) return
-      this.assignmentAnswers[this.answerKey] = { ...draft, submittedAt: new Date().toISOString() }
     },
   },
 })

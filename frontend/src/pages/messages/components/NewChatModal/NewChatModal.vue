@@ -1,93 +1,80 @@
 <template>
   <Modal
     :model-value="modelValue"
-    @update:model-value="$emit('update:modelValue', $event)"
     :width="440"
+    @update:model-value="!opening && $emit('update:modelValue', $event)"
   >
     <header :class="style.modalHeader">
-      <div>
-        <h2>Новый диалог</h2>
-        <p>Кому хотите написать?</p>
-      </div>
-      <IconButton
-        variant="ghost"
-        size="sm"
-        :class="style.headerAction"
-        round
-        @click="$emit('update:modelValue', false)"
+      <h2>Новый диалог</h2>
+      <Button variant="ghost" :disabled="opening" @click="$emit('update:modelValue', false)"
+        >Закрыть</Button
       >
-        <PhX :size="20" />
-      </IconButton>
     </header>
-    <Input v-model="contactSearch" placeholder="Имя или фамилия" full-width>
-      <template #prefix>
-        <PhMagnifyingGlass :size="18" />
-      </template>
-    </Input>
-    <ul :class="style.contacts">
-      <li v-for="contact in filteredContacts" :key="contact.id">
-        <StyleTab :class="style.contact" @select="$emit('select', contact.id)">
-          <span :class="style.contactContent">
-            <ChatAvatar :initials="contact.initials" />
-            <span :class="style.contactCopy">
-              <strong>{{ contact.name }}</strong>
-              <span>{{ contact.description }}</span>
-            </span>
-          </span>
-          <template #trailing>
-            <PhArrowUpRight :size="17" />
-          </template>
-        </StyleTab>
-      </li>
-    </ul>
-    <p v-if="!filteredContacts.length" :class="style.contactsEmpty">
-      Никого не нашли. Попробуйте другое имя.
-    </p>
+    <form :class="style.composeForm" @submit.prevent="openDirect">
+      <p>Введите ID пользователя, которому хотите написать.</p>
+      <TextInput v-model="userId" label="ID пользователя" inputmode="numeric" full-width required />
+      <Button type="submit" :loading="opening" :disabled="opening || !/^[1-9]\d*$/.test(userId)"
+        >Открыть диалог</Button
+      >
+    </form>
+    <Button v-if="auth.user?.student" variant="secondary" :disabled="opening" @click="openGroup"
+      >Чат группы {{ auth.user.student.group_name }}</Button
+    >
+    <p v-if="error" role="alert">{{ error }}</p>
   </Modal>
 </template>
-
 <script lang="ts">
 import { defineComponent } from 'vue'
-import { PhX, PhMagnifyingGlass, PhArrowUpRight } from '@phosphor-icons/vue'
 import Modal from '@/components/UI/modal/BaseModal/Modal.vue'
-import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
-import Input from '@/components/UI/inputs/Input/Input.vue'
-import StyleTab from '@/components/UI/tabs/StyleTab/StyleTab.vue'
-import ChatAvatar from '../ChatAvatar/ChatAvatar.vue'
-import { contacts } from '../../messages.data'
+import Button from '@/components/UI/buttons/Button/Button.vue'
+import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
+import { useAuthStore } from '@/stores/auth'
 import style from './NewChatModal.module.scss'
 export default defineComponent({
   name: 'NewChatModal',
-  components: {
-    PhX,
-    PhMagnifyingGlass,
-    PhArrowUpRight,
-    Modal,
-    IconButton,
-    Input,
-    StyleTab,
-    ChatAvatar,
-  },
+  components: { Modal, Button, TextInput },
   props: { modelValue: Boolean },
-  emits: {
-    'update:modelValue': (value: boolean) => typeof value === 'boolean',
-    select: (id: string) => !!id,
-  },
+  emits: ['update:modelValue', 'select'],
   data() {
-    return { style, contactSearch: '' }
-  },
-  computed: {
-    filteredContacts(): typeof contacts {
-      return contacts.filter((contact) =>
-        contact.name
-          .toLocaleLowerCase('ru')
-          .includes(this.contactSearch.trim().toLocaleLowerCase('ru')),
-      )
-    },
+    return { style, auth: useAuthStore(), userId: '', opening: false, error: '' }
   },
   watch: {
     modelValue(open: boolean) {
-      if (open) this.contactSearch = ''
+      if (open) {
+        this.userId = ''
+        this.error = ''
+      }
+    },
+  },
+  methods: {
+    async openDirect() {
+      if (this.opening || !Number.isSafeInteger(Number(this.userId)) || Number(this.userId) <= 0)
+        return
+      this.opening = true
+      this.error = ''
+      try {
+        const id = await this.$messageStore.openDirect(Number(this.userId))
+        this.$emit('select', id)
+        this.$emit('update:modelValue', false)
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Не удалось открыть диалог.'
+      } finally {
+        this.opening = false
+      }
+    },
+    async openGroup() {
+      if (this.opening || !this.auth.user?.student) return
+      this.opening = true
+      this.error = ''
+      try {
+        const id = await this.$messageStore.openGroup(this.auth.user.student.group_id)
+        this.$emit('select', id)
+        this.$emit('update:modelValue', false)
+      } catch (error) {
+        this.error = error instanceof Error ? error.message : 'Не удалось открыть чат группы.'
+      } finally {
+        this.opening = false
+      }
     },
   },
 })

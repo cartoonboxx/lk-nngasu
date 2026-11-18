@@ -1,5 +1,10 @@
 <template>
   <section ref="page" :class="style.page" :style="viewportStyle">
+    <p v-if="$messageStore.loading && !chats.length">Загрузка чатов…</p>
+    <p v-if="$messageStore.error" role="alert">
+      {{ $messageStore.error }} <button @click="refreshMessages">Повторить</button>
+    </p>
+    <p v-if="$route.query.chat && !selectedChat && !$messageStore.loading">Чат не найден.</p>
     <div :class="[style.messenger, selectedChat && style.conversationOpen]">
       <ChatSidebar
         ref="sidebar"
@@ -28,7 +33,6 @@ import ChatSidebar from './components/ChatSidebar/ChatSidebar.vue'
 import ChatConversation from './components/ChatConversation/ChatConversation.vue'
 import MessagesWelcome from './components/MessagesWelcome/MessagesWelcome.vue'
 import NewChatModal from './components/NewChatModal/NewChatModal.vue'
-import { contacts } from './messages.data'
 import type { Chat } from './messages.types'
 import style from './MessagesPage.module.scss'
 export default defineComponent({
@@ -37,6 +41,8 @@ export default defineComponent({
   data() {
     return {
       style,
+      pollTimer: 0,
+      refreshing: false,
       viewportHeight: 0,
       viewportTop: 0,
       viewportWidth: 0,
@@ -73,6 +79,10 @@ export default defineComponent({
     },
   },
   mounted() {
+    void this.refreshMessages()
+    this.pollTimer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') void this.refreshMessages()
+    }, 10000)
     document.documentElement.dataset.messagesPage = 'true'
     // Search in NewChatModal is teleported outside the page element.
     document.addEventListener('focusin', this.scheduleViewportUpdate)
@@ -85,6 +95,8 @@ export default defineComponent({
     this.updateViewport()
   },
   beforeUnmount() {
+    window.clearInterval(this.pollTimer)
+    this.$messageStore.activeChatId = ''
     cancelAnimationFrame(this.viewportFrame)
     delete document.documentElement.dataset.messagesPage
     document.removeEventListener('focusin', this.scheduleViewportUpdate)
@@ -99,9 +111,12 @@ export default defineComponent({
     'selectedChat.id': {
       immediate: true,
       handler(id: string | undefined, previous: string | undefined) {
+        this.$messageStore.activeChatId = id ?? ''
+        this.$messageStore.conversationError = ''
+        this.$messageStore.sendError = ''
         if (id) {
           this.lastChatId = id
-          this.$messageStore.markRead(id)
+          void this.$messageStore.fetchMessages(id)
         }
         void this.$nextTick(() => {
           if (!id && previous)
@@ -149,12 +164,17 @@ export default defineComponent({
         this.$refs.conversation as InstanceType<typeof ChatConversation> | undefined
       )?.updateComposerLimit()
     },
-    startChat(id: string) {
-      const contact = contacts.find((item) => item.id === id)
-      if (!contact) return
-      if (!this.chats.some((chat) => chat.id === id)) {
-        this.$messageStore.ensureChat({ ...contact, group: false })
+    async refreshMessages() {
+      if (this.refreshing) return
+      this.refreshing = true
+      try {
+        await this.$messageStore.fetchChats()
+        if (this.selectedChat) await this.$messageStore.fetchMessages(this.selectedChat.id)
+      } finally {
+        this.refreshing = false
       }
+    },
+    startChat(id: string) {
       void this.$router.push({ path: '/messages', query: { chat: id } })
     },
   },

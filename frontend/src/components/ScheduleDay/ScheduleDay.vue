@@ -52,7 +52,7 @@
 <script lang="ts">
 import { defineComponent, type PropType } from 'vue'
 import { PhUser } from '@phosphor-icons/vue'
-import { lessonTypes } from '@/pages/schedule/schedule.data'
+import { lessonTypes } from '@/pages/schedule/schedule.types'
 import type { ScheduleDayItem } from './schedule-day.types'
 import style from './ScheduleDay.module.scss'
 

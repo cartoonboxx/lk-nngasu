@@ -2,6 +2,7 @@ export interface Subject {
   id: number
   label: string
   value: string
+  semesterLabel: string
   semester: string
 }
 

@@ -91,7 +91,7 @@ export default defineComponent({
         day: 'numeric',
         month: 'long',
         year: 'numeric',
-      }).format(new Date(`${this.date}T00:00:00`))
+      }).format(new Date(this.date))
     },
   },
   mounted() {

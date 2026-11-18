@@ -68,6 +68,9 @@
         >
       </p>
       <p v-if="signInError" :class="style.error" role="alert">{{ signInError }}</p>
+      <p v-if="$route.query.reason === 'password-changed'" role="status">
+        Пароль изменён. Войдите с новым паролем.
+      </p>
       <p v-if="$route.query.reason === 'server-unavailable'" :class="style.error" role="alert">
         Не удалось восстановить сессию. Проверьте подключение к серверу и повторите вход.
       </p>

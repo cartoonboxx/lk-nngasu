@@ -6,6 +6,7 @@
     <Input
       ref="field"
       :maxlength="maxlength"
+      :mask="mask"
       :max-height="maxHeight"
       :id="fieldId"
       :name="name"
@@ -49,6 +50,10 @@ export default defineComponent({
     Input,
   },
   props: {
+    mask: {
+      type: String,
+      default: '',
+    },
     id: {
       type: String,
       default: undefined,

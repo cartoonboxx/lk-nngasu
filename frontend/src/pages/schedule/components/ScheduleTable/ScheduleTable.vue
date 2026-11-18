@@ -24,14 +24,14 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="(period, index) in rows" :key="period.start">
+        <tr v-for="(period, index) in rows" :key="`${period.start}-${period.end}`">
           <th :class="style.period">
             <span :class="style.periodNumber">{{ index + 1 }} пара</span>
             <span :class="style.periodTime">{{ period.start }} – {{ period.end }}</span>
           </th>
-          <td v-for="(lesson, dayIndex) in period.lessons" :key="dayIndex">
-            <LessonCard v-if="lesson" :lesson="lesson" />
-            <span v-else :class="style.empty"></span>
+          <td v-for="(lessons, dayIndex) in period.lessons" :key="dayIndex">
+            <LessonCard v-for="lesson in lessons" :key="lesson.id" :lesson="lesson" />
+            <span v-if="!lessons.length" :class="style.empty"></span>
           </td>
         </tr>
       </tbody>
@@ -43,7 +43,6 @@
 import { defineComponent } from 'vue'
 import style from './ScheduleTable.module.scss'
 import LessonCard from '../LessonCard/LessonCard.vue'
-import { periods } from '../../schedule.data'
 
 export default defineComponent({
   name: 'ScheduleTable',
@@ -53,10 +52,12 @@ export default defineComponent({
   },
   computed: {
     rows() {
-      return periods.map((period) => ({
+      return this.$scheduleStore.periods.map((period) => ({
         ...period,
         lessons: this.$scheduleStore.days.map((day) =>
-          day.lessons.find((lesson) => lesson.start === period.start),
+          day.lessons.filter(
+            (lesson) => lesson.start === period.start && lesson.end === period.end,
+          ),
         ),
       }))
     },

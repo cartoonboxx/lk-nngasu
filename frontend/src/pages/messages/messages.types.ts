@@ -3,6 +3,7 @@ export interface Message {
   text: string
   sender: string
   own: boolean
+  files: { id: number; name: string }[]
   sentAt: string
 }
 
@@ -14,6 +15,7 @@ export interface Chat {
   description: string
   unread: number
   messages: Message[]
+  lastMessage?: Message
 }
 
 export interface SendPointer {
@@ -21,5 +23,3 @@ export interface SendPointer {
   x: number
   y: number
 }
-
-export type MessageSavedChecker = (chatId: string, message: Message) => boolean

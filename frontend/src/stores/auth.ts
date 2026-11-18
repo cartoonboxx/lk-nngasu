@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ApiError, apiRequest, type ApiRequestOptions } from '@/api/client'
+import { ApiError, apiRequest, type ApiPage, type ApiRequestOptions } from '@/api/client'
 
 interface AuthUser {
   id: number
@@ -33,6 +33,9 @@ export const useAuthStore = defineStore('auth', {
     // Access-токен и профиль живут только в памяти; refresh-cookie управляет браузер.
     session: null as AuthToken | null,
     initialized: false,
+    avatarUrl: '',
+    avatarError: '',
+    avatarVersion: 0,
     refreshPromise: null as Promise<void> | null,
   }),
   getters: {
@@ -51,19 +54,96 @@ export const useAuthStore = defineStore('auth', {
     async request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
       await this.ensureSession()
       if (!this.session) throw new ApiError(401, 'session_expired')
+      const userId = this.user?.id
       const headers = new Headers(options.headers)
       headers.set('Authorization', `Bearer ${this.session.access_token}`)
       try {
-        return await apiRequest<T>(path, { ...options, headers })
+        const result = await apiRequest<T>(path, { ...options, headers })
+        if (this.user?.id !== userId) throw new ApiError(401, 'session_expired')
+        return result
       } catch (error) {
-        if (error instanceof ApiError && error.code === 'token_expired') {
+        if (
+          error instanceof ApiError &&
+          error.code === 'token_expired' &&
+          this.user?.id === userId
+        ) {
           await this.refresh()
-          if (!this.session) throw new ApiError(401, 'session_expired')
+          if (!this.session || this.user?.id !== userId) throw new ApiError(401, 'session_expired')
           headers.set('Authorization', `Bearer ${this.session.access_token}`)
-          return apiRequest<T>(path, { ...options, headers })
+          const result = await apiRequest<T>(path, { ...options, headers })
+          if (this.user?.id !== userId) throw new ApiError(401, 'session_expired')
+          return result
         }
-        if (error instanceof ApiError && error.status === 401) this.session = null
+        if (error instanceof ApiError && error.status === 401 && this.user?.id === userId)
+          this.session = null
         throw error
+      }
+    },
+
+    async loadAvatar() {
+      const version = ++this.avatarVersion
+      if (this.avatarUrl) URL.revokeObjectURL(this.avatarUrl)
+      this.avatarUrl = ''
+      this.avatarError = ''
+      const id = this.user?.avatar?.id
+      if (!id) return
+      try {
+        const blob = await this.request<Blob>(`/files/${id}`, { responseType: 'blob' })
+        if (version === this.avatarVersion) this.avatarUrl = URL.createObjectURL(blob)
+      } catch (error) {
+        if (version === this.avatarVersion)
+          this.avatarError = error instanceof Error ? error.message : 'Не удалось загрузить фото.'
+      }
+    },
+
+    async getMe() {
+      const userId = this.user?.id
+      const user = await this.request<AuthUser>('/me')
+      if (this.session && this.user?.id === userId) {
+        this.session.user = { ...this.session.user, ...user }
+      }
+      return user
+    },
+
+    async updateMe(values: {
+      last_name?: string
+      first_name?: string
+      middle_names?: string | null
+      avatar_file_id?: number | null
+    }) {
+      const userId = this.user?.id
+      const user = await this.request<AuthUser>('/me', {
+        method: 'PATCH',
+        body: JSON.stringify(values),
+      })
+      if (this.session && this.user?.id === userId) {
+        this.session.user = { ...this.session.user, ...user }
+      }
+      return user
+    },
+
+    async changePassword(oldPassword: string, newPassword: string) {
+      await this.request<void>('/me/password', {
+        method: 'POST',
+        body: JSON.stringify({ old_password: oldPassword, new_password: newPassword }),
+      })
+      this.session = null
+      this.initialized = true
+    },
+
+    async list<T>(path: string): Promise<T[]> {
+      const result: T[] = []
+      let offset = 0
+      while (true) {
+        const page = await this.request<ApiPage<T>>(
+          `${path}${path.includes('?') ? '&' : '?'}limit=200&offset=${offset}`,
+          { paginated: true },
+        )
+        result.push(...page.data)
+        offset += page.data.length
+        if (offset >= page.meta.total || !page.data.length) {
+          return result
+        }
       }
     },
 
@@ -102,11 +182,12 @@ export const useAuthStore = defineStore('auth', {
 
     async signIn(email: string, password: string, rememberMe: boolean) {
       if (this.refreshPromise) await this.refreshPromise
-      this.session = await apiRequest<AuthToken>('/auth/login', {
+      const session = await apiRequest<AuthToken>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email: email.trim(), password, remember_me: rememberMe }),
       })
       this.initialized = true
+      this.session = session
     },
 
     async signOut() {
