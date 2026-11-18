@@ -1,4 +1,22 @@
 const messages: Record<string, string> = {
+  request_already_reviewed:
+    'Заявка уже рассмотрена другим администратором. Показано актуальное состояние.',
+  registration_request_not_found: 'Заявка не найдена.',
+  invalid_reference: 'Выбранная связанная запись не существует или находится в архиве.',
+  invalid_role: 'Выберите одну учебную роль: студент или преподаватель.',
+  record_book_exists: 'Номер зачётной книжки уже занят.',
+  last_active_admin: 'Нельзя заблокировать последнего активного администратора.',
+  self_lockout: 'Нельзя заблокировать свой аккаунт.',
+  workload_exists: 'Такая нагрузка уже существует.',
+  teacher_inactive: 'Аккаунт выбранного преподавателя заблокирован.',
+  invalid_period: 'Выберите время пары из действующей сетки звонков.',
+  current_semester_in_use: 'Нельзя архивировать текущий семестр.',
+  already_exists: 'Запись с такими данными уже существует.',
+  in_use: 'Запись используется в других данных.',
+  course_exists: 'Дисциплина уже назначена этой группе в выбранном семестре.',
+  schedule_conflict: 'Занятие пересекается с другим занятием группы, преподавателя или аудитории.',
+  forbidden: 'Недостаточно прав для выполнения действия.',
+
   invitations_disabled: 'Для приглашения администраторов нужно настроить SMTP на сервере.',
   owner_protected: 'Изменять аккаунт владельца может только сам владелец.',
   setup_closed: 'Первоначальная настройка отключена или уже завершена.',
@@ -36,13 +54,23 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
+export interface ApiPage<T> {
+  data: T[]
+  meta: { limit: number; offset: number; total: number }
+}
+
+export interface ApiRequestOptions extends RequestInit {
+  paginated?: boolean
+}
+
+export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+  const { paginated, ...requestOptions } = options
   const headers = new Headers(options.headers)
   if (options.body) headers.set('Content-Type', 'application/json')
   let response: Response
   try {
     response = await fetch(`/api/v1${path}`, {
-      ...options,
+      ...requestOptions,
       headers,
       credentials: 'include',
       cache: 'no-store',
@@ -63,5 +91,5 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
   if (!body || !('data' in body)) {
     throw new Error('Сервер вернул некорректный ответ. Повторите попытку позже.')
   }
-  return body.data as T
+  return (paginated ? body : body.data) as T
 }

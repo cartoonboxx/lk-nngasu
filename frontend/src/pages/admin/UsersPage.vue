@@ -9,6 +9,7 @@
         <Button @click="openUser()"><PhPlus :size="18" />Создать пользователя</Button>
       </template>
     </SectionHeader>
+    <p v-if="detailLoading" role="status">Загрузка карточки…</p>
     <div :class="style.toolbar">
       <TextInput
         v-model="search"
@@ -84,14 +85,11 @@
       :title="draft?.id ? 'Карточка пользователя' : 'Новый пользователь'"
     >
       <form v-if="draft" :class="style.form" @submit.prevent="save">
-        <UserFields :key="`${draft.id}-${opened}`" v-model="draft" />
-        <AdminImage
-          :key="`${draft.id}-${opened}-avatar`"
-          v-model="draft.avatar_url"
-          label="Аватар"
-        />
+        <fieldset :class="style.formFields" :disabled="$adminStore.saving">
+          <UserFields :key="`${draft.id}-${opened}`" v-model="draft" />
+        </fieldset>
         <p v-if="!draft.id" :class="style.notice">
-          В демо-режиме учётная запись создаётся без пароля и отправки приглашения.
+          После создания пользователю будет отправлено приглашение задать пароль.
         </p>
         <div :class="style.dialogFooter">
           <Button variant="ghost" @click="opened = false">Отмена</Button>
@@ -135,7 +133,8 @@ import Button from '@/components/UI/buttons/Button/Button.vue'
 import AdminTable from './components/AdminTable.vue'
 import AdminDialog from './components/AdminDialog.vue'
 import UserFields from './components/UserFields.vue'
-import AdminImage from './components/AdminImage.vue'
+import { useAuthStore } from '@/stores/auth'
+import { normalizeUser, type AdminUserResponse } from './admin.repository'
 import type { AdminUser } from './admin.types'
 import style from './Admin.module.scss'
 export default defineComponent({
@@ -149,7 +148,6 @@ export default defineComponent({
     AdminTable,
     AdminDialog,
     UserFields,
-    AdminImage,
   },
   data() {
     return {
@@ -171,6 +169,8 @@ export default defineComponent({
       ],
       columns: ['Пользователь', 'Принадлежность', 'Доступ', 'Действия'],
       style,
+      auth: useAuthStore(),
+      detailLoading: false,
       search: '',
       active: '',
       role: '',
@@ -207,28 +207,39 @@ export default defineComponent({
     const user = this.$adminStore.data?.users.find(
       (item) => item.id === Number(this.$route.query.user),
     )
-    if (user) this.openUser(user)
+    if (user) void this.openUser(user)
+    else if (Number(this.$route.query.user) > 0)
+      void this.openUser({ id: Number(this.$route.query.user) } as AdminUser)
   },
   methods: {
-    openUser(item?: AdminUser) {
-      this.draft = item
-        ? JSON.parse(JSON.stringify(item))
-        : {
-            id: 0,
-            last_name: '',
-            first_name: '',
-            middle_names: '',
-            email: '',
-            passport: '',
-            snils: '',
-            avatar_url: '',
-            is_active: true,
-            is_admin: false,
-            student: null,
-            teacher: null,
-          }
+    async openUser(item?: AdminUser) {
+      if (this.detailLoading) return
       this.$adminStore.error = ''
-      this.opened = true
+      this.detailLoading = true
+      try {
+        this.draft = item
+          ? normalizeUser(await this.auth.request<AdminUserResponse>(`/users/${item.id}`))
+          : {
+              id: 0,
+              last_name: '',
+              first_name: '',
+              middle_names: '',
+              email: '',
+              passport: '',
+              snils: '',
+              avatar_url: '',
+              is_active: true,
+              is_admin: false,
+              student: null,
+              teacher: null,
+            }
+        this.opened = true
+      } catch (error) {
+        this.$adminStore.error =
+          error instanceof Error ? error.message : 'Не удалось загрузить пользователя.'
+      } finally {
+        this.detailLoading = false
+      }
     },
     async save() {
       if (!this.draft) return

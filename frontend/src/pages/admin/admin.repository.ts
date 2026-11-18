@@ -1,154 +1,125 @@
-import { createAdminData } from './admin.data'
-import { catalogLabels, type AdminData, type CatalogKind } from './admin.types'
+import { useAuthStore } from '@/stores/auth'
+import type { ApiPage } from '@/api/client'
+import type {
+  AdminData,
+  AdminUser,
+  AdminLesson,
+  AdminWorkload,
+  CatalogKind,
+  CatalogEntry,
+  CourseOffering,
+  RegistrationRequest,
+} from './admin.types'
 
-// A local snapshot is not an HTTP contract. Production needs entity commands and server pagination.
-export interface AdminRepository {
-  load(): Promise<AdminData>
-  save(data: AdminData): Promise<void>
+export const catalogPaths: Record<CatalogKind, string> = {
+  groups: '/groups',
+  specializations: '/specializations',
+  departments: '/departments',
+  subjects: '/catalog/subjects',
+  semesters: '/semesters',
+  rooms: '/rooms',
 }
-export const adminStorageKey = 'lk-nngasu-admin-demo-v1'
-export const adminRepository: AdminRepository = {
-  async load() {
-    let saved: string | null
-    try {
-      saved = localStorage.getItem(adminStorageKey)
-    } catch {
-      throw new Error(
-        'Хранилище браузера недоступно. Разрешите сохранение данных и повторите загрузку.',
-      )
-    }
-    if (!saved) return createAdminData()
-    try {
-      const data = JSON.parse(saved) as AdminData
-      if (
-        !data ||
-        data.version !== 1 ||
-        !data.catalogs ||
-        !['requests', 'users', 'courses', 'workloads', 'lessons', 'news'].every((key) =>
-          Array.isArray(data[key as keyof AdminData]),
-        )
-      )
-        throw new Error()
-      for (const kind of Object.keys(catalogLabels) as CatalogKind[]) {
-        if (
-          !Array.isArray(data.catalogs[kind]) ||
-          data.catalogs[kind].some(
-            (item) =>
-              !item ||
-              !Number.isInteger(item.id) ||
-              typeof item.name !== 'string' ||
-              typeof item.archived !== 'boolean',
-          )
-        )
-          throw new Error()
-      }
-      for (const item of [...data.users, ...data.requests]) {
-        if (!item) throw new Error()
-        for (const field of ['passport', 'snils'] as const) {
-          if (item[field] === undefined) item[field] = ''
-          else if (typeof item[field] !== 'string') throw new Error()
+
+export interface AdminUserResponse extends Omit<
+  AdminUser,
+  'middle_names' | 'passport' | 'snils' | 'avatar_url' | 'student'
+> {
+  middle_names: string | null
+  passport?: string | null
+  snils?: string | null
+  avatar: { id: number; url: string } | null
+  student: { group_id: number; record_book_number: string | null; is_headman: boolean } | null
+}
+
+export function normalizeUser(user: AdminUserResponse): AdminUser {
+  return {
+    ...user,
+    middle_names: user.middle_names ?? '',
+    passport: user.passport ?? '',
+    snils: user.snils ?? '',
+    avatar_url: user.avatar?.url ?? '',
+    student: user.student
+      ? {
+          group_id: user.student.group_id,
+          record_book_number: user.student.record_book_number ?? '',
+          is_headman: user.student.is_headman,
         }
-      }
-      if (
-        data.users.some(
-          (item) =>
-            !item ||
-            !Number.isInteger(item.id) ||
-            !['last_name', 'first_name', 'middle_names', 'email', 'avatar_url'].every(
-              (key) => typeof item[key as keyof typeof item] === 'string',
-            ) ||
-            typeof item.is_active !== 'boolean' ||
-            typeof item.is_admin !== 'boolean',
-        )
+      : null,
+    teacher: user.teacher ? { department_id: user.teacher.department_id } : null,
+  }
+}
+
+export function normalizeRequest(item: RegistrationRequest): RegistrationRequest {
+  return {
+    ...item,
+    first_name: item.first_name ?? '',
+    last_name: item.last_name ?? '',
+    middle_names: item.middle_names ?? '',
+    comment: item.comment ?? '',
+  }
+}
+
+export const adminRepository = {
+  async list<T>(path: string): Promise<T[]> {
+    const items: T[] = []
+    let offset = 0
+    while (true) {
+      const separator = path.includes('?') ? '&' : '?'
+      const page = await useAuthStore().request<ApiPage<T>>(
+        `${path}${separator}limit=200&offset=${offset}`,
+        { paginated: true },
       )
-        throw new Error()
-      if (
-        data.users.some(
-          (item) =>
-            (item.student &&
-              (!data.catalogs.groups.some((group) => group.id === item.student?.group_id) ||
-                typeof item.student.record_book_number !== 'string')) ||
-            (item.teacher &&
-              !data.catalogs.departments.some((dept) => dept.id === item.teacher?.department_id)),
-        )
-      )
-        throw new Error()
-      if (
-        data.courses.some(
-          (item) =>
-            !item ||
-            !data.catalogs.groups.some((group) => group.id === item.group_id) ||
-            !data.catalogs.semesters.some((semester) => semester.id === item.semester_id) ||
-            !data.catalogs.subjects.some((subject) => subject.id === item.subject_id),
-        )
-      )
-        throw new Error()
-      if (
-        data.workloads.some(
-          (item) =>
-            !item ||
-            !data.courses.some((course) => course.id === item.course_id) ||
-            !data.users.some((user) => user.id === item.teacher_id && user.teacher),
-        )
-      )
-        throw new Error()
-      if (
-        data.lessons.some(
-          (item) =>
-            !item ||
-            !data.workloads.some((workload) => workload.id === item.workload_id) ||
-            !data.catalogs.rooms.some((room) => room.id === item.room_id) ||
-            !/^([01]\d|2[0-3]):[0-5]\d$/.test(item.starts_at) ||
-            !/^([01]\d|2[0-3]):[0-5]\d$/.test(item.ends_at),
-        )
-      )
-        throw new Error()
-      if (
-        data.requests.some(
-          (item) =>
-            !item ||
-            !['pending', 'approved', 'rejected'].includes(item.status) ||
-            !Number.isFinite(Date.parse(item.created_at)) ||
-            typeof item.email !== 'string' ||
-            typeof item.last_name !== 'string' ||
-            typeof item.first_name !== 'string',
-        )
-      )
-        throw new Error()
-      if (
-        data.news.some(
-          (item) =>
-            !item ||
-            !['draft', 'published', 'archived'].includes(item.status) ||
-            typeof item.title !== 'string' ||
-            typeof item.body !== 'string' ||
-            !Number.isFinite(Date.parse(item.updated_at)),
-        )
-      )
-        throw new Error()
-      return {
-        version: data.version,
-        requests: data.requests,
-        users: data.users,
-        catalogs: data.catalogs,
-        courses: data.courses,
-        workloads: data.workloads,
-        lessons: data.lessons,
-        news: data.news,
-      }
-    } catch {
-      throw new Error(
-        'Локальные данные повреждены или имеют другую версию. Проверьте хранилище браузера и повторите загрузку.',
-      )
+      items.push(...page.data)
+      offset += page.data.length
+      if (offset >= page.meta.total || !page.data.length) return items
     }
   },
-  async save(data) {
-    try {
-      localStorage.setItem(adminStorageKey, JSON.stringify(data))
-    } catch {
-      throw new Error(
-        'Не удалось сохранить данные. Проверьте доступность и свободное место в хранилище браузера; попробуйте уменьшить изображения.',
-      )
+  async load(section: string): Promise<AdminData> {
+    const data: AdminData = {
+      requests: [],
+      users: [],
+      courses: [],
+      workloads: [],
+      lessons: [],
+      catalogs: {
+        groups: [],
+        specializations: [],
+        departments: [],
+        subjects: [],
+        semesters: [],
+        rooms: [],
+      },
     }
+    if (section === 'admin-news' || section === 'admin-administrators') return data
+    const kinds: CatalogKind[] =
+      section === 'admin-requests' || section === 'admin-users'
+        ? ['groups', 'departments']
+        : (Object.keys(catalogPaths) as CatalogKind[])
+    await Promise.all(
+      kinds.map(async (kind) => {
+        data.catalogs[kind] = await this.list<CatalogEntry>(
+          `${catalogPaths[kind]}?include_archived=true`,
+        )
+      }),
+    )
+    if (['admin-users', 'admin-courses', 'admin-schedule'].includes(section)) {
+      data.users = (await this.list<AdminUserResponse>('/users')).map(normalizeUser)
+    }
+    if (section === 'admin-courses' || section === 'admin-schedule') {
+      data.courses = await this.list<CourseOffering>('/courses')
+      const workloads = await Promise.all(
+        data.courses.map((course) =>
+          useAuthStore().request<AdminWorkload[]>(`/courses/${course.id}/workloads`),
+        ),
+      )
+      data.workloads = workloads.flat()
+      const lessons = await Promise.all(
+        data.catalogs.semesters.map((semester) =>
+          useAuthStore().request<AdminLesson[]>(`/schedule/lessons?semester_id=${semester.id}`),
+        ),
+      )
+      data.lessons = lessons.flat()
+    }
+    return data
   },
 }

@@ -1873,8 +1873,7 @@ export const apiGroups: ApiGroup[] = [
     title: 'Файлы и изображения',
     description:
       'Загрузка отделена от привязки к аватару, материалу, заданию, ответу или сообщению.',
-    source:
-      'scheme.dbml; формы заданий и ответов; настройки аватара; admin/components/AdminImage.vue',
+    source: 'scheme.dbml; формы заданий и ответов; настройки аватара',
     endpoints: [
       {
         method: 'POST',

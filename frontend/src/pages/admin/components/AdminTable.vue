@@ -14,7 +14,7 @@
     </div>
     <div v-else :class="style.empty">
       <PhMagnifyingGlass :size="32" /><strong>{{ emptyTitle }}</strong>
-      <p>Измените поиск или фильтры, либо добавьте запись.</p>
+      <p>{{ emptyDescription }}</p>
     </div>
     <footer v-if="total" :class="style.pagination">
       <span>{{ start + 1 }}–{{ end }} из {{ total }}</span>
@@ -23,7 +23,11 @@
           variant="ghost"
           size="sm"
           :disabled="currentPage <= 1"
-          @click="page = currentPage - 1"
+          @click="
+            remotePage === undefined
+              ? (page = currentPage - 1)
+              : $emit('page-change', currentPage - 1)
+          "
           >Назад</Button
         >
         <span>{{ currentPage }} / {{ pages }}</span>
@@ -31,7 +35,11 @@
           variant="ghost"
           size="sm"
           :disabled="currentPage >= pages"
-          @click="page = currentPage + 1"
+          @click="
+            remotePage === undefined
+              ? (page = currentPage + 1)
+              : $emit('page-change', currentPage + 1)
+          "
           >Далее</Button
         >
       </div>
@@ -45,7 +53,14 @@ import Button from '@/components/UI/buttons/Button/Button.vue'
 import style from '../Admin.module.scss'
 export default defineComponent({
   components: { Button, PhMagnifyingGlass },
+  emits: ['page-change'],
   props: {
+    remotePage: { type: Number, default: undefined },
+    pageSize: { type: Number, default: 8 },
+    emptyDescription: {
+      type: String,
+      default: 'Измените поиск или фильтры, либо добавьте запись.',
+    },
     columns: {
       type: Array as PropType<string[]>,
       required: true,
@@ -64,7 +79,7 @@ export default defineComponent({
     },
   },
   data() {
-    return { style, page: 1, pageSize: 8 }
+    return { style, page: 1 }
   },
   computed: {
     end(): number {
@@ -74,7 +89,7 @@ export default defineComponent({
       return Math.max(1, Math.ceil(this.total / this.pageSize))
     },
     currentPage(): number {
-      return Math.min(this.page, this.pages)
+      return Math.min(this.remotePage ?? this.page, this.pages)
     },
     start(): number {
       return (this.currentPage - 1) * this.pageSize

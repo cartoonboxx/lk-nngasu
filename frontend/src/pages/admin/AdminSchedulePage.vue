@@ -117,8 +117,8 @@
       </tr>
     </AdminTable>
     <p :class="style.muted">
-      Пересечения проверяются локально по интервалам времени. Совместные потоки и изменения на
-      конкретные даты требуют отдельной модели и пока недоступны.
+      При сохранении проверяются пересечения занятий группы, преподавателя и аудитории. Изменения на
+      отдельные даты пока недоступны.
     </p>
     <AdminDialog v-model="opened" :title="draft.id ? 'Изменить занятие' : 'Новое занятие'">
       <form :class="style.form" @submit.prevent="save">
@@ -276,15 +276,15 @@ export default defineComponent({
       })),
       lessonLabels,
       days: adminDays,
-      semester: 1,
+      semester: this.$adminStore.data?.catalogs.semesters.find((item) => !item.archived)?.id ?? 0,
       scope: 'group',
       scopeId: 1,
       week: 1,
       view: 'grid',
       opened: false,
       confirmOpen: false,
-      formGroup: 1,
-      formSemester: 1,
+      formGroup: 0,
+      formSemester: 0,
       draft: {
         id: 0,
         workload_id: 0,

@@ -12,7 +12,11 @@
         </p>
         <div v-if="$adminStore.error" :class="style.error" role="alert">
           {{ $adminStore.error }}
-          <Button v-if="!$adminStore.data" variant="ghost" @click="$adminStore.initialize(true)">
+          <Button
+            v-if="!$adminStore.data"
+            variant="ghost"
+            @click="$adminStore.initialize(String($route.name))"
+          >
             Повторить
           </Button>
         </div>
@@ -24,6 +28,7 @@
 </template>
 <script lang="ts">
 import { defineComponent } from 'vue'
+import { useAuthStore } from '@/stores/auth'
 import { RouterView } from 'vue-router'
 import Button from '@/components/UI/buttons/Button/Button.vue'
 import AdminNavigation from './components/AdminNavigation.vue'
@@ -33,15 +38,22 @@ import style from './Admin.module.scss'
 export default defineComponent({
   components: { RouterView, Button, AdminNavigation },
   data() {
-    return { home, layout, style, collapsed: false, mobileMenuOpen: false }
+    return { home, layout, style, auth: useAuthStore(), collapsed: false, mobileMenuOpen: false }
   },
   mounted() {
-    void this.$adminStore.initialize()
+    void this.$adminStore.initialize(String(this.$route.name))
   },
   watch: {
-    '$route.path'() {
-      this.$adminStore.error = ''
-      this.$adminStore.success = ''
+    'auth.user'() {
+      if (!this.auth.user) {
+        void this.$router.replace({
+          name: 'authorization',
+          query: { redirect: this.$route.fullPath },
+        })
+      }
+    },
+    '$route.name'() {
+      void this.$adminStore.initialize(String(this.$route.name))
     },
   },
 })

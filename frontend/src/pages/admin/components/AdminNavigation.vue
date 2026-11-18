@@ -216,7 +216,7 @@ export default defineComponent({
     },
 
     pending(): number {
-      return this.$adminStore.data?.requests.filter((item) => item.status === 'pending').length ?? 0
+      return this.$adminStore.pendingRequestsTotal
     },
   },
   mounted() {

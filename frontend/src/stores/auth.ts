@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ApiError, apiRequest } from '@/api/client'
+import { ApiError, apiRequest, type ApiRequestOptions } from '@/api/client'
 
 interface AuthUser {
   id: number
@@ -48,7 +48,7 @@ export const useAuthStore = defineStore('auth', {
     },
   },
   actions: {
-    async request<T>(path: string, options: RequestInit = {}): Promise<T> {
+    async request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
       await this.ensureSession()
       if (!this.session) throw new ApiError(401, 'session_expired')
       const headers = new Headers(options.headers)

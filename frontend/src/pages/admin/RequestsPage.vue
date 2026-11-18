@@ -6,7 +6,12 @@
       nm
     >
       <template #actions>
-        <StatusBadge variant="warning">Ожидают решения: {{ pending }}</StatusBadge>
+        <StatusBadge variant="warning"
+          >Ожидают решения: {{ $adminStore.pendingRequestsTotal }}</StatusBadge
+        >
+        <Button variant="secondary" :disabled="$adminStore.requestsLoading" @click="loadPage(page)"
+          >Обновить</Button
+        >
       </template>
     </SectionHeader>
     <div :class="style.toolbar">
@@ -26,17 +31,23 @@
         <Select v-model="sort" :options="sortOptions" full-width />
       </label>
     </div>
+    <p v-if="$adminStore.requestsLoading" role="status">Загрузка заявок…</p>
     <AdminTable
+      v-else
       :columns="columns"
-      :total="filtered.length"
-      :reset-key="`${search}-${status}-${sort}`"
-      v-slot="{ start, end }"
+      :total="$adminStore.requestsTotal"
+      :remote-page="page"
+      empty-title="Заявок не найдено"
+      empty-description="Новых заявок с выбранными параметрами нет. Измените фильтры или обновите список."
+      @page-change="loadPage"
     >
-      <tr v-for="item in filtered.slice(start, end)" :key="item.id">
+      <tr v-for="item in $adminStore.data?.requests ?? []" :key="item.id">
         <td>
           <Button variant="ghost" size="sm" :class="style.recordButton" @click="openRequest(item)">
             <span :class="style.recordCopy">
-              <strong>{{ item.last_name }} {{ item.first_name }}</strong>
+              <strong>{{
+                [item.last_name, item.first_name].filter(Boolean).join(' ') || `Заявка №${item.id}`
+              }}</strong>
               <small>{{ item.email }}</small>
             </span>
           </Button>
@@ -55,7 +66,8 @@
       </tr>
     </AdminTable>
     <AdminDialog v-model="opened" :title="selected ? `Заявка №${selected.id}` : 'Заявка'">
-      <template v-if="selected && user">
+      <p v-if="detailLoading" role="status">Загрузка заявки…</p>
+      <template v-else-if="selected && user">
         <dl :class="style.detail">
           <dt>Получена</dt>
           <dd>{{ requestDates[selected.id]?.created }}</dd>
@@ -84,17 +96,22 @@
               <p :class="style.muted">
                 Определите роль вручную. Email не назначает роль автоматически.
               </p>
-              <UserFields :key="`${selected.id}-${opened}`" v-model="user" registration />
+              <fieldset :class="style.formFields" :disabled="$adminStore.saving">
+                <UserFields :key="`${selected.id}-${opened}`" v-model="user" registration />
+              </fieldset>
             </template>
             <p v-else :class="style.notice">
               Заявка будет отклонена. Для повторного рассмотрения потребуется новая заявка.
             </p>
             <div :class="style.dialogFooter">
-              <Button variant="ghost" @click="opened = false">Отмена</Button>
+              <Button variant="ghost" :disabled="$adminStore.saving" @click="opened = false"
+                >Отмена</Button
+              >
               <Button
                 :variant="decision === 'reject' ? 'danger' : 'primary'"
                 type="submit"
                 :loading="$adminStore.saving"
+                :disabled="$adminStore.saving"
               >
                 {{
                   decision === 'reject'
@@ -109,7 +126,7 @@
           <dt>Решение</dt>
           <dd>{{ statusLabels[selected.status] }}</dd>
           <dt>Рассмотрел</dt>
-          <dd>{{ selected.reviewed_by }}</dd>
+          <dd>{{ selected.reviewed_by?.name || '—' }}</dd>
           <dt>Дата решения</dt>
           <dd>
             {{ requestDates[selected.id]?.reviewed }}
@@ -132,6 +149,8 @@ import Select from '@/components/UI/inputs/Select/Select.vue'
 import StyleTab from '@/components/UI/tabs/StyleTab/StyleTab.vue'
 import { defineComponent } from 'vue'
 import { RouterLink } from 'vue-router'
+import { useAuthStore } from '@/stores/auth'
+import { normalizeRequest } from './admin.repository'
 import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
 import AdminTable from './components/AdminTable.vue'
@@ -174,6 +193,11 @@ export default defineComponent({
       style,
       statusLabels,
       statusVariants,
+      auth: useAuthStore(),
+      page: 1,
+      reloadTimer: undefined as ReturnType<typeof setTimeout> | undefined,
+      detailLoading: false,
+      detailVersion: 0,
       search: '',
       status: 'pending',
       sort: 'desc',
@@ -186,54 +210,100 @@ export default defineComponent({
   computed: {
     requestDates(): Record<number, { created: string; reviewed: string }> {
       return Object.fromEntries(
-        (this.$adminStore.data?.requests ?? []).map((item) => [
-          item.id,
-          {
-            created: adminDate.format(new Date(item.created_at)),
-            reviewed: item.reviewed_at ? adminDate.format(new Date(item.reviewed_at)) : '—',
-          },
-        ]),
+        [...(this.$adminStore.data?.requests ?? []), ...(this.selected ? [this.selected] : [])].map(
+          (item) => [
+            item.id,
+            {
+              created: adminDate.format(new Date(item.created_at)),
+              reviewed: item.reviewed_at ? adminDate.format(new Date(item.reviewed_at)) : '—',
+            },
+          ],
+        ),
       )
     },
-
-    pending(): number {
-      return this.$adminStore.data?.requests.filter((item) => item.status === 'pending').length ?? 0
+  },
+  mounted() {
+    void this.loadPage(1)
+  },
+  beforeUnmount() {
+    clearTimeout(this.reloadTimer)
+    this.detailVersion++
+  },
+  watch: {
+    search() {
+      clearTimeout(this.reloadTimer)
+      this.reloadTimer = setTimeout(() => void this.loadPage(1), 300)
     },
-    filtered(): RegistrationRequest[] {
-      return (this.$adminStore.data?.requests ?? [])
-        .filter(
-          (item) =>
-            (!this.status || item.status === this.status) &&
-            `${item.email} ${item.last_name} ${item.first_name}`
-              .toLowerCase()
-              .includes(this.search.toLowerCase()),
-        )
-        .sort((a, b) => (this.sort === 'desc' ? -1 : 1) * a.created_at.localeCompare(b.created_at))
+    status() {
+      clearTimeout(this.reloadTimer)
+      void this.loadPage(1)
+    },
+    sort() {
+      clearTimeout(this.reloadTimer)
+      void this.loadPage(1)
+    },
+    opened(value: boolean) {
+      if (!value) {
+        this.detailVersion++
+        this.selected = null
+        this.user = null
+      }
     },
   },
   methods: {
-    openRequest(item: RegistrationRequest) {
-      this.selected = item
-      this.user = {
-        id: 0,
-        last_name: item.last_name,
-        first_name: item.first_name,
-        middle_names: item.middle_names,
-        email: item.email,
-        passport: item.passport,
-        snils: item.snils,
-        avatar_url: '',
-        is_active: true,
-        is_admin: false,
-        student: null,
-        teacher: null,
+    async loadPage(page: number) {
+      clearTimeout(this.reloadTimer)
+      this.page = page
+      const loaded = await this.$adminStore.loadRequests({
+        q: this.search.trim(),
+        status: this.status,
+        sort: this.sort === 'desc' ? '-created_at' : 'created_at',
+        limit: 8,
+        offset: (page - 1) * 8,
+      })
+      if (loaded && page > 1 && (page - 1) * 8 >= this.$adminStore.requestsTotal) {
+        await this.loadPage(Math.max(1, Math.ceil(this.$adminStore.requestsTotal / 8)))
       }
+    },
+    async openRequest(item: RegistrationRequest) {
+      const version = ++this.detailVersion
+      this.selected = null
+      this.user = null
       this.decision = 'approve'
-      this.$adminStore.error = ''
       this.opened = true
+      this.detailLoading = true
+      this.$adminStore.error = ''
+      try {
+        const request = normalizeRequest(
+          await this.auth.request<RegistrationRequest>(`/registration-requests/${item.id}`),
+        )
+        if (version !== this.detailVersion) return
+        this.selected = request
+        this.user = {
+          id: 0,
+          last_name: request.last_name,
+          first_name: request.first_name,
+          middle_names: request.middle_names,
+          email: request.email,
+          passport: request.passport,
+          snils: request.snils,
+          avatar_url: '',
+          is_active: true,
+          is_admin: false,
+          student: null,
+          teacher: null,
+        }
+      } catch (error) {
+        if (version === this.detailVersion)
+          this.$adminStore.error =
+            error instanceof Error ? error.message : 'Не удалось загрузить заявку.'
+      } finally {
+        if (version === this.detailVersion) this.detailLoading = false
+      }
     },
     async review() {
-      if (!this.selected) return
+      if (!this.selected || this.$adminStore.saving) return
+      const id = this.selected.id
       const saved = await this.$adminStore.reviewRequest(
         this.selected.id,
         this.decision === 'approve' ? this.user : null,
@@ -242,6 +312,20 @@ export default defineComponent({
         this.opened = false
         this.selected = null
         this.user = null
+        await this.loadPage(this.page)
+      } else {
+        try {
+          this.selected = normalizeRequest(
+            await this.auth.request<RegistrationRequest>(`/registration-requests/${id}`),
+          )
+          if (this.selected.status !== 'pending') {
+            const message = this.$adminStore.error
+            await this.loadPage(this.page)
+            this.$adminStore.error = message
+          }
+        } catch {
+          // Ошибка решения остаётся видимой, даже если повторное чтение недоступно.
+        }
       }
     },
   },

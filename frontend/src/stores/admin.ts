@@ -1,54 +1,42 @@
-import { periods } from '@/pages/schedule/schedule.periods'
 import { defineStore } from 'pinia'
-import { adminRepository } from '@/pages/admin/admin.repository'
+import { ApiError, type ApiPage } from '@/api/client'
+import { useAuthStore } from './auth'
+import {
+  adminRepository,
+  catalogPaths,
+  normalizeRequest,
+  normalizeUser,
+  type AdminUserResponse,
+} from '@/pages/admin/admin.repository'
 import type {
   AdminData,
   AdminUser,
-  AdminNews,
   AdminLesson,
   AdminWorkload,
   CatalogKind,
   CatalogEntry,
   CourseOffering,
+  RegistrationRequest,
+  RequestQuery,
 } from '@/pages/admin/admin.types'
 
-function validateUser(data: AdminData, user: AdminUser) {
-  if (!user.last_name.trim() || !user.first_name.trim()) throw new Error('Укажите имя и фамилию.')
-  if (user.last_name.length > 50 || user.first_name.length > 50 || user.middle_names.length > 50)
-    throw new Error('Имя, фамилия и отчество — не более 50 символов каждое.')
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(user.email) || user.email.length > 255)
-    throw new Error('Укажите корректный email.')
-  if (!/^(?:\d{10}|\d{2} \d{2} \d{6})$/.test(user.passport.trim()))
-    throw new Error('Укажите серию и номер паспорта: 10 цифр, например 45 09 123456.')
-  if (!/^(?:\d{11}|\d{3}-\d{3}-\d{3} \d{2})$/.test(user.snils.trim()))
-    throw new Error('Укажите СНИЛС: 11 цифр, например 112-233-445 95.')
-  if (
-    data.users.some(
-      (item) => item.id !== user.id && item.email.toLowerCase() === user.email.toLowerCase(),
-    )
-  )
-    throw new Error('Пользователь с таким email уже существует.')
-  if (user.student) {
-    if (!data.catalogs.groups.some((item) => item.id === user.student?.group_id && !item.archived))
-      throw new Error('Выберите действующую учебную группу.')
-    if (!user.student.record_book_number.trim() || user.student.record_book_number.length > 50)
-      throw new Error('Укажите номер зачётной книжки до 50 символов.')
-    if (
-      data.users.some(
-        (item) =>
-          item.id !== user.id &&
-          item.student?.record_book_number === user.student?.record_book_number,
-      )
-    )
-      throw new Error('Номер зачётной книжки уже используется.')
+function userPayload(user: AdminUser) {
+  return {
+    last_name: user.last_name.trim(),
+    first_name: user.first_name.trim(),
+    middle_names: user.middle_names.trim() || null,
+    email: user.email.trim(),
+    passport: user.passport.trim(),
+    snils: user.snils.trim(),
+    student: user.student
+      ? {
+          group_id: user.student.group_id,
+          record_book_number: user.student.record_book_number,
+          is_headman: user.student.is_headman,
+        }
+      : null,
+    teacher: user.teacher ? { department_id: user.teacher.department_id } : null,
   }
-  if (
-    user.teacher &&
-    !data.catalogs.departments.some(
-      (item) => item.id === user.teacher?.department_id && !item.archived,
-    )
-  )
-    throw new Error('Выберите действующую кафедру.')
 }
 
 export function lessonConflicts(
@@ -92,392 +80,313 @@ export const useAdminStore = defineStore('adminStore', {
     saving: false,
     error: '',
     success: '',
+    section: '',
+    loadVersion: 0,
+    sessionVersion: 0,
+    requestsVersion: 0,
+    requestsLoading: false,
+    requestsTotal: 0,
+    pendingRequestsTotal: 0,
+    requestsQuery: {
+      q: '',
+      status: 'pending',
+      sort: '-created_at',
+      limit: 8,
+      offset: 0,
+    } as RequestQuery,
   }),
   actions: {
-    async initialize(force = false) {
-      if (this.loading || (this.data && !force)) return
+    clearSession() {
+      this.loadVersion++
+      this.requestsVersion++
+      this.sessionVersion++
+      this.data = null
+      this.loading = false
+      this.saving = false
+      this.requestsLoading = false
+      this.requestsTotal = 0
+      this.pendingRequestsTotal = 0
+      this.error = ''
+      this.success = ''
+      this.requestsQuery = { q: '', status: 'pending', sort: '-created_at', limit: 8, offset: 0 }
+    },
+    async initialize(section = 'admin-requests') {
+      const version = ++this.loadVersion
+      this.requestsVersion++
+      this.requestsLoading = false
+      this.section = section
       this.loading = true
       this.error = ''
+      this.success = ''
+      this.data = null
       try {
-        this.data = await adminRepository.load()
+        const [data, pending] = await Promise.all([
+          adminRepository.load(section),
+          useAuthStore().request<ApiPage<RegistrationRequest>>(
+            '/registration-requests?status=pending&limit=1&offset=0',
+            { paginated: true },
+          ),
+        ])
+        if (version === this.loadVersion) {
+          this.data = data
+          this.pendingRequestsTotal = pending.meta.total
+        }
       } catch (error) {
-        this.error =
-          error instanceof Error ? error.message : 'Не удалось загрузить примерные данные.'
+        if (version === this.loadVersion) {
+          this.error =
+            error instanceof Error ? error.message : 'Не удалось загрузить данные с сервера.'
+        }
       } finally {
-        this.loading = false
+        if (version === this.loadVersion) this.loading = false
       }
     },
-    async commit(update: (data: AdminData) => void) {
-      if (!this.data || this.saving) return false
+    async loadRequests(query?: RequestQuery): Promise<boolean> {
+      const filters = query ?? this.requestsQuery
+      const version = ++this.requestsVersion
+      this.requestsQuery = { ...filters }
+      this.requestsLoading = true
+      this.error = ''
+      if (this.data) this.data.requests = []
+      try {
+        const params = new URLSearchParams({
+          ...filters,
+          limit: String(filters.limit),
+          offset: String(filters.offset),
+        })
+        const auth = useAuthStore()
+        const [page, pending] = await Promise.all([
+          auth.request<ApiPage<RegistrationRequest>>(`/registration-requests?${params}`, {
+            paginated: true,
+          }),
+          auth.request<ApiPage<RegistrationRequest>>(
+            '/registration-requests?status=pending&limit=1&offset=0',
+            { paginated: true },
+          ),
+        ])
+        if (version !== this.requestsVersion || !this.data) return false
+        this.data.requests = page.data.map(normalizeRequest)
+        this.requestsTotal = page.meta.total
+        this.pendingRequestsTotal = pending.meta.total
+        return true
+      } catch (error) {
+        if (version === this.requestsVersion) {
+          this.requestsTotal = 0
+          this.error = error instanceof Error ? error.message : 'Не удалось загрузить заявки.'
+        }
+        return false
+      } finally {
+        if (version === this.requestsVersion) this.requestsLoading = false
+      }
+    },
+    async execute(operation: () => Promise<void>, message: string): Promise<boolean> {
+      if (this.saving) return false
+      const version = this.sessionVersion
       this.saving = true
       this.error = ''
       this.success = ''
       try {
-        const next = JSON.parse(JSON.stringify(this.data)) as AdminData
-        update(next)
-        await adminRepository.save(next)
-        this.data = next
-        this.success = 'Изменения сохранены в демо-данных.'
+        await operation()
+        if (version !== this.sessionVersion) return false
+        this.success = message
         return true
       } catch (error) {
-        this.error = error instanceof Error ? error.message : 'Не удалось сохранить изменения.'
+        if (version === this.sessionVersion) {
+          this.error =
+            error instanceof Error ? error.message : 'Не удалось сохранить изменения на сервере.'
+        }
         return false
       } finally {
-        this.saving = false
+        if (version === this.sessionVersion) this.saving = false
       }
     },
     async reviewRequest(id: number, user: AdminUser | null) {
-      return this.commit((data) => {
-        const request = data.requests.find((item) => item.id === id)
-        if (!request || request.status !== 'pending')
-          throw new Error('Заявка уже обработана или не найдена.')
-        if (user) {
-          const created = {
-            ...user,
-            id: Math.max(0, ...data.users.map((item) => item.id)) + 1,
-            email: request.email.toLowerCase(),
-            passport: user.passport.trim(),
-            snils: user.snils.trim(),
-            is_admin: false,
-            is_active: true,
-          }
-          if (Boolean(created.student) === Boolean(created.teacher))
+      return this.execute(
+        async () => {
+          if (user && Boolean(user.student) === Boolean(user.teacher)) {
             throw new Error('Выберите одну учебную роль для регистрации.')
-          validateUser(data, created)
-          data.users.push(created)
-          request.passport = created.passport
-          request.snils = created.snils
-          request.user_id = created.id
-          request.status = 'approved'
-        } else {
-          request.status = 'rejected'
-        }
-        request.reviewed_at = new Date().toISOString()
-        request.reviewed_by = 'Анна Иванова'
-      })
+          }
+          const body = user
+            ? {
+                decision: 'approve',
+                user: {
+                  last_name: user.last_name.trim(),
+                  first_name: user.first_name.trim(),
+                  middle_names: user.middle_names.trim() || null,
+                  passport: user.passport.trim(),
+                  snils: user.snils.trim(),
+                  student: user.student,
+                  teacher: user.teacher,
+                },
+              }
+            : { decision: 'reject' }
+          try {
+            await useAuthStore().request<RegistrationRequest>(
+              `/registration-requests/${id}/decision`,
+              { method: 'POST', body: JSON.stringify(body) },
+            )
+          } catch (error) {
+            if (error instanceof ApiError && error.code === 'request_already_reviewed') {
+              await this.loadRequests()
+            }
+            throw error
+          }
+        },
+        user
+          ? 'Заявка одобрена. Пользователь создан на сервере и может войти.'
+          : 'Заявка отклонена.',
+      )
     },
     async saveUser(user: AdminUser) {
-      return this.commit((data) => {
-        const existing = data.users.find((item) => item.id === user.id)
-        const next = {
-          ...user,
-          email: user.email.trim().toLowerCase(),
-          passport: user.passport.trim(),
-          snils: user.snils.trim(),
-          is_admin: existing?.is_admin ?? false,
-          is_active: existing?.is_active ?? true,
-          id: user.id || Math.max(0, ...data.users.map((item) => item.id)) + 1,
-        }
-        if (
-          existing?.teacher &&
-          !next.teacher &&
-          data.workloads.some((item) => item.teacher_id === existing.id)
-        )
-          throw new Error('Нельзя снять роль преподавателя: у пользователя есть учебная нагрузка.')
-        validateUser(data, next)
-        if (existing) data.users.splice(data.users.indexOf(existing), 1, next)
-        else data.users.push(next)
-      })
+      const data = this.data
+      return this.execute(
+        async () => {
+          const saved = await useAuthStore().request<AdminUserResponse>(
+            user.id ? `/users/${user.id}` : '/users',
+            {
+              method: user.id ? 'PATCH' : 'POST',
+              body: JSON.stringify(userPayload(user)),
+            },
+          )
+          if (!data) return
+          const index = data.users.findIndex((item) => item.id === saved.id)
+          if (index < 0) data.users.push(normalizeUser(saved))
+          else data.users.splice(index, 1, normalizeUser(saved))
+        },
+        user.id
+          ? 'Пользователь обновлён.'
+          : 'Пользователь создан. Приглашение поставлено в очередь отправки.',
+      )
     },
     async toggleUser(id: number) {
-      return this.commit((data) => {
-        const user = data.users.find((item) => item.id === id)
+      const data = this.data
+      return this.execute(async () => {
+        const user = data?.users.find((item) => item.id === id)
         if (!user) throw new Error('Пользователь не найден.')
-        if (
-          user.is_active &&
-          user.is_admin &&
-          data.users.filter((item) => item.is_admin && item.is_active).length <= 1
-        )
-          throw new Error('Нельзя заблокировать последнего действующего администратора.')
-        user.is_active = !user.is_active
-      })
+        const saved = await useAuthStore().request<AdminUserResponse>(`/users/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ is_active: !user.is_active }),
+        })
+        data!.users.splice(data!.users.indexOf(user), 1, normalizeUser(saved))
+      }, 'Доступ пользователя обновлён.')
     },
     async saveCatalog(kind: CatalogKind, entry: CatalogEntry) {
-      return this.commit((data) => {
+      const data = this.data
+      return this.execute(async () => {
+        const body: Record<string, unknown> = { name: entry.name.trim() }
+        if (kind === 'specializations') body.code = entry.code?.trim()
+        if (kind === 'groups')
+          Object.assign(body, {
+            specialization_id: entry.specialization_id,
+            admission_year: entry.admission_year,
+          })
+        if (kind === 'semesters')
+          Object.assign(body, {
+            academic_year_start: entry.academic_year_start,
+            number: entry.number,
+          })
+        const saved = await useAuthStore().request<CatalogEntry>(
+          `${catalogPaths[kind]}${entry.id ? `/${entry.id}` : ''}`,
+          {
+            method: entry.id ? 'PUT' : 'POST',
+            body: JSON.stringify(body),
+          },
+        )
+        if (!data) return
         const entries = data.catalogs[kind]
-        const existing = entries.find((item) => item.id === entry.id)
-        const next = {
-          ...entry,
-          name: entry.name.trim(),
-          id: entry.id || Math.max(0, ...entries.map((item) => item.id)) + 1,
-        }
-        if (!next.name || next.name.length > 200)
-          throw new Error('Укажите название до 200 символов.')
-        if (
-          entries.some(
-            (item) => item.id !== next.id && item.name.toLowerCase() === next.name.toLowerCase(),
-          )
-        )
-          throw new Error('Запись с таким названием уже существует.')
-        if (
-          kind === 'specializations' &&
-          (!next.code?.trim() ||
-            entries.some((item) => item.id !== next.id && item.code === next.code))
-        )
-          throw new Error('Укажите уникальный код направления.')
-        if (
-          kind === 'groups' &&
-          (!next.admission_year ||
-            next.admission_year < 2000 ||
-            !Number.isInteger(next.admission_year) ||
-            !data.catalogs.specializations.some(
-              (item) => item.id === next.specialization_id && !item.archived,
-            ))
-        )
-          throw new Error('Укажите направление и год поступления не ранее 2000.')
-        if (
-          kind === 'semesters' &&
-          (!Number.isInteger(next.academic_year_start) ||
-            !next.academic_year_start ||
-            next.academic_year_start < 2000 ||
-            ![1, 2].includes(next.number ?? 0) ||
-            entries.some(
-              (item) =>
-                item.id !== next.id &&
-                item.academic_year_start === next.academic_year_start &&
-                item.number === next.number,
-            ))
-        )
-          throw new Error(
-            'Проверьте учебный год и номер семестра: сочетание должно быть уникальным.',
-          )
-        if (existing) entries.splice(entries.indexOf(existing), 1, next)
-        else entries.push(next)
-      })
+        const index = entries.findIndex((item) => item.id === saved.id)
+        if (index < 0) entries.push(saved)
+        else entries.splice(index, 1, saved)
+      }, 'Запись справочника сохранена.')
     },
     async archiveCatalog(kind: CatalogKind, id: number) {
-      return this.commit((data) => {
-        const entry = data.catalogs[kind].find((item) => item.id === id)
-        if (!entry || entry.archived) throw new Error('Запись уже архивирована или не найдена.')
-        const used =
-          kind === 'groups'
-            ? data.users.some((item) => item.student?.group_id === id) ||
-              data.courses.some((item) => item.group_id === id)
-            : kind === 'departments'
-              ? data.users.some((item) => item.teacher?.department_id === id)
-              : kind === 'specializations'
-                ? data.catalogs.groups.some(
-                    (item) => item.specialization_id === id && !item.archived,
-                  )
-                : kind === 'subjects'
-                  ? data.courses.some((item) => item.subject_id === id)
-                  : kind === 'semesters'
-                    ? data.courses.some((item) => item.semester_id === id)
-                    : data.lessons.some((item) => item.room_id === id)
-        if (used)
-          throw new Error(
-            'Запись используется в учебных данных. Сначала перенесите связанные записи.',
-          )
-        entry.archived = true
-      })
+      const data = this.data
+      return this.execute(async () => {
+        const saved = await useAuthStore().request<CatalogEntry>(`${catalogPaths[kind]}/${id}`, {
+          method: 'PATCH',
+          body: JSON.stringify({ archived: true }),
+        })
+        const entries = data?.catalogs[kind]
+        const index = entries?.findIndex((item) => item.id === id) ?? -1
+        if (entries && index >= 0) entries.splice(index, 1, saved)
+      }, 'Запись архивирована.')
     },
     async saveCourse(course: CourseOffering) {
-      return this.commit((data) => {
-        for (const [kind, id] of [
-          ['groups', course.group_id],
-          ['semesters', course.semester_id],
-          ['subjects', course.subject_id],
-        ] as const) {
-          if (!data.catalogs[kind].some((item) => item.id === id && !item.archived))
-            throw new Error('Выберите действующие группу, семестр и дисциплину.')
-        }
-        if (
-          data.courses.some(
-            (item) =>
-              item.id !== course.id &&
-              item.group_id === course.group_id &&
-              item.semester_id === course.semester_id &&
-              item.subject_id === course.subject_id,
-          )
+      const data = this.data
+      return this.execute(async () => {
+        const saved = await useAuthStore().request<CourseOffering>(
+          course.id ? `/courses/${course.id}` : '/courses',
+          {
+            method: course.id ? 'PATCH' : 'POST',
+            body: JSON.stringify(
+              course.id
+                ? { subject_id: course.subject_id }
+                : {
+                    group_id: course.group_id,
+                    semester_id: course.semester_id,
+                    subject_id: course.subject_id,
+                  },
+            ),
+          },
         )
-          throw new Error('Дисциплина уже назначена этой группе в выбранном семестре.')
-        const existing = data.courses.find((item) => item.id === course.id)
-        const next = {
-          ...course,
-          id: course.id || Math.max(0, ...data.courses.map((item) => item.id)) + 1,
-        }
-        if (existing) data.courses.splice(data.courses.indexOf(existing), 1, next)
-        else data.courses.push(next)
-        if (
-          existing &&
-          (existing.group_id !== next.group_id || existing.semester_id !== next.semester_id)
-        ) {
-          const workloadIds = new Set(
-            data.workloads.filter((item) => item.course_id === next.id).map((item) => item.id),
-          )
-          for (const lesson of data.lessons.filter((item) => workloadIds.has(item.workload_id))) {
-            const conflicts = lessonConflicts(data, lesson)
-            if (conflicts.length)
-              throw new Error(
-                `Не удалось изменить назначение: занятие №${lesson.id}. ${conflicts.join(' ')}`,
-              )
-          }
-        }
-      })
+        if (!data) return
+        const index = data.courses.findIndex((item) => item.id === saved.id)
+        if (index < 0) data.courses.push(saved)
+        else data.courses.splice(index, 1, saved)
+        course.id = saved.id
+      }, 'Назначение дисциплины сохранено.')
     },
     async saveWorkload(workload: AdminWorkload) {
-      return this.commit((data) => {
-        if (
-          !data.courses.some((item) => item.id === workload.course_id) ||
-          !data.users.some(
-            (item) => item.id === workload.teacher_id && item.teacher && item.is_active,
-          )
+      const data = this.data
+      return this.execute(async () => {
+        const saved = await useAuthStore().request<AdminWorkload>(
+          workload.id ? `/workloads/${workload.id}` : `/courses/${workload.course_id}/workloads`,
+          {
+            method: workload.id ? 'PUT' : 'POST',
+            body: JSON.stringify({
+              teacher_id: workload.teacher_id,
+              lesson_type: workload.lesson_type,
+              planned_hours: workload.planned_hours,
+            }),
+          },
         )
-          throw new Error('Выберите курс и действующего преподавателя.')
-        if (!Number.isFinite(workload.planned_hours) || workload.planned_hours < 0)
-          throw new Error('Количество часов должно быть неотрицательным числом.')
-        if (
-          data.workloads.some(
-            (item) =>
-              item.id !== workload.id &&
-              item.course_id === workload.course_id &&
-              item.teacher_id === workload.teacher_id &&
-              item.lesson_type === workload.lesson_type,
-          )
-        )
-          throw new Error('Такая нагрузка уже существует.')
-        const existing = data.workloads.find((item) => item.id === workload.id)
-        const next = {
-          ...workload,
-          id: workload.id || Math.max(0, ...data.workloads.map((item) => item.id)) + 1,
-        }
-        if (existing) data.workloads.splice(data.workloads.indexOf(existing), 1, next)
-        else data.workloads.push(next)
-        if (
-          existing &&
-          (existing.teacher_id !== next.teacher_id || existing.course_id !== next.course_id)
-        ) {
-          for (const lesson of data.lessons.filter((item) => item.workload_id === next.id)) {
-            const conflicts = lessonConflicts(data, lesson)
-            if (conflicts.length)
-              throw new Error(
-                `Не удалось изменить нагрузку: занятие №${lesson.id}. ${conflicts.join(' ')}`,
-              )
-          }
-        }
-      })
+        if (!data) return
+        const index = data.workloads.findIndex((item) => item.id === saved.id)
+        if (index < 0) data.workloads.push(saved)
+        else data.workloads.splice(index, 1, saved)
+      }, 'Нагрузка сохранена.')
     },
     async saveLesson(lesson: AdminLesson) {
-      return this.commit((data) => {
-        const existing = data.lessons.find((item) => item.id === lesson.id)
-        if (
-          ![1, 2].includes(lesson.week_number) ||
-          lesson.day_of_week < 1 ||
-          lesson.day_of_week > 6 ||
-          (!periods.some(
-            (period) => period.start === lesson.starts_at && period.end === lesson.ends_at,
-          ) &&
-            !(existing?.starts_at === lesson.starts_at && existing.ends_at === lesson.ends_at))
-        )
-          throw new Error('Проверьте неделю, день и номер пары (1–7).')
-        if (!data.catalogs.rooms.some((item) => item.id === lesson.room_id && !item.archived))
-          throw new Error('Выберите действующую аудиторию.')
-        const conflicts = lessonConflicts(data, lesson)
-        if (conflicts.length) throw new Error(conflicts.join(' '))
-        const next = {
-          ...lesson,
-          id: lesson.id || Math.max(0, ...data.lessons.map((item) => item.id)) + 1,
+      const data = this.data
+      return this.execute(async () => {
+        const body = {
+          week_number: lesson.week_number,
+          day_of_week: lesson.day_of_week,
+          starts_at: lesson.starts_at,
+          ends_at: lesson.ends_at,
+          room_id: lesson.room_id,
+          ...(!lesson.id ? { workload_id: lesson.workload_id } : {}),
         }
-        if (existing) data.lessons.splice(data.lessons.indexOf(existing), 1, next)
-        else data.lessons.push(next)
-      })
+        const saved = await useAuthStore().request<AdminLesson>(
+          lesson.id ? `/schedule/lessons/${lesson.id}` : '/schedule/lessons',
+          { method: lesson.id ? 'PUT' : 'POST', body: JSON.stringify(body) },
+        )
+        if (!data) return
+        const index = data.lessons.findIndex((item) => item.id === saved.id)
+        if (index < 0) data.lessons.push(saved)
+        else data.lessons.splice(index, 1, saved)
+      }, 'Занятие сохранено.')
     },
     async removeAcademic(kind: 'courses' | 'workloads' | 'lessons', id: number) {
-      return this.commit((data) => {
-        if (kind === 'courses' && data.workloads.some((item) => item.course_id === id))
-          throw new Error('Сначала удалите связанную нагрузку.')
-        if (kind === 'workloads' && data.lessons.some((item) => item.workload_id === id))
-          throw new Error('Нагрузка используется в расписании.')
-        const entries = data[kind]
-        const index = entries.findIndex((item) => item.id === id)
-        if (index < 0) throw new Error('Запись не найдена.')
-        entries.splice(index, 1)
-      })
-    },
-    async copyLessons(
-      group: number,
-      sourceSemester: number,
-      targetSemester: number,
-      week: number,
-      preview = true,
-    ) {
       const data = this.data
-      if (!data) return null
-      const source = data.lessons.filter((item) => {
-        const workload = data.workloads.find((value) => value.id === item.workload_id)
-        const course = data.courses.find((value) => value.id === workload?.course_id)
-        return (
-          course?.group_id === group &&
-          course.semester_id === sourceSemester &&
-          item.week_number === week
+      return this.execute(async () => {
+        await useAuthStore().request<void>(
+          `${kind === 'lessons' ? '/schedule/lessons' : `/${kind}`}/${id}`,
+          { method: 'DELETE' },
         )
-      })
-      const candidates: AdminLesson[] = []
-      const conflicts: string[] = []
-      for (const [index, item] of source.entries()) {
-        const original = data.workloads.find((value) => value.id === item.workload_id)!
-        const course = data.courses.find((value) => value.id === original.course_id)!
-        const target = data.courses.find(
-          (value) =>
-            value.group_id === group &&
-            value.semester_id === targetSemester &&
-            value.subject_id === course.subject_id,
-        )
-        const workload = data.workloads.find(
-          (value) =>
-            value.course_id === target?.id &&
-            value.teacher_id === original.teacher_id &&
-            value.lesson_type === original.lesson_type,
-        )
-        if (!workload) {
-          conflicts.push(`Нет соответствующей нагрузки для занятия №${item.id} в целевом семестре.`)
-          continue
-        }
-        const next = {
-          ...item,
-          id: Math.max(0, ...data.lessons.map((value) => value.id)) + index + 1,
-          workload_id: workload.id,
-          week_number: sourceSemester === targetSemester ? 2 : week,
-        }
-        conflicts.push(...lessonConflicts(data, next, [...data.lessons, ...candidates]))
-        candidates.push(next)
-      }
-      if (!preview && candidates.length && !conflicts.length) {
-        const saved = await this.commit((next) => {
-          next.lessons.push(...candidates)
-        })
-        if (!saved) return null
-      }
-      return { candidates, conflicts }
-    },
-    async saveNews(news: AdminNews) {
-      return this.commit((data) => {
-        if (!news.title.trim() || !news.body.trim())
-          throw new Error('Заполните заголовок и текст новости.')
-        if (news.title.length > 200)
-          throw new Error('Заголовок должен быть не длиннее 200 символов.')
-        const existing = data.news.find((item) => item.id === news.id)
-        const now = new Date().toISOString()
-        const next = {
-          ...news,
-          id: news.id || Math.max(0, ...data.news.map((item) => item.id)) + 1,
-          author: existing?.author ?? 'Анна Иванова',
-          created_at: existing?.created_at ?? now,
-          updated_at: now,
-          published_at: news.status === 'published' ? (existing?.published_at ?? now) : null,
-        }
-        if (existing) data.news.splice(data.news.indexOf(existing), 1, next)
-        else data.news.push(next)
-      })
-    },
-    async deleteNews(id: number) {
-      return this.commit((data) => {
-        const index = data.news.findIndex((item) => item.id === id)
-        if (index < 0) throw new Error('Новость не найдена.')
-        if (data.news[index]?.status === 'published')
-          throw new Error('Перед удалением снимите новость с публикации.')
-        data.news.splice(index, 1)
-      })
+        const entries = data?.[kind]
+        const index = entries?.findIndex((item) => item.id === id) ?? -1
+        if (entries && index >= 0) entries.splice(index, 1)
+      }, 'Запись удалена.')
     },
   },
 })
