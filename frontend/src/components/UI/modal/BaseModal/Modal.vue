@@ -267,11 +267,8 @@ export default defineComponent({
     trapFocus(event: KeyboardEvent) {
       if (this.isPopover) return
       const panel = this.$refs.panel as HTMLElement
-      const dialog = this.$refs.dialog as HTMLDialogElement
       const controls = Array.from(
-        dialog.querySelectorAll<HTMLElement>(
-          'button, a[href], input, select, textarea, [tabindex]',
-        ),
+        panel.querySelectorAll<HTMLElement>('button, a[href], input, select, textarea, [tabindex]'),
       ).filter(
         (element) =>
           element.tabIndex >= 0 &&
