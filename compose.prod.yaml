@@ -52,6 +52,8 @@ services:
     image: postgres:17
     restart: unless-stopped
     shm_size: 128mb
+    ports:
+      - "127.0.0.1:15432:5432"
     environment:
       POSTGRES_USER: nngasu
       POSTGRES_DB: nngasu
