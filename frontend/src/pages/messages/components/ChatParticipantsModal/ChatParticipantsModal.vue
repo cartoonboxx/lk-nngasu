@@ -9,7 +9,7 @@
         <h2>Участники группы</h2>
         <p>{{ chatName }}</p>
       </div>
-      <IconButton variant="ghost" title="Закрыть" @click="$emit('update:modelValue', false)">
+      <IconButton variant="ghost" title="Закрыть" round @click="$emit('update:modelValue', false)">
         <PhX :size="20" />
       </IconButton>
     </header>

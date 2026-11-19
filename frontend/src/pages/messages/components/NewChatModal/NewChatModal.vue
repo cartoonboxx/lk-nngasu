@@ -6,9 +6,15 @@
   >
     <header :class="style.modalHeader">
       <h2>Новый диалог</h2>
-      <Button variant="ghost" :disabled="opening" @click="$emit('update:modelValue', false)"
-        >Закрыть</Button
+      <IconButton
+        variant="ghost"
+        :disabled="opening"
+        size="sm"
+        round
+        @click="$emit('update:modelValue', false)"
       >
+        <PhX></PhX>
+      </IconButton>
     </header>
     <TextInput
       v-model="search"
@@ -31,23 +37,30 @@
           :disabled="opening"
           @click="openDirect(contact.id)"
         >
-          <span :class="style.contactCopy"
-            ><strong>{{ contact.name }}</strong
-            ><span>{{ contact.description }}</span></span
-          >
+          <span :class="style.contactContent">
+            <span :class="style.contactAvatar">
+              <img
+                v-if="contact.avatar && avatarUrls[contact.avatar.id]"
+                :src="avatarUrls[contact.avatar.id]"
+                :alt="`Фото ${contact.name}`"
+              />
+              <span v-else>{{
+                contact.name
+                  .split(/\s+/)
+                  .filter(Boolean)
+                  .slice(0, 2)
+                  .map((part) => part[0])
+                  .join('')
+              }}</span>
+            </span>
+            <span :class="style.contactCopy">
+              <strong>{{ contact.name }}</strong>
+              <span v-if="contact.description">{{ contact.description }}</span>
+            </span>
+          </span>
         </Button>
       </li>
     </ul>
-    <Button
-      v-if="contacts.length < total"
-      variant="ghost"
-      :disabled="loading || opening"
-      @click="loadContacts(true)"
-      >Ещё контакты</Button
-    >
-    <Button v-if="auth.user?.student" variant="secondary" :disabled="opening" @click="openGroup"
-      >Чат группы {{ auth.user.student.group_name }}</Button
-    >
   </Modal>
 </template>
 <script lang="ts">
@@ -59,9 +72,11 @@ import Button from '@/components/UI/buttons/Button/Button.vue'
 import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
 import { useAuthStore } from '@/stores/auth'
 import style from './NewChatModal.module.scss'
+import { PhX } from '@phosphor-icons/vue'
+import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 export default defineComponent({
   name: 'NewChatModal',
-  components: { Modal, Button, TextInput },
+  components: { IconButton, PhX, Modal, Button, TextInput },
   props: { modelValue: Boolean },
   emits: ['update:modelValue', 'select'],
   computed: {
@@ -74,6 +89,7 @@ export default defineComponent({
       style,
       search: '',
       contacts: [] as Contact[],
+      avatarUrls: {} as Record<number, string>,
       total: 0,
       loading: false,
       error: '',
@@ -89,6 +105,8 @@ export default defineComponent({
         this.version++
         window.clearTimeout(this.timer)
         this.contacts = []
+        for (const url of Object.values(this.avatarUrls)) URL.revokeObjectURL(url)
+        this.avatarUrls = {}
         this.search = ''
         if (open) void this.loadContacts()
       },
@@ -102,13 +120,18 @@ export default defineComponent({
   beforeUnmount() {
     this.version++
     window.clearTimeout(this.timer)
+    for (const url of Object.values(this.avatarUrls)) URL.revokeObjectURL(url)
   },
   methods: {
     async loadContacts(append = false) {
       const version = ++this.version
       this.loading = true
       this.error = ''
-      if (!append) this.contacts = []
+      if (!append) {
+        this.contacts = []
+        for (const url of Object.values(this.avatarUrls)) URL.revokeObjectURL(url)
+        this.avatarUrls = {}
+      }
       try {
         const query = new URLSearchParams({
           q: this.search.trim(),
@@ -121,6 +144,18 @@ export default defineComponent({
         if (version !== this.version || !this.modelValue) return
         this.contacts = append ? [...this.contacts, ...page.data] : page.data
         this.total = page.meta.total
+        await Promise.allSettled(
+          page.data.map(async (contact) => {
+            const avatarId = contact.avatar?.id
+            if (!avatarId || this.avatarUrls[avatarId]) return
+            const blob = await this.auth.request<Blob>(`/files/${avatarId}`, {
+              responseType: 'blob',
+              notifyOnError: false,
+            })
+            if (version === this.version && this.modelValue && !this.avatarUrls[avatarId])
+              this.avatarUrls[avatarId] = URL.createObjectURL(blob)
+          }),
+        )
       } catch (error) {
         if (version === this.version)
           this.error = error instanceof Error ? error.message : 'Не удалось загрузить контакты.'

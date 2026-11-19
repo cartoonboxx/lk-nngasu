@@ -11,9 +11,7 @@
       >
         <PhArrowLeft :size="21" />
       </IconButton>
-      <component
-        :is="chat.group ? 'button' : 'div'"
-        :type="chat.group ? 'button' : undefined"
+      <div
         :class="[style.headerInfo, chat.group && style.groupHeader]"
         :title="chat.group ? 'Участники группы' : undefined"
         @click="chat.group && (participantsOpen = true)"
@@ -33,7 +31,7 @@
           </span>
         </span>
         <PhCaretDown v-if="chat.group" :size="16" :class="style.participantsIndicator" />
-      </component>
+      </div>
     </header>
     <p v-if="$messageStore.messagesLoading">Загрузка сообщений…</p>
     <p v-if="$messageStore.conversationError">
