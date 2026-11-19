@@ -97,9 +97,7 @@ export const adminRepository = {
         : (Object.keys(catalogPaths) as CatalogKind[])
     await Promise.all(
       kinds.map(async (kind) => {
-        data.catalogs[kind] = await this.list<CatalogEntry>(
-          `${catalogPaths[kind]}?include_archived=true`,
-        )
+        data.catalogs[kind] = await this.list<CatalogEntry>(catalogPaths[kind])
       }),
     )
     if (['admin-users', 'admin-courses', 'admin-schedule'].includes(section)) {
