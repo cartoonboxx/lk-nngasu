@@ -7,6 +7,7 @@ import { useScheduleStore } from './schedule'
 import { useAdminStore } from './admin'
 import { useAuthStore } from './auth'
 import { useCabinetStore } from './cabinet'
+import { useDataCacheStore } from './dataCache'
 import { apiNotifications } from '@/api/client'
 
 const stores: Plugin = {
@@ -21,11 +22,13 @@ const stores: Plugin = {
     app.config.globalProperties.$adminStore = adminStore
     const authStore = useAuthStore(pinia)
     const cabinetStore = useCabinetStore(pinia)
+    const dataCacheStore = useDataCacheStore(pinia)
     const messageStore = useMessageStore(pinia)
     app.config.globalProperties.$messageStore = messageStore
     const stopSessionSync = watch(
       () => authStore.user?.id,
       (id) => {
+        dataCacheStore.invalidate()
         adminStore.clearSession()
         app.config.globalProperties.$subjectsStore.clearSession()
         app.config.globalProperties.$scheduleStore.clearSession()
@@ -73,6 +76,7 @@ const stores: Plugin = {
     const cleanup = () => {
       apiNotifications.onError = null
       stopSessionSync()
+      dataCacheStore.invalidate()
       stopAvatarSync()
       stopThemeSync()
       window.removeEventListener('storage', syncTheme)

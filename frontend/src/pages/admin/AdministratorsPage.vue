@@ -8,7 +8,11 @@
 
     <div :class="style.toolbar">
       <h2>Аккаунты администраторов</h2>
-      <Button variant="secondary" :loading="loading" :disabled="loading || submitting" @click="load"
+      <Button
+        variant="secondary"
+        :loading="loading"
+        :disabled="loading || submitting"
+        @click="load(true)"
         >Обновить</Button
       >
     </div>
@@ -183,12 +187,14 @@ export default defineComponent({
     await this.load()
   },
   methods: {
-    async load() {
+    async load(fresh = false) {
       if (this.loading) return
       this.loading = true
 
       try {
-        this.administrators = await this.auth.request<Administrator[]>('/admin/administrators')
+        this.administrators = await this.auth.request<Administrator[]>('/admin/administrators', {
+          fresh,
+        })
       } catch (error) {
         apiNotifications.onError?.(error)
       } finally {

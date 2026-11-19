@@ -63,7 +63,11 @@ export const useCabinetStore = defineStore('cabinet', {
         if (version !== this.version) return
         this.dashboard = data
         this.news = data.news
-        useMessageStore().applyChats(data.chats)
+        const messages = useMessageStore()
+        // Снимок главной из кеша не должен заменять свежие сообщения из WebSocket.
+        messages.applyChats(
+          data.chats.filter((chat) => !messages.chats.some((item) => item.id === String(chat.id))),
+        )
       } catch (error) {
         if (version === this.version)
           this.dashboardError =

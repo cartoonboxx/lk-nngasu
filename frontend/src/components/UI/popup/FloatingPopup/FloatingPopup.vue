@@ -63,6 +63,7 @@ export default defineComponent({
     items: { type: Array as PropType<FloatingPopupItem[]>, required: true },
     modelValue: { type: String, default: undefined },
     triggerText: { type: String, default: 'Вкладки' },
+    anchor: { type: Function as PropType<() => HTMLElement | undefined>, default: undefined },
     disabled: Boolean,
     closeOnSelect: Boolean,
     mode: { type: String as PropType<FloatingPopupMode>, default: 'tabs' },
@@ -123,6 +124,8 @@ export default defineComponent({
     window.visualViewport?.addEventListener('scroll', this.updatePosition)
     this.resizeObserver = new ResizeObserver(this.updatePosition)
     this.resizeObserver.observe(this.$refs.root as HTMLElement)
+    const anchor = this.anchor?.()
+    if (anchor) this.resizeObserver.observe(anchor)
   },
   beforeUnmount() {
     document.removeEventListener('pointerdown', this.onPointerdown)
@@ -135,7 +138,7 @@ export default defineComponent({
   },
   methods: {
     updatePosition() {
-      const root = this.$refs.root as HTMLElement | undefined
+      const root = this.anchor?.() ?? (this.$refs.root as HTMLElement | undefined)
       const popup = this.$refs.popup as HTMLElement | undefined
       const list = this.$refs.list as HTMLElement | undefined
       if (!this.open || !root || !popup || !list) return
@@ -163,7 +166,7 @@ export default defineComponent({
         ?.querySelectorAll<HTMLButtonElement>('[data-popup-item]')
         [index]?.focus()
     },
-    async show(last = false) {
+    async show(last = false, focus = true) {
       if (this.disabled) return
       this.open = true
       await this.$nextTick()
@@ -171,6 +174,7 @@ export default defineComponent({
       if (!this.open || !popup) return
       if (!popup.matches(':popover-open')) popup.showPopover()
       this.updatePosition()
+      if (!focus) return
       const index =
         this.activeIndex >= 0 && !this.items[this.activeIndex]?.disabled
           ? this.activeIndex
@@ -184,10 +188,11 @@ export default defineComponent({
       const popup = this.$refs.popup as HTMLElement | undefined
       if (popup?.matches(':popover-open')) popup.hidePopover()
       this.open = false
-      if (restoreFocus)
-        (this.$refs.root as HTMLElement | undefined)
-          ?.querySelector<HTMLButtonElement>('button')
-          ?.focus()
+      if (restoreFocus) {
+        const anchor = this.anchor?.() ?? (this.$refs.root as HTMLElement | undefined)
+        if (anchor?.matches('input, textarea, button')) anchor.focus()
+        else anchor?.querySelector<HTMLElement>('input, textarea, button')?.focus()
+      }
     },
     async toggle() {
       if (this.open) this.close()
@@ -232,12 +237,18 @@ export default defineComponent({
       if (this.isTabs) this.select(this.items[next]!)
     },
     onPointerdown(event: PointerEvent) {
-      if (!(this.$refs.root as HTMLElement | undefined)?.contains(event.target as Node))
+      if (
+        !(this.$refs.root as HTMLElement | undefined)?.contains(event.target as Node) &&
+        !this.anchor?.()?.contains(event.target as Node)
+      )
         this.close()
     },
     onFocusin(event: FocusEvent) {
       // Safari can blur an item before a trigger click without focusing the trigger.
-      if (!(this.$refs.root as HTMLElement | undefined)?.contains(event.target as Node))
+      if (
+        !(this.$refs.root as HTMLElement | undefined)?.contains(event.target as Node) &&
+        !this.anchor?.()?.contains(event.target as Node)
+      )
         this.close()
     },
   },

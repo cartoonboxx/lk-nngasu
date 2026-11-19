@@ -141,7 +141,7 @@ export const useAdminStore = defineStore('adminStore', {
         if (version === this.loadVersion) this.loading = false
       }
     },
-    async loadRequests(query?: RequestQuery): Promise<boolean> {
+    async loadRequests(query?: RequestQuery, fresh = false): Promise<boolean> {
       const filters = query ?? this.requestsQuery
       const version = ++this.requestsVersion
       this.requestsQuery = { ...filters }
@@ -158,10 +158,11 @@ export const useAdminStore = defineStore('adminStore', {
         const [page, pending] = await Promise.all([
           auth.request<ApiPage<RegistrationRequest>>(`/registration-requests?${params}`, {
             paginated: true,
+            fresh,
           }),
           auth.request<ApiPage<RegistrationRequest>>(
             '/registration-requests?status=pending&limit=1&offset=0',
-            { paginated: true },
+            { paginated: true, fresh },
           ),
         ])
         if (version !== this.requestsVersion || !this.data) return false

@@ -13,23 +13,7 @@
         <span v-if="chat.group && !message.own" :class="style.sender">
           {{ message.sender }}
         </span>
-        <form v-if="editingId === message.id" @submit.prevent="saveEdit(message)">
-          <TextInput
-            v-model="editText"
-            label="Текст сообщения"
-            multiline
-            full-width
-            :maxlength="4000"
-          />
-          <Button
-            type="submit"
-            size="sm"
-            :disabled="!!$messageStore.mutationId || $messageStore.connectionState !== 'connected'"
-            >Сохранить</Button
-          >
-          <Button size="sm" variant="ghost" @click="editingId = ''">Отмена</Button>
-        </form>
-        <p v-else>{{ message.text }}</p>
+        <p>{{ message.text }}</p>
         <Button
           v-for="file in message.files"
           :key="file.id"
@@ -45,48 +29,9 @@
             {{ messageTimeFormatter.format(new Date(message.sentAt)) }}
           </time>
           <PhCheck v-if="message.own" :size="14" title="Сохранено на сервере" />
-          <IconButton
-            v-if="message.own"
-            size="sm"
-            variant="ghost"
-            title="Изменить"
-            :disabled="!!$messageStore.mutationId || $messageStore.connectionState !== 'connected'"
-            @click="
-              () => {
-                editingId = message.id
-                editText = message.text
-              }
-            "
-          >
-            <PhPencilSimple :size="14" />
-          </IconButton>
-          <IconButton
-            v-if="message.own"
-            size="sm"
-            variant="ghost"
-            title="Удалить"
-            :disabled="!!$messageStore.mutationId || $messageStore.connectionState !== 'connected'"
-            @click="removeTarget = message"
-          >
-            <PhTrash :size="14" />
-          </IconButton>
         </div>
       </article>
     </template>
-    <Modal
-      :model-value="!!removeTarget"
-      :width="400"
-      @update:model-value="!$event && (removeTarget = null)"
-    >
-      <h2>Удалить сообщение?</h2>
-      <p>Сообщение исчезнет у всех участников чата.</p>
-      <Button variant="ghost" :disabled="!!$messageStore.mutationId" @click="removeTarget = null"
-        >Отмена</Button
-      >
-      <Button variant="danger" :loading="!!$messageStore.mutationId" @click="removeMessage"
-        >Удалить</Button
-      >
-    </Modal>
   </div>
 </template>
 
@@ -94,12 +39,9 @@
 import { apiNotifications } from '@/api/client'
 import { defineComponent, type PropType } from 'vue'
 import style from './MessageHistory.module.scss'
-import { PhChatCircleText, PhCheck, PhPencilSimple, PhTrash } from '@phosphor-icons/vue'
+import { PhChatCircleText, PhCheck } from '@phosphor-icons/vue'
 import { useFilesStore } from '@/stores/files'
-import Modal from '@/components/UI/modal/BaseModal/Modal.vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
-import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
-import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
 import type { Chat, Message } from '../../messages.types'
 import { messageTimeFormatter, dayLabel } from '../../messages.format'
 export default defineComponent({
@@ -107,12 +49,7 @@ export default defineComponent({
   components: {
     PhChatCircleText,
     PhCheck,
-    PhPencilSimple,
-    PhTrash,
-    Modal,
     Button,
-    IconButton,
-    TextInput,
   },
   props: {
     chat: { type: Object as PropType<Chat>, required: true },
@@ -120,10 +57,6 @@ export default defineComponent({
   data() {
     return {
       style,
-      editingId: '',
-      editText: '',
-      removeTarget: null as Message | null,
-
       messageTimeFormatter,
       followingLatest: true,
       historyHeight: 0,
@@ -144,8 +77,6 @@ export default defineComponent({
   },
   watch: {
     async 'chat.id'() {
-      this.editingId = ''
-      this.removeTarget = null
       await this.scrollToEnd()
     },
     async 'chat.messages'(messages: Message[], previous: Message[]) {
@@ -158,24 +89,6 @@ export default defineComponent({
     },
   },
   methods: {
-    async saveEdit(message: Message) {
-      if (!this.editText.trim() && !message.files.length) return
-      const id = this.chat.id
-      const saved = await this.$messageStore.mutateMessage(id, message.id, this.editText.trim())
-      if (saved && this.chat.id === id) {
-        this.editingId = ''
-        this.editText = ''
-      }
-    },
-    async removeMessage() {
-      if (!this.removeTarget) return
-      const id = this.chat.id
-      const saved = await this.$messageStore.mutateMessage(id, this.removeTarget.id)
-      if (saved && this.chat.id === id) {
-        this.removeTarget = null
-        this.editingId = ''
-      }
-    },
     async download(id: number, name: string) {
       try {
         await useFilesStore().download(id, name)

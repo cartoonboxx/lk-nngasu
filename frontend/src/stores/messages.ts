@@ -56,7 +56,6 @@ export const useMessageStore = defineStore('messages', {
     hasOlder: {} as Record<string, boolean>,
     cursors: {} as Record<string, number | null>,
     connectionState: 'disconnected' as ConnectionState,
-    mutationId: '',
     revision: 0,
     changes: {} as Record<string, Record<string, { revision: number; message: Message | null }>>,
     version: 0,
@@ -288,35 +287,6 @@ export const useMessageStore = defineStore('messages', {
         return false
       } finally {
         if (version === this.version) this.sending = false
-      }
-    },
-    async mutateMessage(id: string, messageId: string, body?: string): Promise<boolean> {
-      if (this.mutationId || !connection) return false
-      const version = this.version
-      this.mutationId = messageId
-      this.sendError = ''
-      try {
-        if (body !== undefined) {
-          const message = await connection.command<ServerMessage>('message.edit', {
-            chat_id: Number(id),
-            message_id: Number(messageId),
-            body,
-          })
-          if (version === this.version) this.applyMessage(message)
-        } else {
-          await connection.command('message.delete', {
-            chat_id: Number(id),
-            message_id: Number(messageId),
-          })
-          if (version === this.version) this.applyRemoval(id, messageId)
-        }
-        return version === this.version
-      } catch (error) {
-        if (version === this.version)
-          this.sendError = error instanceof Error ? error.message : 'Не удалось изменить сообщение.'
-        return false
-      } finally {
-        if (version === this.version) this.mutationId = ''
       }
     },
     clearSession() {

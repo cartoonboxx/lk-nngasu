@@ -166,3 +166,24 @@
     padding: var(--mobile-card-padding);
   }
 }
+
+.page .searchExample {
+  display: grid;
+  gap: var(--space-3);
+
+  h3,
+  p {
+    margin: 0;
+  }
+
+  p {
+    color: var(--color-text-muted);
+    font-size: var(--font-size-body-small);
+    line-height: 1.6;
+  }
+
+  label {
+    color: var(--color-text-secondary);
+    font-size: var(--font-size-body-small);
+  }
+}

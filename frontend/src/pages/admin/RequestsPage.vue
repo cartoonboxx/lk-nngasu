@@ -9,7 +9,10 @@
         <StatusBadge variant="warning"
           >Ожидают решения: {{ $adminStore.pendingRequestsTotal }}</StatusBadge
         >
-        <Button variant="secondary" :disabled="$adminStore.requestsLoading" @click="loadPage(page)"
+        <Button
+          variant="secondary"
+          :disabled="$adminStore.requestsLoading"
+          @click="loadPage(page, true)"
           >Обновить</Button
         >
       </template>
@@ -254,16 +257,19 @@ export default defineComponent({
     },
   },
   methods: {
-    async loadPage(page: number) {
+    async loadPage(page: number, fresh = false) {
       clearTimeout(this.reloadTimer)
       this.page = page
-      const loaded = await this.$adminStore.loadRequests({
-        q: this.search.trim(),
-        status: this.status,
-        sort: this.sort === 'desc' ? '-created_at' : 'created_at',
-        limit: 8,
-        offset: (page - 1) * 8,
-      })
+      const loaded = await this.$adminStore.loadRequests(
+        {
+          q: this.search.trim(),
+          status: this.status,
+          sort: this.sort === 'desc' ? '-created_at' : 'created_at',
+          limit: 8,
+          offset: (page - 1) * 8,
+        },
+        fresh,
+      )
       if (loaded && page > 1 && (page - 1) * 8 >= this.$adminStore.requestsTotal) {
         await this.loadPage(Math.max(1, Math.ceil(this.$adminStore.requestsTotal / 8)))
       }

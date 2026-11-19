@@ -5,6 +5,7 @@
     </label>
     <Input
       ref="field"
+      :options="options"
       :maxlength="maxlength"
       :mask="mask"
       :max-height="maxHeight"
@@ -22,7 +23,11 @@
       :multiline="multiline"
       :base-height="baseHeight"
       @update:model-value="$emit('update:modelValue', $event)"
+      @select="$emit('select', $event)"
     >
+      <template v-if="$slots.option" #option="{ option, selected }">
+        <slot name="option" :option="option" :selected="selected" />
+      </template>
       <template v-if="$slots.prefix" #prefix>
         <slot name="prefix" />
       </template>
@@ -47,6 +52,10 @@ export default defineComponent({
     Input,
   },
   props: {
+    options: {
+      type: Array as PropType<FloatingPopupItem[]>,
+      default: () => [],
+    },
     mask: {
       type: String,
       default: '',
@@ -120,7 +129,7 @@ export default defineComponent({
       default: 96,
     },
   },
-  emits: ['update:modelValue'],
+  emits: ['update:modelValue', 'select'],
   data() {
     return {
       style,

@@ -101,10 +101,18 @@ export interface ApiRequestOptions extends RequestInit {
   notifyOnError?: boolean
   responseType?: 'blob'
   paginated?: boolean
+  // Получить актуальные данные с сервера, заменив сохранённый ответ в Pinia.
+  fresh?: boolean
 }
 
 export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
-  const { paginated, responseType, notifyOnError = true, ...requestOptions } = options
+  const {
+    paginated,
+    responseType,
+    fresh: _fresh,
+    notifyOnError = true,
+    ...requestOptions
+  } = options
   const headers = new Headers(options.headers)
   if (options.body && !(options.body instanceof FormData))
     headers.set('Content-Type', 'application/json')

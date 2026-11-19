@@ -1,4 +1,5 @@
 import { defineStore } from 'pinia'
+import { useDataCacheStore } from './dataCache'
 import {
   ApiError,
   apiRequest,
@@ -58,6 +59,39 @@ export const useAuthStore = defineStore('auth', {
   },
   actions: {
     async request<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
+      await this.ensureSession()
+      if (!this.session) throw new ApiError(401, 'session_expired')
+      const cache = useDataCacheStore()
+      const method = (options.method ?? 'GET').toUpperCase()
+      const resource = path.split('?')[0] ?? ''
+      const cacheable =
+        method === 'GET' &&
+        !options.signal &&
+        !options.responseType &&
+        options.cache !== 'no-store' &&
+        /^\/(dashboard|news|grades|courses|assignments|submissions|semesters|groups|departments|specializations|catalog|rooms|schedule|users|contacts|registration-requests|admin\/(news|administrators))(\/|$)/.test(
+          resource,
+        )
+      if (cacheable) {
+        const query = new URLSearchParams(path.split('?')[1])
+        query.sort()
+        const key = `${resource}?${query}|${options.paginated ? 'page' : 'data'}`
+        return cache.load(key, () => this.sendRequest<T>(path, options), options.fresh)
+      }
+
+      const mutation =
+        method !== 'GET' &&
+        method !== 'HEAD' &&
+        !/^\/(realtime|chats|files|auth)(\/|$)/.test(resource)
+      if (mutation) cache.invalidate()
+      try {
+        return await this.sendRequest<T>(path, options)
+      } finally {
+        // Сбрасываем также после ошибки: сервер мог сохранить изменения до обрыва связи.
+        if (mutation) cache.invalidate()
+      }
+    },
+    async sendRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
       try {
         await this.ensureSession()
         if (!this.session) throw new ApiError(401, 'session_expired')

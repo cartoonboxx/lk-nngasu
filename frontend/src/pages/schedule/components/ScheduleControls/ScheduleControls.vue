@@ -13,12 +13,26 @@
       </div>
     </div>
     <div :class="style.inputGroup">
-      <Select
-        v-model="$scheduleStore.groupId"
+      <label for="schedule-group-search" :class="style.inputLabel">Группа расписания</label>
+      <Input
+        id="schedule-group-search"
+        v-model="groupSearch"
         :options="groupOptions"
         :class="style.input"
-        @update:model-value="$scheduleStore.fetchSchedule()"
-      />
+        placeholder="Название группы"
+        full-width
+        @select="
+          (option) => {
+            if ($scheduleStore.groupId !== option.value) {
+              $scheduleStore.groupId = option.value
+              $scheduleStore.fetchSchedule()
+            }
+            groupQuery = null
+          }
+        "
+      >
+        <template #prefix><PhMagnifyingGlass :size="20" /></template>
+      </Input>
       <p v-if="$scheduleStore.groupsError">
         <button @click="$scheduleStore.fetchGroups()">Повторить</button>
       </p>
@@ -30,8 +44,8 @@
 import { defineComponent } from 'vue'
 import style from './ScheduleControls.module.scss'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
-import Select from '@/components/UI/inputs/Select/Select.vue'
-import { PhCaretLeft, PhCaretRight } from '@phosphor-icons/vue'
+import Input from '@/components/UI/inputs/Input/Input.vue'
+import { PhCaretLeft, PhCaretRight, PhMagnifyingGlass } from '@phosphor-icons/vue'
 import SchedulePeriodPicker from '../SchedulePeriodPicker/SchedulePeriodPicker.vue'
 
 export default defineComponent({
@@ -39,7 +53,8 @@ export default defineComponent({
   components: {
     SchedulePeriodPicker,
     IconButton,
-    Select,
+    Input,
+    PhMagnifyingGlass,
     PhCaretLeft,
     PhCaretRight,
   },
@@ -47,6 +62,18 @@ export default defineComponent({
     await this.$scheduleStore.fetchGroups()
   },
   computed: {
+    groupSearch: {
+      get(): string {
+        return (
+          this.groupQuery ??
+          this.groupOptions.find((option) => option.value === this.$scheduleStore.groupId)?.label ??
+          ''
+        )
+      },
+      set(value: string) {
+        this.groupQuery = value
+      },
+    },
     groupOptions() {
       return [
         { label: 'Личное расписание', value: '' },
@@ -70,6 +97,7 @@ export default defineComponent({
   data() {
     return {
       style,
+      groupQuery: null as string | null,
     }
   },
 })

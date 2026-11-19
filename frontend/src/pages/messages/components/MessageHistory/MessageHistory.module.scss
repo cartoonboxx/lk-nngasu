@@ -77,10 +77,6 @@
       font-size: 10px;
       font-variant-numeric: tabular-nums;
 
-      button {
-        min-width: 0;
-      }
-
       @media (max-width: breakpoints.$screen-phone-max) {
         font-size: max(11px, calc(var(--font-size-caption) - 2px));
       }

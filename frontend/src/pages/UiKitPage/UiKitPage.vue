@@ -224,6 +224,28 @@
           </div>
         </article>
 
+        <article :class="[style.group, style.searchExample]">
+          <h3>Input с поиском вариантов</h3>
+          <p>Начните вводить название вкладки. Выберите вариант мышью или стрелками и Enter.</p>
+          <label for="ui-kit-tab-search">Поиск вкладки</label>
+          <Input
+            id="ui-kit-tab-search"
+            v-model="tabSearch"
+            :options="switchableTabs"
+            placeholder="Например, расписание"
+            autocomplete="off"
+            full-width
+            @update:model-value="selectedSuggestion = null"
+            @select="selectedSuggestion = $event"
+          >
+            <template #prefix><PhMagnifyingGlass :size="20" /></template>
+          </Input>
+          <p v-if="selectedSuggestion">
+            Выбрана вкладка: {{ selectedSuggestion.label }} ({{ selectedSuggestion.value }})
+          </p>
+          <p v-else>Поиск идёт по названию, без учёта регистра. «Архив» недоступен для выбора.</p>
+        </article>
+
         <article :class="style.group">
           <h3>Textarea</h3>
           <div :class="style.row">
@@ -269,6 +291,19 @@
         <h2>TextInput</h2>
       </div>
       <div :class="style.showcase">
+        <article :class="style.group">
+          <h3>Поиск дисциплины</h3>
+          <TextInput
+            v-model="subjectSearch"
+            label="Дисциплина"
+            :options="selectOptions"
+            placeholder="Начните вводить название"
+            autocomplete="off"
+            full-width
+            @select="selectedSubject = $event.value"
+          />
+        </article>
+
         <article :class="style.group">
           <h3>Подпись и сообщение об ошибке</h3>
           <div :class="style.textInputExamples">
@@ -786,6 +821,9 @@ export default defineComponent({
       activeTab: 'schedule',
       popupTab: 'schedule',
       selectedSubject: '',
+      tabSearch: '',
+      subjectSearch: '',
+      selectedSuggestion: null as FloatingPopupItem | null,
       selectOptions: [
         { value: 'math', label: 'Математика' },
         { value: 'physics', label: 'Физика' },
