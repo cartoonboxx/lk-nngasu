@@ -1,0 +1,47 @@
+services:
+  ssh-tunnel:
+    build: ./docker/ssh-tunnel
+    restart: unless-stopped
+    command:
+      - -p
+      - "${SSH_PORT:-22}"
+      - -L
+      - "0.0.0.0:5432:127.0.0.1:${SSH_DB_PORT:-15432}"
+      - "${SSH_USER:?Укажите SSH_USER}@${SSH_HOST:?Укажите SSH_HOST}"
+    volumes:
+      - type: bind
+        source: ${SSH_KEY_PATH:?Укажите абсолютный путь SSH_KEY_PATH}
+        target: /run/ssh/key
+        read_only: true
+        bind:
+          create_host_path: false
+      - type: bind
+        source: ${SSH_KNOWN_HOSTS_PATH:?Укажите абсолютный путь SSH_KNOWN_HOSTS_PATH}
+        target: /run/ssh/known_hosts
+        read_only: true
+        bind:
+          create_host_path: false
+    environment:
+      PGUSER: ${REMOTE_DB_USER:-nngasu}
+      PGDATABASE: ${REMOTE_DB_NAME:-nngasu}
+    healthcheck:
+      test: ["CMD", "pg_isready", "-h", "127.0.0.1", "-p", "5432"]
+      interval: 5s
+      timeout: 3s
+      start_period: 10s
+      retries: 12
+
+  backend:
+    depends_on: !override
+      ssh-tunnel:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${REMOTE_DB_USER:-nngasu}@ssh-tunnel:5432/${REMOTE_DB_NAME:-nngasu}?sslmode=disable
+      PGPASSWORD: ${REMOTE_DATABASE_PASSWORD:?Укажите REMOTE_DATABASE_PASSWORD}
+      MIGRATE_ON_START: "false"
+
+  db:
+    profiles: ["local-db"]
+
+  adminer:
+    profiles: ["local-db"]

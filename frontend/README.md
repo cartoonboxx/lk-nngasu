@@ -33,7 +33,7 @@ Origin при обновлении сессии и выходе. Для HTTP з�
 и `COOKIE_SECURE=true`. В `compose.prod.yaml` настройка передаётся из серверного `.env`:
 при временной работе сервера по HTTP укажите `COOKIE_SECURE=false` и пересоздайте
 контейнер бэкенда. С Secure-cookie на обычном HTTP браузер не сохранит сессию.
-`VITE_TERMS_VERSION` из `.env.example` должна совпадать с `TERMS_VERSION` бэкенда;
+`VITE_TERMS_VERSION` должна совпадать с `TERMS_VERSION` бэкенда;
 по умолчанию обе версии — `2026-11-13`.
 
 ## Личный кабинет и API

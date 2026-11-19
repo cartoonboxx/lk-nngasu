@@ -135,7 +135,7 @@ jobs:
           backend_image="${image_base}-backend:${GITHUB_SHA}"
           tar -czf "$RUNNER_TEMP/deploy.tar.gz" \
             compose.prod.yaml deploy/deploy.sh deploy/nginx-location.conf \
-            deploy/.env.example backend/migrations
+            backend/migrations
           ssh -o BatchMode=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \
             'mkdir -p /var/www/lk-nngasu'
           ssh -o BatchMode=yes -o StrictHostKeyChecking=yes "$SSH_USER@$SSH_HOST" \

@@ -7,7 +7,7 @@ export FRONTEND_IMAGE="${1:?Передайте образ фронтенда}"
 export BACKEND_IMAGE="${2:?Передайте образ бэкенда}"
 
 if [[ ! -f .env ]]; then
-  echo 'Создайте серверный .env по образцу deploy/.env.example' >&2
+  echo 'Создайте серверный .env с POSTGRES_PASSWORD и JWT_SECRET; инструкция — в README.md' >&2
   exit 1
 fi
 
