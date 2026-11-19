@@ -2,6 +2,7 @@
   <section ref="page" :class="style.page" :style="viewportStyle">
     <p v-if="$messageStore.loading && !chats.length">Загрузка чатов…</p>
     <p v-if="$messageStore.error">
+      {{ $messageStore.error }}
       <button @click="refreshMessages">Повторить</button>
     </p>
     <p v-if="$route.query.chat && !selectedChat && !$messageStore.loading">Чат не найден.</p>
@@ -41,7 +42,6 @@ export default defineComponent({
   data() {
     return {
       style,
-      pollTimer: 0,
       refreshing: false,
       viewportHeight: 0,
       viewportTop: 0,
@@ -79,9 +79,7 @@ export default defineComponent({
     },
   },
   async mounted() {
-    this.pollTimer = window.setInterval(async () => {
-      if (document.visibilityState === 'visible') await this.refreshMessages()
-    }, 10000)
+    this.$messageStore.connect()
     document.documentElement.dataset.messagesPage = 'true'
     // Search in NewChatModal is teleported outside the page element.
     document.addEventListener('focusin', this.scheduleViewportUpdate)
@@ -95,7 +93,6 @@ export default defineComponent({
     await this.refreshMessages()
   },
   beforeUnmount() {
-    window.clearInterval(this.pollTimer)
     this.$messageStore.activeChatId = ''
     cancelAnimationFrame(this.viewportFrame)
     delete document.documentElement.dataset.messagesPage

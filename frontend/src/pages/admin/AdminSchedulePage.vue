@@ -271,9 +271,9 @@ export default defineComponent({
       })),
       lessonLabels,
       days: adminDays,
-      semester: this.$adminStore.data?.catalogs.semesters.find((item) => !item.archived)?.id ?? 0,
+      semester: this.$adminStore.data?.catalogs.semesters.at(0)?.id ?? 0,
       scope: 'group',
-      scopeId: 1,
+      scopeId: this.$adminStore.data?.catalogs.groups.at(0)?.id ?? 0,
       week: 1,
       view: 'grid',
       opened: false,
@@ -293,22 +293,25 @@ export default defineComponent({
   },
   computed: {
     semesterOptions(): FloatingPopupItem[] {
-      return (this.$adminStore.data?.catalogs.semesters.filter((item) => !item.archived) ?? []).map(
-        (item) => ({ value: String(item.id), label: item.name }),
-      )
+      return (this.$adminStore.data?.catalogs.semesters ?? []).map((item) => ({
+        value: String(item.id),
+        label: item.name,
+      }))
     },
     groupOptions(): FloatingPopupItem[] {
-      return (this.$adminStore.data?.catalogs.groups.filter((item) => !item.archived) ?? []).map(
-        (item) => ({ value: String(item.id), label: item.name }),
-      )
+      return (this.$adminStore.data?.catalogs.groups ?? []).map((item) => ({
+        value: String(item.id),
+        label: item.name,
+      }))
     },
     dayOptions(): FloatingPopupItem[] {
       return (this.days ?? []).map((day, index) => ({ value: String(index + 1), label: day }))
     },
     roomOptions(): FloatingPopupItem[] {
-      return (this.$adminStore.data?.catalogs.rooms.filter((item) => !item.archived) ?? []).map(
-        (item) => ({ value: String(item.id), label: item.name }),
-      )
+      return (this.$adminStore.data?.catalogs.rooms ?? []).map((item) => ({
+        value: String(item.id),
+        label: item.name,
+      }))
     },
 
     selectedPeriod: {

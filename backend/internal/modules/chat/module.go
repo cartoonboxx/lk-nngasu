@@ -21,6 +21,7 @@ func Register(r *gin.RouterGroup, pool *pgxpool.Pool, guard Guard, blobs Blobs, 
 	r.GET("/chats/:id", h.Get)
 
 	r.GET("/chats/:id/messages", h.Messages)
+	r.GET("/chats/:id/participants", h.Participants)
 
 	return h.svc
 }

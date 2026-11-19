@@ -1,5 +1,15 @@
 @use '@/styles/breakpoints';
 
+.feedback,
+.attachments {
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-4);
+  max-height: 100px;
+  overflow-y: auto;
+  font-size: var(--font-size-caption);
+  overflow-wrap: anywhere;
+}
+
 .conversation {
   display: flex;
   flex-direction: column;
@@ -60,7 +70,7 @@
   .conversationTitle {
     min-width: 0;
 
-    h2 {
+    .chatName {
       overflow: hidden;
       font-size: 15px;
       font-weight: 600;
@@ -68,33 +78,69 @@
       white-space: nowrap;
     }
 
-    p {
+    .chatDescription {
       margin-top: 2px;
       color: var(--color-text-muted);
       font-size: 12px;
     }
 
-    h2:focus {
-    }
-
     @container (max-width: 620px) {
-      h2 {
+      .chatName {
         font-size: 14px;
       }
 
-      p {
+      .chatDescription {
         font-size: 11px;
       }
     }
 
     @media (max-width: breakpoints.$screen-phone-max) {
-      h2 {
+      .chatName {
         font-size: var(--font-size-h5);
       }
 
-      p {
+      .chatDescription {
         font-size: max(12px, calc(var(--font-size-caption) - 1px));
       }
     }
   }
+}
+
+.headerInfo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  flex: 1;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+}
+
+.groupHeader {
+  cursor: pointer;
+  border-radius: 8px;
+
+  &:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: 5px;
+  }
+
+  &:hover .chatName {
+    color: var(--color-content-accent);
+  }
+}
+
+.chatName,
+.chatDescription {
+  display: block;
+}
+
+.participantsIndicator {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--color-text-muted);
 }

@@ -21,7 +21,6 @@
       :icon="icons.squares"
       :active="isMoreActive || mobileOpen"
       variant="bottom"
-      :notification="unreadMessages > 0"
       @click="isMobile && (mobileOpen = true)"
     />
   </nav>
@@ -47,7 +46,6 @@
           :text="item.text"
           :icon="item.icon"
           :active="$route.name === item.route"
-          :badge="item.route === 'messages' && unreadMessages ? unreadMessages : undefined"
           @click="navigate(item.route)"
         />
       </div>
@@ -153,9 +151,7 @@ export default defineComponent({
         this.$messageStore.chats.some((chat) => chat.id === this.$route.query.chat)
       )
     },
-    unreadMessages(): number {
-      return this.$messageStore.unreadMessages
-    },
+
     mobileTabs() {
       return [
         {

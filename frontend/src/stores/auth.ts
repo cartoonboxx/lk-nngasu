@@ -132,7 +132,7 @@ export const useAuthStore = defineStore('auth', {
       return user
     },
 
-    async updateMe(values: { avatar_file_id?: number | null }) {
+    async updateMe(values: { avatar: number | null }) {
       const userId = this.user?.id
       const user = await this.request<AuthUser>('/me', {
         method: 'PATCH',

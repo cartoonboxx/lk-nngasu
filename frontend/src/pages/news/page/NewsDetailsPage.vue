@@ -1,18 +1,18 @@
 <template>
   <section :class="style.newsDetailsPage">
     <RouterLink to="/news">Назад к новостям</RouterLink>
-    <p v-if="cabinet.newsLoading">Загрузка новости…</p>
-    <p v-else-if="cabinet.newsError">
-      <button @click="cabinet.fetchNews()">Повторить</button>
+    <p v-if="cabinet.detailLoading">Загрузка новости…</p>
+    <p v-else-if="cabinet.detailError">
+      <button @click="cabinet.fetchNewsDetail(String($route.params.idNews))">Повторить</button>
     </p>
     <article v-else-if="currentNews">
       <header :class="style.header">
         <time :datetime="currentNews.published_at">{{
           new Date(currentNews.published_at).toLocaleDateString('ru-RU')
         }}</time>
-        <h1>{{ currentNews.title }}</h1>
+        <h1>{{ currentNews.excerpt }}</h1>
       </header>
-      <p :class="style.body" style="white-space: pre-wrap">{{ currentNews.text }}</p>
+      <p :class="style.body" style="white-space: pre-wrap">{{ currentNews.body }}</p>
     </article>
     <p v-else>Новость не найдена.</p>
   </section>
@@ -28,15 +28,20 @@ export default defineComponent({
   data() {
     return { style }
   },
-  async created() {
-    await this.cabinet.fetchNews()
+  watch: {
+    '$route.params.idNews': {
+      immediate: true,
+      handler(id: string) {
+        void this.cabinet.fetchNewsDetail(id)
+      },
+    },
   },
   computed: {
     cabinet() {
       return useCabinetStore()
     },
     currentNews() {
-      return this.cabinet.news.find((item) => String(item.id) === this.$route.params.idNews)
+      return this.cabinet.currentNews
     },
   },
 })

@@ -10,8 +10,11 @@ export const useFilesStore = defineStore('files', {
       body.append('purpose', purpose)
       return useAuthStore().request<FileInfo>('/files', { method: 'POST', body })
     },
-    async download(id: number, name: string) {
-      const blob = await useAuthStore().request<Blob>(`/files/${id}`, { responseType: 'blob' })
+    async download(id: number | string, name: string) {
+      const blob = await useAuthStore().request<Blob>(
+        typeof id === 'number' ? `/files/${id}` : id,
+        { responseType: 'blob' },
+      )
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url

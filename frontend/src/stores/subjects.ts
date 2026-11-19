@@ -74,7 +74,7 @@ export const useSubjectsStore = defineStore('subjects', {
       this.currentAssignment = assignment
       return assignment
     },
-    async submitAnswer(id: number, draft: AssignmentAnswerDraft) {
+    async submitAnswer(id: number, draft: AssignmentAnswerDraft, submit = true) {
       const version = this.requestVersion
       const fileIds: number[] = []
       for (const attachment of draft.attachments) {
@@ -88,10 +88,22 @@ export const useSubjectsStore = defineStore('subjects', {
         fileIds.push(Number(attachment.id))
       }
       if (version !== this.requestVersion) throw new Error('Страница курса закрыта.')
-      return useAuthStore().request<Submission>(`/assignments/${id}/submission`, {
+      const submission = await useAuthStore().request<Submission>(`/assignments/${id}/submission`, {
         method: 'PUT',
-        body: JSON.stringify({ answer_text: draft.comment, file_ids: fileIds, submit: true }),
+        body: JSON.stringify({ answer_text: draft.comment || null, file_ids: fileIds, submit }),
       })
+      if (version === this.requestVersion) {
+        const assignment = this.currentSubject?.topics.find(
+          (topic) => topic.assignment?.id === id,
+        )?.assignment
+        if (assignment)
+          assignment.mine = {
+            status: submission.status,
+            submitted_at: submission.submitted_at,
+            grade: submission.grade,
+          }
+      }
+      return submission
     },
     clearSession() {
       this.requestVersion++

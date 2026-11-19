@@ -25,12 +25,13 @@ const stores: Plugin = {
     app.config.globalProperties.$messageStore = messageStore
     const stopSessionSync = watch(
       () => authStore.user?.id,
-      () => {
+      (id) => {
         adminStore.clearSession()
         app.config.globalProperties.$subjectsStore.clearSession()
         app.config.globalProperties.$scheduleStore.clearSession()
         messageStore.clearSession()
         cabinetStore.clearSession()
+        if (id) messageStore.connect()
       },
       { flush: 'sync' },
     )
@@ -76,6 +77,7 @@ const stores: Plugin = {
       stopThemeSync()
       window.removeEventListener('storage', syncTheme)
       authStore.avatarVersion++
+      messageStore.clearSession()
       if (authStore.avatarUrl) URL.revokeObjectURL(authStore.avatarUrl)
     }
     app.onUnmount(() => {

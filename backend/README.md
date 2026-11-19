@@ -21,8 +21,8 @@ curl -s localhost:5173/api/v1/auth/login -H 'Content-Type: application/json' \
 ```
 
 Браузер и HTTP-клиенты обращаются к API через фронтенд: `/api/v1/...`.
-Vite проксирует запросы в контейнер `backend:8080`. SQL применяется автоматически
-только к пустому тому PostgreSQL; для существующей БД см. корневой README.
+Vite проксирует запросы в контейнер `backend:8080`. API применяет недостающие
+миграции автоматически и на новой, и на существующей БД.
 Загруженные файлы сохраняются в отдельном томе `uploads`.
 
 Проверка работоспособности без авторизации: `GET /api/healthz` возвращает
@@ -178,6 +178,7 @@ migrations         001–017 *.sql, встроены в бинарник (embed.
 | GET | /contacts | кому можно написать (`q`, `limit`, `offset`) |
 | GET | /chats | свои чаты, страница (`q`, `limit`, `offset`) |
 | POST | /chats/direct, /chats/group | открыть личный / групповой чат (200) |
+| GET | /chats/:id/participants | участники доступного чата: `[{id, name}]` |
 | GET | /chats/:id, /chats/:id/messages | чат; история `before`, `limit` → `{items, has_more, next_before}` |
 | GET | /dashboard | неделя, пары на сегодня, последние чаты и новости |
 | GET | /resources | внешние сервисы и контакты из `RESOURCES_FILE` (по умолчанию — встроенный набор) |

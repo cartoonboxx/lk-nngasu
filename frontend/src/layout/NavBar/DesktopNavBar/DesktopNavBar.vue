@@ -65,9 +65,6 @@
             :active="$route.name === 'messages'"
             @select="navigate('messages')"
           >
-            <template v-if="!collapsed && unreadMessages" #actions>
-              <Badge :value="unreadMessages" variant="info" inline />
-            </template>
           </NavTab>
         </Tooltip>
         <Tooltip
@@ -110,7 +107,6 @@
 
 <script lang="ts">
 import { useAuthStore } from '@/stores/auth'
-import Badge from '@/components/UI/Badge/Badge.vue'
 import {
   PhBookOpen,
   PhCalendarBlank,
@@ -132,7 +128,7 @@ import style from './DesktopNavBar.module.scss'
 
 export default defineComponent({
   name: 'DesktopNavBar',
-  components: { Badge, PhSidebarSimple, BrandHeader, StudentCard, NavTab, IconButton, Tooltip },
+  components: { PhSidebarSimple, BrandHeader, StudentCard, NavTab, IconButton, Tooltip },
   emits: ['collapse-change'],
   data() {
     return { style, collapsed: false }
@@ -148,9 +144,7 @@ export default defineComponent({
     auth() {
       return useAuthStore()
     },
-    unreadMessages(): number {
-      return this.$messageStore.unreadMessages
-    },
+
     icons() {
       return {
         house: markRaw(PhHouse),

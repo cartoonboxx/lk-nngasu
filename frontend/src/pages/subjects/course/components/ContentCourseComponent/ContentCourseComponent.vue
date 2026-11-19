@@ -12,7 +12,7 @@
         <div v-for="material in topic.materials" :key="material.id">
           <MediaButton
             v-if="material.file"
-            :title="material.title"
+            :title="material.file.name"
             :filename="material.file.name"
             :meta="`${material.file.name} · ${(material.file.size_bytes / 1024).toFixed(1)} КБ`"
             @click="download(material.file.id, material.file.name)"
@@ -24,14 +24,18 @@
             :href="material.external_url!"
             target="_blank"
             rel="noopener noreferrer"
-            >{{ material.title }}</a
+            >{{ material.external_url }}</a
           >
         </div>
       </div>
     </section>
     <section :class="style.assignmentSection">
-      <p v-if="!topic.assignments.length">Задания пока не добавлены</p>
-      <div v-for="assignment in topic.assignments" :key="assignment.id" :class="style.assignment">
+      <p v-if="!topic.assignment">Задание пока не добавлено</p>
+      <div
+        v-for="assignment in topic.assignment ? [topic.assignment] : []"
+        :key="assignment.id"
+        :class="style.assignment"
+      >
         <h3>{{ assignment.title }}</h3>
         <p :class="style.assignmentText">{{ assignment.description }}</p>
         <div :class="style.assignmentFooter">

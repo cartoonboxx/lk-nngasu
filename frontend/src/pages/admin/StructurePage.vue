@@ -26,15 +26,11 @@
         :placeholder="kind === 'specializations' ? 'Код и название' : 'Название'"
         full-width
       />
-      <label :class="style.field">
-        Состояние
-        <Select v-model="archive" :options="archiveOptions" full-width />
-      </label>
     </div>
     <AdminTable
       :columns="columns"
       :total="filtered.length"
-      :reset-key="`${kind}-${search}-${archive}`"
+      :reset-key="`${kind}-${search}`"
       v-slot="{ start, end }"
     >
       <tr v-for="item in filtered.slice(start, end)" :key="item.id">
@@ -45,15 +41,20 @@
           {{ entryDetails[item.id] }}
         </td>
         <td>
-          <StatusBadge>{{ item.archived ? 'В архиве' : 'Действует' }}</StatusBadge>
+          <StatusBadge>{{ item.is_current ? 'Текущий семестр' : 'Действует' }}</StatusBadge>
         </td>
         <td>
           <div :class="style.actions">
-            <Button size="sm" variant="ghost" :disabled="item.archived" @click="openEntry(item)">
-              Изменить
-            </Button>
             <Button
-              v-if="!item.archived"
+              v-if="kind === 'semesters' && !item.is_current"
+              size="sm"
+              variant="ghost"
+              :disabled="$adminStore.saving"
+              @click="$adminStore.setCurrentSemester(item.id)"
+              >Сделать текущим</Button
+            >
+            <Button size="sm" variant="ghost" @click="openEntry(item)"> Изменить </Button>
+            <Button
               size="sm"
               variant="ghost"
               @click="
@@ -63,7 +64,7 @@
                 }
               "
             >
-              В архив
+              Удалить
             </Button>
           </div>
         </td>
@@ -73,9 +74,10 @@
       <form :class="style.form" @submit.prevent="save">
         <p :class="style.muted">{{ catalogLabels[kind] }}</p>
         <TextInput
+          v-if="kind !== 'semesters'"
           v-model="draft.name"
           :label="kind === 'rooms' ? 'Номер / обозначение аудитории' : 'Название'"
-          :maxlength="200"
+          :maxlength="kind === 'rooms' ? 30 : kind === 'groups' ? 50 : 200"
           required
           full-width
         />
@@ -135,16 +137,15 @@
         </div>
       </form>
     </AdminDialog>
-    <AdminDialog v-model="confirmOpen" title="Архивировать запись?">
+    <AdminDialog v-model="confirmOpen" title="Удалить запись?">
       <p>{{ target?.name }}</p>
       <p :class="style.muted">
-        Запись исчезнет из списков выбора. Записи со связанными учебными данными архивировать
-        нельзя.
+        Запись будет удалена. Удаление доступно только при отсутствии связанных учебных данных.
       </p>
       <div :class="style.dialogFooter">
         <Button variant="ghost" @click="confirmOpen = false">Отмена</Button>
-        <Button variant="danger" :loading="$adminStore.saving" @click="archiveEntry">
-          Архивировать
+        <Button variant="danger" :loading="$adminStore.saving" @click="removeEntry">
+          Удалить
         </Button>
       </div>
     </AdminDialog>
@@ -177,11 +178,6 @@ export default defineComponent({
   },
   data() {
     return {
-      archiveOptions: [
-        { value: 'active', label: 'Действующие' },
-        { value: 'archived', label: 'Архив' },
-        { value: 'all', label: 'Все записи' },
-      ],
       semesterNumberOptions: [
         { value: '1', label: '1 · Осенний' },
         { value: '2', label: '2 · Весенний' },
@@ -191,14 +187,12 @@ export default defineComponent({
       catalogLabels,
       kind: 'groups' as CatalogKind,
       search: '',
-      archive: 'active',
       opened: false,
       confirmOpen: false,
       target: null as CatalogEntry | null,
       draft: {
         id: 0,
         name: '',
-        archived: false,
         code: '',
         specialization_id: 0,
         admission_year: 2026,
@@ -233,16 +227,15 @@ export default defineComponent({
     },
 
     specializationOptions(): FloatingPopupItem[] {
-      return (
-        this.$adminStore.data?.catalogs.specializations.filter((item) => !item.archived) ?? []
-      ).map((item) => ({ value: String(item.id), label: `${item.code} · ${item.name}` }))
+      return (this.$adminStore.data?.catalogs.specializations ?? []).map((item) => ({
+        value: String(item.id),
+        label: `${item.code} · ${item.name}`,
+      }))
     },
 
     filtered(): CatalogEntry[] {
-      return (this.$adminStore.data?.catalogs[this.kind] ?? []).filter(
-        (item) =>
-          `${item.name} ${item.code ?? ''}`.toLowerCase().includes(this.search.toLowerCase()) &&
-          (this.archive === 'all' || item.archived === (this.archive === 'archived')),
+      return (this.$adminStore.data?.catalogs[this.kind] ?? []).filter((item) =>
+        `${item.name} ${item.code ?? ''}`.toLowerCase().includes(this.search.toLowerCase()),
       )
     },
   },
@@ -253,7 +246,7 @@ export default defineComponent({
   },
   methods: {
     openEntry(item?: CatalogEntry) {
-      this.draft = item ? { ...item } : { id: 0, name: '', archived: false }
+      this.draft = item ? { ...item } : { id: 0, name: '' }
       if (this.kind === 'groups')
         Object.assign(this.draft, {
           specialization_id: item?.specialization_id ?? 0,
@@ -272,12 +265,11 @@ export default defineComponent({
       if (saved) {
         this.opened = false
         this.search = ''
-        this.archive = 'active'
       }
     },
-    async archiveEntry() {
+    async removeEntry() {
       if (!this.target) return
-      const saved = await this.$adminStore.archiveCatalog(this.kind, this.target.id)
+      const saved = await this.$adminStore.removeCatalog(this.kind, this.target.id)
       if (saved) {
         this.confirmOpen = false
         this.target = null

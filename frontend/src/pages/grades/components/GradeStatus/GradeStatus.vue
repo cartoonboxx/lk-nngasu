@@ -19,6 +19,7 @@ export default defineComponent({
         reviewed: 'success',
         pending: 'info',
         'not-submitted': 'warning',
+        missing: 'error',
       } satisfies Record<GradeStatus, StatusBadgeVariant>,
     }
   },

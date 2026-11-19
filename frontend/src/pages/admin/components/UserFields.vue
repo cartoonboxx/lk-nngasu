@@ -33,16 +33,10 @@
         full-width
       />
     </div>
-    <template v-if="registration">
-      <label :class="style.field">
-        Учебная роль
-        <Select v-model="role" :options="roleOptions" full-width />
-      </label>
-    </template>
-    <div v-else :class="style.actions">
-      <Checkbox v-model="isStudent" label="Студент" />
-      <Checkbox v-model="isTeacher" label="Преподаватель" />
-    </div>
+    <label v-if="!user.is_admin || auth.user?.can_manage_admins" :class="style.field">
+      Учебная роль
+      <Select v-model="role" :options="roleOptions" full-width />
+    </label>
     <div v-if="user.student" :class="style.grid">
       <label :class="style.field">
         Учебная группа
@@ -58,7 +52,6 @@
         v-model="user.student.record_book_number"
         label="Номер зачётной книжки"
         :maxlength="50"
-        required
         full-width
       />
       <Checkbox v-model="user.student.is_headman" label="Староста группы" />
@@ -83,6 +76,7 @@
 import Select from '@/components/UI/inputs/Select/Select.vue'
 import { defineComponent, type PropType } from 'vue'
 import type { AdminUser } from '../admin.types'
+import { useAuthStore } from '@/stores/auth'
 import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
 import Checkbox from '@/components/UI/inputs/Checkbox/Checkbox.vue'
 import style from '../Admin.module.scss'
@@ -95,52 +89,51 @@ export default defineComponent({
   data() {
     return {
       style,
-      roleOptions: [
-        { value: '', label: 'Выберите роль вручную' },
-        { value: 'student', label: 'Студент' },
-        { value: 'teacher', label: 'Преподаватель' },
-      ],
     }
   },
   computed: {
+    auth() {
+      return useAuthStore()
+    },
+    roleOptions(): FloatingPopupItem[] {
+      return [
+        { value: '', label: 'Выберите роль' },
+        { value: 'student', label: 'Студент' },
+        { value: 'teacher', label: 'Преподаватель' },
+        ...(!this.registration && this.auth.user?.can_manage_admins
+          ? [{ value: 'admin', label: 'Администратор' }]
+          : []),
+      ]
+    },
     role: {
       get(): string {
-        return this.user.student ? 'student' : this.user.teacher ? 'teacher' : ''
+        return this.user.is_admin
+          ? 'admin'
+          : this.user.student
+            ? 'student'
+            : this.user.teacher
+              ? 'teacher'
+              : ''
       },
       set(value: string) {
+        if (value === this.role) return
+        this.user.is_admin = value === 'admin'
         this.user.student =
           value === 'student' ? { group_id: 0, record_book_number: '', is_headman: false } : null
         this.user.teacher = value === 'teacher' ? { department_id: 0 } : null
       },
     },
-    isStudent: {
-      get(): boolean {
-        return Boolean(this.user.student)
-      },
-      set(value: boolean) {
-        this.user.student = value
-          ? { group_id: 0, record_book_number: '', is_headman: false }
-          : null
-      },
-    },
-    isTeacher: {
-      get(): boolean {
-        return Boolean(this.user.teacher)
-      },
-      set(value: boolean) {
-        this.user.teacher = value ? { department_id: 0 } : null
-      },
-    },
-
     groupOptions(): FloatingPopupItem[] {
-      return (this.$adminStore.data?.catalogs.groups.filter((item) => !item.archived) ?? []).map(
-        (item) => ({ value: String(item.id), label: item.name }),
-      )
+      return (this.$adminStore.data?.catalogs.groups ?? []).map((item) => ({
+        value: String(item.id),
+        label: item.name,
+      }))
     },
     departmentOptions(): FloatingPopupItem[] {
-      return (
-        this.$adminStore.data?.catalogs.departments.filter((item) => !item.archived) ?? []
-      ).map((item) => ({ value: String(item.id), label: item.name }))
+      return (this.$adminStore.data?.catalogs.departments ?? []).map((item) => ({
+        value: String(item.id),
+        label: item.name,
+      }))
     },
 
     user(): AdminUser {

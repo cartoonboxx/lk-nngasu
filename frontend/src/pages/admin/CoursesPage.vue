@@ -46,6 +46,17 @@
         <td>
           <div :class="style.actions">
             <Button
+              size="sm"
+              variant="ghost"
+              @click="
+                () => {
+                  contentCourseId = item.id
+                  contentOpen = true
+                }
+              "
+              >Материалы и задания</Button
+            >
+            <Button
               :variant="selectedId === item.id ? 'secondary' : 'ghost'"
               size="sm"
               @click="selectedId = item.id"
@@ -87,7 +98,7 @@
             {{ teacherNames[item.teacher_id] }}
           </td>
           <td>{{ lessonLabels[item.lesson_type] }}</td>
-          <td>{{ item.planned_hours }} ак. ч.</td>
+          <td>{{ item.planned_hours === null ? 'Не заданы' : `${item.planned_hours} ак. ч.` }}</td>
           <td>{{ scheduledHours[item.id] ?? 0 }} ак. ч.</td>
           <td>
             <div :class="style.actions">
@@ -177,11 +188,17 @@
         <label :class="style.field">
           Плановые академические часы
           <input
-            v-model.number="workloadDraft.planned_hours"
+            :value="workloadDraft.planned_hours ?? ''"
+            @input="
+              workloadDraft.planned_hours =
+                ($event.target as HTMLInputElement).value === ''
+                  ? null
+                  : Number(($event.target as HTMLInputElement).value)
+            "
             type="number"
             min="0"
-            step="0.25"
-            required
+            step="0.01"
+            max="99999.99"
           />
         </label>
         <div :class="style.dialogFooter">
@@ -190,6 +207,7 @@
         </div>
       </form>
     </AdminDialog>
+    <CourseContent v-if="contentOpen" v-model="contentOpen" :course-id="contentCourseId" />
     <AdminDialog v-model="confirmOpen" title="Удалить учебную запись?">
       <p>
         Операция доступна только при отсутствии связанных
@@ -210,10 +228,11 @@ import { PhPlus } from '@phosphor-icons/vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
 import AdminTable from './components/AdminTable.vue'
 import AdminDialog from './components/AdminDialog.vue'
+import CourseContent from './components/CourseContent.vue'
 import { lessonLabels, type CourseOffering, type AdminWorkload } from './admin.types'
 import style from './Admin.module.scss'
 export default defineComponent({
-  components: { SectionHeader, Select, PhPlus, Button, AdminTable, AdminDialog },
+  components: { SectionHeader, Select, PhPlus, Button, AdminTable, AdminDialog, CourseContent },
   data() {
     return {
       columns: ['Дисциплина', 'Нагрузка', 'Действия'],
@@ -226,9 +245,11 @@ export default defineComponent({
       ],
       style,
       lessonLabels,
-      group: this.$adminStore.data?.catalogs.groups.find((item) => !item.archived)?.id ?? 0,
-      semester: this.$adminStore.data?.catalogs.semesters.find((item) => !item.archived)?.id ?? 0,
+      group: this.$adminStore.data?.catalogs.groups.at(0)?.id ?? 0,
+      semester: this.$adminStore.data?.catalogs.semesters.at(0)?.id ?? 0,
       selectedId: 0,
+      contentOpen: false,
+      contentCourseId: 0,
       courseOpen: false,
       workloadOpen: false,
       confirmOpen: false,
@@ -276,19 +297,22 @@ export default defineComponent({
     },
 
     groupOptions(): FloatingPopupItem[] {
-      return (this.$adminStore.data?.catalogs.groups.filter((item) => !item.archived) ?? []).map(
-        (item) => ({ value: String(item.id), label: item.name }),
-      )
+      return (this.$adminStore.data?.catalogs.groups ?? []).map((item) => ({
+        value: String(item.id),
+        label: item.name,
+      }))
     },
     semesterOptions(): FloatingPopupItem[] {
-      return (this.$adminStore.data?.catalogs.semesters.filter((item) => !item.archived) ?? []).map(
-        (item) => ({ value: String(item.id), label: item.name }),
-      )
+      return (this.$adminStore.data?.catalogs.semesters ?? []).map((item) => ({
+        value: String(item.id),
+        label: item.name,
+      }))
     },
     subjectOptions(): FloatingPopupItem[] {
-      return (this.$adminStore.data?.catalogs.subjects.filter((item) => !item.archived) ?? []).map(
-        (item) => ({ value: String(item.id), label: item.name }),
-      )
+      return (this.$adminStore.data?.catalogs.subjects ?? []).map((item) => ({
+        value: String(item.id),
+        label: item.name,
+      }))
     },
     teacherOptions(): FloatingPopupItem[] {
       return (

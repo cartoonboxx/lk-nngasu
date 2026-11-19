@@ -4,7 +4,7 @@ export type LessonKind = 'lecture' | 'practice' | 'laboratory' | 'consultation' 
 export interface CatalogEntry {
   id: number
   name: string
-  archived: boolean
+  is_current?: boolean
   code?: string
   specialization_id?: number
   admission_year?: number
@@ -51,7 +51,7 @@ export interface AdminWorkload {
   course_id: number
   teacher_id: number
   lesson_type: LessonKind
-  planned_hours: number
+  planned_hours: number | null
 }
 export interface AdminLesson {
   id: number

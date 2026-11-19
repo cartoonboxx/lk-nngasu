@@ -13,8 +13,8 @@
       <NewsCard
         v-for="item in news"
         :key="item.id"
-        :title="item.title"
-        :description="item.text"
+        :title="item.excerpt"
+        :description="item.excerpt"
         :date="item.published_at"
         :url="`/news/${item.id}`"
       />
@@ -44,7 +44,7 @@ export default defineComponent({
     news() {
       const query = this.searchQuery.trim().toLocaleLowerCase('ru')
       return this.cabinet.news.filter((item) =>
-        `${item.title} ${item.text}`.toLocaleLowerCase('ru').includes(query),
+        `${item.excerpt} ${item.excerpt}`.toLocaleLowerCase('ru').includes(query),
       )
     },
   },

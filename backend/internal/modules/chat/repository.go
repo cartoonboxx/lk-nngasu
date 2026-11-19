@@ -439,3 +439,17 @@ func (r *Repository) Members(ctx context.Context, chatID int64) ([]int64, error)
 		)
 		SELECT m.user_id::bigint FROM m JOIN app_user u ON u.id = m.user_id AND u.is_active`, chatID)
 }
+
+func (r *Repository) Participants(ctx context.Context, chatID int64) ([]Person, error) {
+	ids, err := r.Members(ctx, chatID)
+	if err != nil {
+		return nil, err
+	}
+	return database.Collect(ctx, r.db, func(row pgx.Row) (Person, error) {
+		var person Person
+		err := row.Scan(&person.ID, &person.Name)
+		return person, err
+	}, `SELECT u.id, `+database.FullName("u")+`
+		FROM app_user u WHERE u.id = ANY($1::bigint[])
+		ORDER BY u.last_name, u.first_name, u.id`, ids)
+}

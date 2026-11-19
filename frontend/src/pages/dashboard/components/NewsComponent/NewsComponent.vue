@@ -16,8 +16,7 @@
             <time :datetime="item.published_at">{{
               new Date(item.published_at).toLocaleDateString('ru-RU')
             }}</time>
-            <h3 :class="style.title">{{ item.title }}</h3>
-            <p :class="style.description">{{ item.text }}</p>
+            <h3 :class="style.title">{{ item.excerpt }}</h3>
           </div>
         </RouterLink>
       </li>
@@ -39,9 +38,6 @@ export default defineComponent({
   },
   data() {
     return { style }
-  },
-  async created() {
-    await this.cabinet.fetchNews()
   },
 })
 </script>

@@ -22,6 +22,7 @@ import type {
 
 function userPayload(user: AdminUser) {
   return {
+    role: user.is_admin ? 'admin' : user.student ? 'student' : 'teacher',
     last_name: user.last_name.trim(),
     first_name: user.first_name.trim(),
     middle_names: user.middle_names.trim() || null,
@@ -31,7 +32,7 @@ function userPayload(user: AdminUser) {
     student: user.student
       ? {
           group_id: user.student.group_id,
-          record_book_number: user.student.record_book_number,
+          record_book_number: user.student.record_book_number.trim() || null,
           is_headman: user.student.is_headman,
         }
       : null,
@@ -210,12 +211,18 @@ export const useAdminStore = defineStore('adminStore', {
             ? {
                 decision: 'approve',
                 user: {
+                  role: user.student ? 'student' : 'teacher',
                   last_name: user.last_name.trim(),
                   first_name: user.first_name.trim(),
                   middle_names: user.middle_names.trim() || null,
                   passport: user.passport.trim(),
                   snils: user.snils.trim(),
-                  student: user.student,
+                  student: user.student
+                    ? {
+                        ...user.student,
+                        record_book_number: user.student.record_book_number.trim() || null,
+                      }
+                    : null,
                   teacher: user.teacher,
                 },
               }
@@ -241,6 +248,8 @@ export const useAdminStore = defineStore('adminStore', {
       const data = this.data
       return this.execute(
         async () => {
+          if (!user.is_admin && Boolean(user.student) === Boolean(user.teacher))
+            throw new Error('Выберите одну учебную роль.')
           const saved = await useAuthStore().request<AdminUserResponse>(
             user.id ? `/users/${user.id}` : '/users',
             {
@@ -273,7 +282,12 @@ export const useAdminStore = defineStore('adminStore', {
     async saveCatalog(kind: CatalogKind, entry: CatalogEntry) {
       const data = this.data
       return this.execute(async () => {
-        const body: Record<string, unknown> = { name: entry.name.trim() }
+        const body: Record<string, unknown> =
+          kind === 'rooms'
+            ? { number: entry.name.trim() }
+            : kind === 'semesters'
+              ? {}
+              : { name: entry.name.trim() }
         if (kind === 'specializations') body.code = entry.code?.trim()
         if (kind === 'groups')
           Object.assign(body, {
@@ -295,21 +309,29 @@ export const useAdminStore = defineStore('adminStore', {
         if (!data) return
         const entries = data.catalogs[kind]
         const index = entries.findIndex((item) => item.id === saved.id)
-        if (index < 0) entries.push(saved)
-        else entries.splice(index, 1, saved)
+        const normalized = kind === 'rooms' ? { ...saved, name: entry.name.trim() } : saved
+        if (index < 0) entries.push(normalized)
+        else entries.splice(index, 1, normalized)
       }, 'Запись справочника сохранена.')
     },
-    async archiveCatalog(kind: CatalogKind, id: number) {
+    async removeCatalog(kind: CatalogKind, id: number) {
       const data = this.data
       return this.execute(async () => {
-        const saved = await useAuthStore().request<CatalogEntry>(`${catalogPaths[kind]}/${id}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ archived: true }),
+        await useAuthStore().request<void>(`${catalogPaths[kind]}/${id}`, {
+          method: 'DELETE',
         })
         const entries = data?.catalogs[kind]
         const index = entries?.findIndex((item) => item.id === id) ?? -1
-        if (entries && index >= 0) entries.splice(index, 1, saved)
-      }, 'Запись архивирована.')
+        if (entries && index >= 0) entries.splice(index, 1)
+      }, 'Запись удалена.')
+    },
+    async setCurrentSemester(id: number) {
+      const data = this.data
+      return this.execute(async () => {
+        await useAuthStore().request(`/semesters/${id}/current`, { method: 'POST' })
+        for (const semester of data?.catalogs.semesters ?? [])
+          semester.is_current = semester.id === id
+      }, 'Текущий семестр изменён.')
     },
     async saveCourse(course: CourseOffering) {
       const data = this.data
@@ -363,7 +385,6 @@ export const useAdminStore = defineStore('adminStore', {
           week_number: lesson.week_number,
           day_of_week: lesson.day_of_week,
           starts_at: lesson.starts_at,
-          ends_at: lesson.ends_at,
           room_id: lesson.room_id,
           ...(!lesson.id ? { workload_id: lesson.workload_id } : {}),
         }

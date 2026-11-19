@@ -5,6 +5,7 @@ export interface Message {
   own: boolean
   files: { id: number; name: string }[]
   sentAt: string
+  editedAt: string | null
 }
 
 export interface Chat {
@@ -13,7 +14,6 @@ export interface Chat {
   initials: string
   group: boolean
   description: string
-  unread: number
   messages: Message[]
   lastMessage?: Message
 }

@@ -343,3 +343,11 @@ func (s *Service) Delete(ctx context.Context, p middleware.Principal, chatID, ms
 	s.removeBlobs(keys)
 	return MessageRemoval{ChatID: chatID, MessageID: msgID}, nil
 }
+
+// Participants доступен только пользователям, имеющим доступ к чату.
+func (s *Service) Participants(ctx context.Context, p middleware.Principal, chatID int64) ([]Person, error) {
+	if _, err := s.member(ctx, p, chatID); err != nil {
+		return nil, err
+	}
+	return s.repo.Participants(ctx, chatID)
+}

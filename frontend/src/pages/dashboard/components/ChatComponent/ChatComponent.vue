@@ -14,7 +14,7 @@
       <li v-for="chat in chats" :key="chat.id">
         <RouterLink
           v-press
-          :class="[style.chatItem, chat.unread && style.hasUnread]"
+          :class="style.chatItem"
           :to="{ path: '/messages', query: { chat: chat.id } }"
         >
           <span :class="style.avatar">
@@ -31,7 +31,6 @@
                 <span v-if="chat.sender" :class="style.sender">{{ chat.sender }}: </span>
                 {{ chat.preview }}
               </span>
-              <Badge v-if="chat.unread" :value="chat.unread" variant="info" inline />
             </span>
           </span>
         </RouterLink>
@@ -56,7 +55,6 @@
 </template>
 
 <script lang="ts">
-import Badge from '@/components/UI/Badge/Badge.vue'
 import { defineComponent } from 'vue'
 import { RouterLink } from 'vue-router'
 import { PhChatsCircle, PhNotePencil, PhArrowUpRight, PhUsersThree } from '@phosphor-icons/vue'
@@ -65,11 +63,8 @@ import style from './ChatComponent.module.scss'
 
 export default defineComponent({
   name: 'ChatComponent',
-  components: { Badge, RouterLink, PhChatsCircle, PhNotePencil, PhArrowUpRight, PhUsersThree },
+  components: { RouterLink, PhChatsCircle, PhNotePencil, PhArrowUpRight, PhUsersThree },
   directives: { press: pressFeedback },
-  async created() {
-    await this.$messageStore.fetchChats()
-  },
   data() {
     return {
       style,

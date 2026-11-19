@@ -11,6 +11,7 @@
           {{ $adminStore.success }}
         </p>
         <div v-if="$adminStore.error" :class="style.error">
+          <p>{{ $adminStore.error }}</p>
           <Button
             v-if="!$adminStore.data"
             variant="ghost"

@@ -37,8 +37,8 @@
           <h3>Оценка: {{ assignment.submission.grade }}</h3>
           <p>{{ assignment.submission.review_comment }}</p>
         </section>
-        <p v-if="success" role="status">Ответ сохранён на сервере и отправлен на проверку.</p>
-        <form v-if="auth.user?.student" :class="style.form" @submit.prevent="submit">
+        <p v-if="success" role="status">{{ success }}</p>
+        <form v-if="auth.user?.student" :class="style.form" @submit.prevent="submit(true)">
           <p v-if="assignment.submission?.submitted_at">
             Отправлено: {{ new Date(assignment.submission.submitted_at).toLocaleString('ru-RU') }}
           </p>
@@ -80,6 +80,20 @@
           </p>
           <footer v-if="!reviewed" :class="style.actions">
             <Button
+              v-if="!assignment.submission?.submitted_at"
+              variant="secondary"
+              :disabled="saving"
+              @click="submit(false)"
+              >Сохранить черновик</Button
+            >
+            <Button
+              v-if="assignment.submission"
+              variant="ghost"
+              :disabled="saving"
+              @click="withdrawOpen = true"
+              >Удалить ответ</Button
+            >
+            <Button
               type="submit"
               :loading="saving"
               :disabled="saving || (!comment.trim() && !attachments.length)"
@@ -89,6 +103,18 @@
         </form>
       </template>
     </div>
+    <Modal
+      :model-value="withdrawOpen"
+      :width="400"
+      @update:model-value="!saving && (withdrawOpen = $event)"
+    >
+      <h2>Удалить ответ?</h2>
+      <p>
+        Текст и прикреплённые файлы ответа будут удалены. После этого можно отправить новый ответ.
+      </p>
+      <Button variant="ghost" :disabled="saving" @click="withdrawOpen = false">Отмена</Button>
+      <Button variant="danger" :loading="saving" @click="withdraw">Удалить</Button>
+    </Modal>
   </Modal>
 </template>
 <script lang="ts">
@@ -119,7 +145,8 @@ export default defineComponent({
       comment: '',
       loading: false,
       saving: false,
-      success: false,
+      success: '',
+      withdrawOpen: false,
       version: 0,
     }
   },
@@ -148,7 +175,7 @@ export default defineComponent({
       const version = ++this.version
       this.loading = true
 
-      this.success = false
+      this.success = ''
       this.assignment = null
       this.attachments = []
       this.comment = ''
@@ -201,21 +228,43 @@ export default defineComponent({
         apiNotifications.onError?.(error)
       }
     },
-    async submit() {
+    async submit(send = true) {
       if (this.saving || this.reviewed || !this.assignment) return
       const version = this.version
       this.saving = true
 
-      this.success = false
+      this.success = ''
       try {
-        const submission = await this.$subjectsStore.submitAnswer(this.assignment.id, {
-          attachments: this.attachments,
-          comment: this.comment.trim(),
-        })
+        const submission = await this.$subjectsStore.submitAnswer(
+          this.assignment.id,
+          {
+            attachments: this.attachments,
+            comment: this.comment.trim(),
+          },
+          send,
+        )
         if (version !== this.version) return
         this.assignment.submission = submission
-        this.success = true
+        this.success = send ? 'Ответ отправлен на проверку.' : 'Черновик сохранён на сервере.'
         this.$emit('submitted')
+      } catch (error) {
+        apiNotifications.onError?.(error)
+      } finally {
+        this.saving = false
+      }
+    },
+    async withdraw() {
+      if (this.saving || this.reviewed || !this.assignment) return
+      const version = this.version
+      this.saving = true
+      try {
+        await this.auth.request(`/assignments/${this.assignment.id}/submission`, {
+          method: 'DELETE',
+        })
+        if (version !== this.version) return
+        this.withdrawOpen = false
+        this.$emit('submitted')
+        await this.load()
       } catch (error) {
         apiNotifications.onError?.(error)
       } finally {

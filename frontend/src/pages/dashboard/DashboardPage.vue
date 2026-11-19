@@ -1,11 +1,14 @@
 <template>
   <section :class="style.dashboardPage">
     <SectionHeader header="Главная" paragraph="Расписание, общение и события университета" />
+    <p v-if="cabinet.dashboardError">
+      {{ cabinet.dashboardError }} <button @click="cabinet.fetchDashboard()">Повторить</button>
+    </p>
     <section :class="style.content">
       <div :class="style.scheduler">
-        <p v-if="$scheduleStore.loading">Загрузка расписания…</p>
+        <p v-if="cabinet.dashboardLoading">Загрузка расписания…</p>
         <ScheduleDay
-          v-else-if="!$scheduleStore.error"
+          v-else-if="!cabinet.dashboardError"
           :class="style.scheduleCard"
           :lessons="lessons"
           layout="list"
@@ -28,6 +31,8 @@
 
 <script lang="ts">
 import { defineComponent } from 'vue'
+import { useCabinetStore } from '@/stores/cabinet'
+import type { ScheduleLesson, LessonType } from '@/pages/schedule/schedule.types'
 import style from './DashboardPage.module.scss'
 import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import ScheduleDay from '@/components/ScheduleDay/ScheduleDay.vue'
@@ -47,13 +52,22 @@ export default defineComponent({
   },
   directives: { press: pressFeedback },
   async created() {
-    this.$scheduleStore.groupId = ''
-    const today = new Date()
-    await this.$scheduleStore.fetchSchedule(today, today)
+    await this.cabinet.fetchDashboard()
   },
   computed: {
-    lessons() {
-      return this.$scheduleStore.days.flatMap((day) => day.lessons)
+    cabinet() {
+      return useCabinetStore()
+    },
+    lessons(): ScheduleLesson[] {
+      return (this.cabinet.dashboard?.lessons ?? []).map((lesson) => ({
+        id: lesson.id,
+        start: lesson.starts_at.slice(0, 5),
+        end: lesson.ends_at.slice(0, 5),
+        subject: lesson.subject,
+        type: (lesson.lesson_type === 'laboratory' ? 'lab' : lesson.lesson_type) as LessonType,
+        location: lesson.room,
+        teacher: lesson.teacher_name,
+      }))
     },
   },
   data() {

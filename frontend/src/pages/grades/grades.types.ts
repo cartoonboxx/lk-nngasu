@@ -1,4 +1,4 @@
-export type GradeStatus = 'reviewed' | 'pending' | 'not-submitted'
+export type GradeStatus = 'reviewed' | 'pending' | 'not-submitted' | 'missing'
 
 export interface GradeAssignment {
   id: number
@@ -18,4 +18,5 @@ export const gradeStatuses: Record<GradeStatus, string> = {
   reviewed: 'Проверено',
   pending: 'На проверке',
   'not-submitted': 'Не отправлено',
+  missing: 'Просрочено',
 }

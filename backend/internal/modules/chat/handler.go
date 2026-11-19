@@ -136,3 +136,13 @@ func (h *Handler) Messages(c *gin.Context) {
 	page, err := h.svc.Messages(c.Request.Context(), middleware.Me(c), id, before, limit)
 	httpx.Reply(c, page, err)
 }
+
+// GET /chats/:id/participants
+func (h *Handler) Participants(c *gin.Context) {
+	id, ok := httpx.ID(c, "id")
+	if !ok {
+		return
+	}
+	list, err := h.svc.Participants(c.Request.Context(), middleware.Me(c), id)
+	httpx.Reply(c, list, err)
+}

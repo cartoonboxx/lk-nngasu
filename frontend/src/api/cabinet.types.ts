@@ -29,7 +29,6 @@ export interface Assignment {
 
 export interface Material {
   id: number
-  title: string
   file: FileInfo | null
   external_url: string | null
 }
@@ -39,7 +38,7 @@ export interface Topic {
   title: string
   description: string | null
   materials: Material[]
-  assignments: Assignment[]
+  assignment: Assignment | null
 }
 
 export interface Course {
@@ -69,9 +68,20 @@ export interface CalendarLesson {
 
 export interface News {
   id: number
-  title: string
-  text: string
+  excerpt: string
+  author: { id: number; name: string }
   published_at: string
+}
+
+export interface NewsDetail extends News {
+  body: string
+}
+
+export interface AdminNews extends Omit<NewsDetail, 'published_at'> {
+  published_at: string | null
+  status: 'draft' | 'published' | 'archived'
+  created_at: string
+  updated_at: string
 }
 
 export interface ServerMessage {
@@ -81,7 +91,7 @@ export interface ServerMessage {
   sender_name: string
   body: string
   created_at: string
-  deleted: boolean
+  edited_at: string | null
   files: { id: number; name: string }[]
 }
 
@@ -90,12 +100,39 @@ export interface ServerChat {
   kind: 'direct' | 'group'
   title: string
   peer: { id: number; name: string } | null
-  unread: number
-  last_message: (Omit<ServerMessage, 'chat_id' | 'files'> & { has_files: boolean }) | null
+  last_message:
+    (Omit<ServerMessage, 'chat_id' | 'files' | 'edited_at'> & { has_files: boolean }) | null
 }
 
-export interface GradeReview {
+export interface MessagePage {
+  items: ServerMessage[]
+  has_more: boolean
+  next_before: number | null
+}
+
+export interface Contact {
+  id: number
+  name: string
+  description: string | null
+  avatar: { id: number; url: string } | null
+}
+
+export interface GradeRow {
   assignment_id: number
-  grade: number
+  assignment_title: string
+  topic_title: string
+  subject_name: string
+  semester_id: number
+  semester_name: string
+  status: 'not_submitted' | 'missing' | 'submitted' | 'reviewed'
+  submitted_at: string | null
+  grade: number | null
   review_comment: string | null
+}
+
+export interface Dashboard {
+  week: { date: string; week_number: number; position: string } | null
+  lessons: CalendarLesson[]
+  chats: ServerChat[]
+  news: News[]
 }

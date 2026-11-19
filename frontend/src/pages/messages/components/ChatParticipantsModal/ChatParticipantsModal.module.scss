@@ -1,0 +1,91 @@
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+
+  h2 {
+    margin: 0;
+    font-size: 20px;
+  }
+
+  p {
+    margin: 6px 0 0;
+    color: var(--color-text-muted);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+  }
+}
+
+.feedback {
+  padding-block: 20px;
+  color: var(--color-text-muted);
+  font-size: 14px;
+}
+
+.participants {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li + li {
+    border-top: 1px solid var(--color-border-level-1);
+  }
+}
+
+.participant {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 6px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--color-text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    background: var(--color-surface-raised);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-border-focus);
+    outline-offset: -2px;
+  }
+
+  &:disabled {
+    cursor: default;
+  }
+
+  > :first-child {
+    flex-shrink: 0;
+  }
+}
+
+.personName {
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.actionText {
+  flex-shrink: 0;
+  margin-left: auto;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+@media (max-width: 380px) {
+  .participant {
+    gap: 8px;
+  }
+
+  .actionText {
+    font-size: 11px;
+  }
+}

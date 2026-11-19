@@ -346,7 +346,8 @@
             Источник контрактов страницы: <code>src/pages/apiDocs/api-docs.endpoints.ts</code>,
             <code>api-docs.schemas.ts</code> , <code>api-docs.websocket.ts</code> и
             <code>api-docs.overview.ts</code>. Их нужно сверять со <code>scheme.dbml</code> при
-            изменении модели данных. Эндпоинты в рамках этой задачи не реализованы.
+            изменении модели данных. Реализация серверных маршрутов находится в
+            backend/internal/modules.
           </p>
         </section>
       </div>

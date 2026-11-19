@@ -1,6 +1,24 @@
 <template>
   <form :class="style.composer" @submit.prevent="sendMessage">
     <div :class="style.composerRow">
+      <input
+        ref="fileInput"
+        type="file"
+        multiple
+        hidden
+        accept=".pdf,.docx,.pptx,.xlsx,.xls,.zip,.rar"
+        @change="
+          ($emit('attach', Array.from(($event.target as HTMLInputElement).files ?? [])),
+          (($event.target as HTMLInputElement).value = ''))
+        "
+      />
+      <IconButton
+        variant="ghost"
+        title="Прикрепить файлы"
+        :disabled="sending"
+        @click="($refs.fileInput as HTMLInputElement).click()"
+        ><PhPaperclip :size="21"
+      /></IconButton>
       <TextInput
         ref="messageField"
         v-model="draft"
@@ -17,7 +35,7 @@
         type="submit"
         variant="primary"
         round
-        :disabled="sending || !draft.trim()"
+        :disabled="sending || !connected || (!draft.trim() && !hasAttachments)"
         @pointerdown="onSendPointerDown"
         @pointerup="onSendPointerUp"
         @pointercancel="sendPointer = null"
@@ -34,21 +52,24 @@
 <script lang="ts">
 import type { SendPointer } from '../../messages.types'
 import { defineComponent } from 'vue'
-import { PhPaperPlaneRight } from '@phosphor-icons/vue'
+import { PhPaperPlaneRight, PhPaperclip } from '@phosphor-icons/vue'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
 import style from './MessageComposer.module.scss'
 export default defineComponent({
   name: 'MessageComposer',
-  components: { PhPaperPlaneRight, IconButton, TextInput },
+  components: { PhPaperPlaneRight, PhPaperclip, IconButton, TextInput },
   props: {
     modelValue: { type: String, required: true },
     maxHeight: { type: Number, default: 144 },
     sending: Boolean,
+    connected: Boolean,
+    hasAttachments: Boolean,
   },
   emits: {
     'update:modelValue': (value: string) => typeof value === 'string',
     send: () => true,
+    attach: (files: File[]) => Array.isArray(files),
   },
   data() {
     return { style, sendPointer: null as SendPointer | null }
@@ -68,7 +89,8 @@ export default defineComponent({
       ;(this.$refs.messageField as InstanceType<typeof TextInput> | undefined)?.focus()
     },
     sendMessage() {
-      if (!this.sending && this.draft.trim()) this.$emit('send')
+      if (!this.sending && this.connected && (this.draft.trim() || this.hasAttachments))
+        this.$emit('send')
     },
     onSendPointerDown(event: PointerEvent) {
       if (event.pointerType !== 'mouse') {

@@ -92,6 +92,13 @@
           После создания пользователю будет отправлено приглашение задать пароль.
         </p>
         <div :class="style.dialogFooter">
+          <Button
+            v-if="draft.id"
+            variant="secondary"
+            :disabled="$adminStore.saving"
+            @click="resendInvitation"
+            >Повторить приглашение</Button
+          >
           <Button variant="ghost" @click="opened = false">Отмена</Button>
           <Button type="submit" :loading="$adminStore.saving">Сохранить</Button>
         </div>
@@ -215,6 +222,13 @@ export default defineComponent({
       await this.openUser({ id: Number(this.$route.query.user) } as AdminUser)
   },
   methods: {
+    async resendInvitation() {
+      if (!this.draft?.id || this.$adminStore.saving) return
+      const id = this.draft.id
+      await this.$adminStore.execute(async () => {
+        await this.auth.request(`/users/${id}/invitations`, { method: 'POST' })
+      }, 'Приглашение поставлено в очередь отправки.')
+    },
     async openUser(item?: AdminUser) {
       if (this.detailLoading) return
       this.$adminStore.error = ''

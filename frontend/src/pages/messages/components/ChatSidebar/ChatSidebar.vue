@@ -21,27 +21,6 @@
         <template #prefix><PhMagnifyingGlass :size="18" /></template>
       </Input>
     </div>
-    <div :class="style.filters" role="group">
-      <Button
-        size="sm"
-        round
-        variant="ghost"
-        :data-selected="!unreadOnly"
-        @click="unreadOnly = false"
-      >
-        Все
-      </Button>
-      <Button
-        size="sm"
-        round
-        variant="ghost"
-        :data-selected="unreadOnly"
-        @click="unreadOnly = true"
-      >
-        Непрочитанные
-        <Badge v-if="unreadChats" :value="unreadChats" variant="info" inline />
-      </Button>
-    </div>
     <ul v-if="filteredChats.length" ref="chatList" :class="style.chatList">
       <li v-for="chat in filteredChats" :key="chat.id">
         <div :class="style.chatWrapper">
@@ -57,7 +36,7 @@
               <ChatAvatar :initials="chat.initials" :group="chat.group" />
               <span :class="style.chatCopy">
                 <span :class="style.chatLine">
-                  <span :class="[style.chatName, chat.unread && style.unreadName]">
+                  <span :class="style.chatName">
                     {{ chat.name }}
                   </span>
                   <time v-if="chat.lastMessage" :class="style.chatTime">
@@ -66,7 +45,6 @@
                 </span>
                 <span :class="style.chatLine">
                   <span :class="style.preview">{{ chat.preview }}</span>
-                  <Badge v-if="chat.unread" :value="chat.unread" variant="info" inline />
                 </span>
               </span>
             </span>
@@ -76,7 +54,7 @@
     </ul>
     <div v-else :class="style.listEmpty">
       <PhMagnifyingGlass :size="25" />
-      <p>{{ search ? 'Чаты не найдены' : unreadOnly ? 'Всё прочитано' : 'Пока нет диалогов' }}</p>
+      <p>{{ search ? 'Чаты не найдены' : 'Пока нет диалогов' }}</p>
       <span>
         {{ search ? 'Попробуйте другое имя или название' : 'Новые сообщения появятся здесь' }}
       </span>
@@ -90,10 +68,8 @@ import { defineComponent, type PropType } from 'vue'
 import style from './ChatSidebar.module.scss'
 import { PhNotePencil, PhMagnifyingGlass } from '@phosphor-icons/vue'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
-import Button from '@/components/UI/buttons/Button/Button.vue'
 import Input from '@/components/UI/inputs/Input/Input.vue'
 import StyleTab from '@/components/UI/tabs/StyleTab/StyleTab.vue'
-import Badge from '@/components/UI/Badge/Badge.vue'
 import ChatAvatar from '../ChatAvatar/ChatAvatar.vue'
 import type { Chat } from '../../messages.types'
 import { messageTimeFormatter, dayLabel } from '../../messages.format'
@@ -103,30 +79,21 @@ export default defineComponent({
     PhNotePencil,
     PhMagnifyingGlass,
     IconButton,
-    Button,
     Input,
     StyleTab,
-    Badge,
     ChatAvatar,
   },
   props: { chats: { type: Array as PropType<Chat[]>, required: true }, selectedId: String },
   emits: { select: (id: string) => !!id, compose: () => true },
   data() {
-    return { style, search: '', unreadOnly: false }
+    return { style, search: '' }
   },
   computed: {
-    unreadChats(): number {
-      return this.chats.filter((chat) => chat.unread > 0).length
-    },
     filteredChats() {
       const query = this.search.trim().toLocaleLowerCase('ru')
       const today = new Date().toDateString()
       return this.chats
-        .filter(
-          (chat) =>
-            (!this.unreadOnly || chat.unread > 0) &&
-            chat.name.toLocaleLowerCase('ru').includes(query),
-        )
+        .filter((chat) => chat.name.toLocaleLowerCase('ru').includes(query))
         .map((chat) => {
           const message = chat.lastMessage
           return {
