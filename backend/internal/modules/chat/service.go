@@ -3,7 +3,6 @@ package chat
 import (
 	"context"
 	"errors"
-	"io"
 	"strings"
 	"unicode/utf8"
 
@@ -16,22 +15,15 @@ type Guard interface {
 	OwnsFile(ctx context.Context, userID, fileID int64) error
 }
 
-// Blobs — файловое хранилище (реализует files.Storage).
-type Blobs interface {
-	Open(key string) (io.ReadCloser, error)
-	Remove(key string) error
-}
-
 type Service struct {
 	repo  *Repository
 	guard Guard
-	blobs Blobs
 	// publish — рассылка события WebSocket пользователям (realtime.Hub.Publish); nil — без событий.
 	publish func(userIDs []int64, typ string, data any)
 }
 
-func NewService(repo *Repository, guard Guard, blobs Blobs) *Service {
-	return &Service{repo: repo, guard: guard, blobs: blobs}
+func NewService(repo *Repository, guard Guard) *Service {
+	return &Service{repo: repo, guard: guard}
 }
 
 var (
@@ -41,8 +33,6 @@ var (
 	errGroupForbidden  = apperr.NewForbidden("group_forbidden", "you are not a member of this group chat")
 	errContactNotAllow = apperr.NewForbidden("contact_not_allowed", "you cannot start a chat with this user")
 	errChatForbidden   = apperr.NewForbidden("chat_forbidden", "you are not a participant of this chat")
-	errForbidden       = apperr.NewForbidden("forbidden", "only the author can change this message")
-	errMsgNotFound     = apperr.NewNotFound("message_not_found")
 	errFileNotFound    = apperr.NewNotFound("file_not_found")
 )
 
@@ -94,12 +84,6 @@ func decideContact(me, other userInfo, teaches func(teacherID, groupID int64) (b
 		return teaches(other.ID, *me.GroupID)
 	}
 	return me.GroupID != nil && other.GroupID != nil && *me.GroupID == *other.GroupID, nil
-}
-
-func (s *Service) removeBlobs(keys []string) {
-	for _, k := range keys {
-		_ = s.blobs.Remove(k)
-	}
 }
 
 // ---- чаты ----
@@ -287,61 +271,6 @@ func (s *Service) Send(ctx context.Context, p middleware.Principal, chatID int64
 func isCode(err error, code string) bool {
 	var ae *apperr.Error
 	return errors.As(err, &ae) && ae.Code == code
-}
-
-// ownMessage — сообщение этого чата, написанное пользователем.
-func (s *Service) ownMessage(ctx context.Context, p middleware.Principal, chatID, msgID int64) (Message, error) {
-	if _, err := s.participant(ctx, p, chatID, errForbidden); err != nil {
-		return Message{}, err
-	}
-	m, err := s.repo.GetMessage(ctx, msgID)
-	if apperr.IsNotFound(err) || (err == nil && m.ChatID != chatID) {
-		return Message{}, errMsgNotFound
-	}
-	if err != nil {
-		return Message{}, err
-	}
-	if m.SenderID != p.UserID {
-		return Message{}, errForbidden
-	}
-	return m, nil
-}
-
-// Edit — message.edit: свой текст; пустой допустим, только если есть вложения.
-// При параллельной правке сохраняется последняя запись.
-func (s *Service) Edit(ctx context.Context, p middleware.Principal, chatID, msgID int64, body string) (Message, error) {
-	m, err := s.ownMessage(ctx, p, chatID, msgID)
-	if err != nil {
-		return Message{}, err
-	}
-	body, err = normalizeBody(body, len(m.Files) > 0)
-	if err != nil {
-		return Message{}, err
-	}
-	if err := s.repo.UpdateMessageBody(ctx, msgID, body); err != nil {
-		if apperr.IsNotFound(err) {
-			return Message{}, errMsgNotFound
-		}
-		return Message{}, err
-	}
-	return s.repo.GetMessage(ctx, msgID)
-}
-
-// Delete — message.delete: своё сообщение удаляется полностью вместе со связями вложений;
-// файл стирается, только если больше нигде не используется.
-func (s *Service) Delete(ctx context.Context, p middleware.Principal, chatID, msgID int64) (MessageRemoval, error) {
-	if _, err := s.ownMessage(ctx, p, chatID, msgID); err != nil {
-		return MessageRemoval{}, err
-	}
-	keys, err := s.repo.DeleteMessage(ctx, msgID)
-	if apperr.IsNotFound(err) {
-		return MessageRemoval{}, errMsgNotFound
-	}
-	if err != nil {
-		return MessageRemoval{}, err
-	}
-	s.removeBlobs(keys)
-	return MessageRemoval{ChatID: chatID, MessageID: msgID}, nil
 }
 
 // Participants доступен только пользователям, имеющим доступ к чату.

@@ -208,6 +208,10 @@ export const useAdminStore = defineStore('adminStore', {
           if (user && Boolean(user.student) === Boolean(user.teacher)) {
             throw new Error('Выберите одну учебную роль для регистрации.')
           }
+          if (user?.student && !user.student.group_id)
+            throw new Error('Выберите учебную группу из списка.')
+          if (user?.teacher && !user.teacher.department_id)
+            throw new Error('Выберите кафедру из списка.')
           const body = user
             ? {
                 decision: 'approve',
@@ -251,6 +255,10 @@ export const useAdminStore = defineStore('adminStore', {
         async () => {
           if (!user.is_admin && Boolean(user.student) === Boolean(user.teacher))
             throw new Error('Выберите одну учебную роль.')
+          if (user.student && !user.student.group_id)
+            throw new Error('Выберите учебную группу из списка.')
+          if (user.teacher && !user.teacher.department_id)
+            throw new Error('Выберите кафедру из списка.')
           const saved = await useAuthStore().request<AdminUserResponse>(
             user.id ? `/users/${user.id}` : '/users',
             {

@@ -35,6 +35,7 @@
       :full-width="fullWidth"
       :multiline="multiline"
       :base-height="baseHeight"
+      @click="onFieldClick"
       @update:model-value="updateValue"
     />
     <div v-if="$slots.actions" :class="style.actions">
@@ -149,6 +150,7 @@ export default defineComponent({
       style,
       composing: false,
       currentValue: this.modelValue,
+      filterSuggestions: false,
     }
   },
   computed: {
@@ -163,6 +165,7 @@ export default defineComponent({
       )
     },
     filteredOptions(): FloatingPopupItem[] {
+      if (!this.filterSuggestions) return this.options
       const query = this.currentValue.trim().toLocaleLowerCase('ru').replace(/ё/g, 'е')
       return this.options.filter((item) =>
         item.label.toLocaleLowerCase('ru').replace(/ё/g, 'е').includes(query),
@@ -174,24 +177,37 @@ export default defineComponent({
   },
   watch: {
     modelValue(value: string) {
+      if (value === this.currentValue) return
       this.currentValue = value
-      if (!value.trim())
-        (this.$refs.suggestions as InstanceType<typeof FloatingPopup> | undefined)?.close()
+      this.filterSuggestions = false
+      ;(this.$refs.suggestions as InstanceType<typeof FloatingPopup> | undefined)?.close()
     },
   },
   methods: {
+    async onFieldClick() {
+      if (!this.suggestionsEnabled || this.composing) return
+      this.filterSuggestions = false
+      await this.$nextTick()
+      const field = (this.$refs.field as InstanceType<typeof BaseInput> | undefined)?.$el
+      if (document.activeElement !== field) return
+      await (this.$refs.suggestions as InstanceType<typeof FloatingPopup> | undefined)?.show(
+        false,
+        false,
+      )
+    },
     async updateValue(value: string) {
       this.currentValue = value
+      this.filterSuggestions = true
       this.$emit('update:modelValue', value)
       const popup = this.$refs.suggestions as InstanceType<typeof FloatingPopup> | undefined
-      if (!this.suggestionsEnabled || this.composing || !value.trim()) {
+      if (!this.suggestionsEnabled || this.composing) {
         popup?.close()
         return
       }
       const field = (this.$refs.field as InstanceType<typeof BaseInput> | undefined)?.$el
       if (document.activeElement !== field) return
       await this.$nextTick()
-      if (this.currentValue === value)
+      if (this.currentValue === value && document.activeElement === field)
         await (this.$refs.suggestions as InstanceType<typeof FloatingPopup> | undefined)?.show(
           false,
           false,
@@ -210,6 +226,7 @@ export default defineComponent({
       if (!popup || event.target !== field || event.isComposing || this.composing) return
       if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
         event.preventDefault()
+        if (!popup.open) this.filterSuggestions = false
         await popup.show(event.key === 'ArrowUp')
       } else if (event.key === 'Escape' && popup.open) {
         event.preventDefault()

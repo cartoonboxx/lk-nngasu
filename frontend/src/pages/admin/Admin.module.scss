@@ -40,6 +40,15 @@
   border-radius: var(--radius-lg);
   overflow: hidden;
 }
+.coursesTable {
+  th:first-child {
+    width: 15%;
+  }
+
+  th:not(:first-child) {
+    width: 1%;
+  }
+}
 .tableScroll {
   overflow-x: auto;
 }
@@ -102,9 +111,6 @@
   border-top: 1px solid var(--color-border-level-1);
   color: var(--color-text-muted);
   font-size: var(--font-size-body-small);
-}
-.actions {
-  flex-wrap: wrap;
 }
 .imageThumbnail {
   object-fit: cover;

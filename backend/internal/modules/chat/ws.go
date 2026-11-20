@@ -17,18 +17,7 @@ type sendCommand struct {
 	FileIDs *[]int64 `json:"file_ids"`
 }
 
-type editCommand struct {
-	ChatID    *int64  `json:"chat_id"`
-	MessageID *int64  `json:"message_id"`
-	Body      *string `json:"body"`
-}
-
-type deleteCommand struct {
-	ChatID    *int64 `json:"chat_id"`
-	MessageID *int64 `json:"message_id"`
-}
-
-// MessageMutation — data событий message.created и message.updated.
+// MessageMutation — данные события message.created.
 type MessageMutation struct {
 	Message Message `json:"message"`
 }
@@ -79,46 +68,4 @@ func registerCommands(hub *realtime.Hub, svc *Service) {
 		return m, publish(chatID, "message.created", MessageMutation{Message: m}), nil
 	})
 
-	hub.Handle("message.edit", func(ctx context.Context, p middleware.Principal, raw json.RawMessage) (any, func(), error) {
-		var cmd editCommand
-		if err := realtime.Decode(raw, &cmd); err != nil {
-			return nil, nil, err
-		}
-		chatID, err := requireID(cmd.ChatID, "chat_id")
-		if err != nil {
-			return nil, nil, err
-		}
-		msgID, err := requireID(cmd.MessageID, "message_id")
-		if err != nil {
-			return nil, nil, err
-		}
-		if cmd.Body == nil {
-			return nil, nil, realtime.FieldError("body", "is required")
-		}
-		m, err := svc.Edit(ctx, p, chatID, msgID, *cmd.Body)
-		if err != nil {
-			return nil, nil, err
-		}
-		return m, publish(chatID, "message.updated", MessageMutation{Message: m}), nil
-	})
-
-	hub.Handle("message.delete", func(ctx context.Context, p middleware.Principal, raw json.RawMessage) (any, func(), error) {
-		var cmd deleteCommand
-		if err := realtime.Decode(raw, &cmd); err != nil {
-			return nil, nil, err
-		}
-		chatID, err := requireID(cmd.ChatID, "chat_id")
-		if err != nil {
-			return nil, nil, err
-		}
-		msgID, err := requireID(cmd.MessageID, "message_id")
-		if err != nil {
-			return nil, nil, err
-		}
-		rm, err := svc.Delete(ctx, p, chatID, msgID)
-		if err != nil {
-			return nil, nil, err
-		}
-		return rm, publish(chatID, "message.deleted", rm), nil
-	})
 }

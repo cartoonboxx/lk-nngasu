@@ -9,35 +9,33 @@
       </template>
     </SectionHeader>
     <div :class="style.toolbar">
-      <label :class="style.field">
-        Семестр
-        <Select
-          :model-value="String(semester)"
-          :options="semesterOptions"
-          @update:model-value="semester = Number($event)"
-          full-width
-        />
-      </label>
+      <TextInput
+        v-model="semesterSearch"
+        label="Семестр"
+        :options="semesterOptions"
+        @update:model-value="semester = 0"
+        @select="semester = Number($event.value)"
+        placeholder="Введите учебный год или семестр"
+        full-width
+      />
       <label :class="style.field">
         Вид
         <Select v-model="scope" :options="scopeTypeOptions" full-width />
       </label>
-      <label :class="style.field">
-        {{ scope === 'group' ? 'Группа' : scope === 'teacher' ? 'Преподаватель' : 'Аудитория' }}
-        <Select
-          :model-value="String(scopeId)"
-          :options="scopeFilterOptions"
-          @update:model-value="scopeId = Number($event)"
-          full-width
-        />
-      </label>
+      <TextInput
+        v-model="scopeSearch"
+        :label="scope === 'group' ? 'Группа' : scope === 'teacher' ? 'Преподаватель' : 'Аудитория'"
+        :options="scopeFilterOptions"
+        @update:model-value="scopeId = -1"
+        @select="scopeId = Number($event.value)"
+        placeholder="Введите название"
+      />
       <label :class="style.field">
         Неделя
         <Select
           :model-value="String(week)"
           :options="weekFilterOptions"
           @update:model-value="week = Number($event)"
-          full-width
         />
       </label>
     </div>
@@ -123,38 +121,41 @@
     <AdminDialog v-model="opened" :title="draft.id ? 'Изменить занятие' : 'Новое занятие'">
       <form :class="style.form" @submit.prevent="save">
         <div :class="style.grid">
-          <label :class="style.field">
-            Группа<Select
-              :model-value="String(formGroup)"
-              :options="groupOptions"
-              @update:model-value="formGroup = Number($event)"
-              full-width
-              :disabled="Boolean(draft.id)"
-            />
-          </label>
-          <label :class="style.field">
-            Семестр
-            <Select
-              :model-value="String(formSemester)"
-              :options="semesterOptions"
-              @update:model-value="formSemester = Number($event)"
-              full-width
-              :disabled="Boolean(draft.id)"
-            />
-          </label>
-        </div>
-        <label :class="style.field">
-          Дисциплина · преподаватель · тип занятия
-          <Select
-            :model-value="String(draft.workload_id)"
-            :options="lessonOptions"
-            @update:model-value="draft.workload_id = Number($event)"
+          <TextInput
+            v-model="formGroupSearch"
+            label="Группа"
+            :options="groupOptions"
+            @update:model-value="formGroup = 0"
+            @select="formGroup = Number($event.value)"
+            placeholder="Введите название группы"
             full-width
-            placeholder="Выберите назначенную нагрузку"
+            required
             :disabled="Boolean(draft.id)"
           />
-        </label>
-        <p v-if="!lessonOptions.length" :class="style.notice">
+          <TextInput
+            v-model="formSemesterSearch"
+            label="Семестр"
+            :options="semesterOptions"
+            @update:model-value="formSemester = 0"
+            @select="formSemester = Number($event.value)"
+            placeholder="Введите учебный год или семестр"
+            full-width
+            required
+            :disabled="Boolean(draft.id)"
+          />
+        </div>
+        <TextInput
+          v-model="workloadSearch"
+          label="Дисциплина · преподаватель · тип занятия"
+          :options="lessonOptions"
+          @update:model-value="draft.workload_id = 0"
+          @select="draft.workload_id = Number($event.value)"
+          full-width
+          required
+          placeholder="Введите дисциплину, преподавателя или тип занятия"
+          :disabled="Boolean(draft.id) || !formGroup || !formSemester"
+        />
+        <p v-if="formGroup && formSemester && !lessonOptions.length" :class="style.notice">
           У группы нет нагрузки в этом семестре. Сначала назначьте дисциплины и преподавателей в
           разделе «Дисциплины и нагрузка».
         </p>
@@ -182,20 +183,30 @@
             <Select v-model="selectedPeriod" :options="periodOptions" full-width />
           </label>
         </div>
-        <label :class="style.field">
-          Аудитория
-          <Select
-            :model-value="String(draft.room_id)"
-            :options="roomOptions"
-            @update:model-value="draft.room_id = Number($event)"
-            full-width
-            placeholder="Выберите аудиторию"
-          />
-        </label>
+        <TextInput
+          v-model="roomSearch"
+          label="Аудитория"
+          :options="roomOptions"
+          @update:model-value="draft.room_id = 0"
+          @select="draft.room_id = Number($event.value)"
+          full-width
+          required
+          placeholder="Введите номер аудитории"
+        />
+        <p
+          v-if="!formGroup || !formSemester || !draft.workload_id || !draft.room_id"
+          :class="style.muted"
+        >
+          Выберите группу, семестр, назначенную нагрузку и аудиторию из списков.
+        </p>
         <div :class="style.dialogFooter">
           <Button v-if="draft.id" variant="danger" @click="confirmOpen = true">Удалить</Button>
           <Button variant="ghost" @click="opened = false">Отмена</Button>
-          <Button type="submit" :disabled="!draft.workload_id" :loading="$adminStore.saving">
+          <Button
+            type="submit"
+            :disabled="!formGroup || !formSemester || !draft.workload_id || !draft.room_id"
+            :loading="$adminStore.saving"
+          >
             Сохранить
           </Button>
         </div>
@@ -219,6 +230,7 @@
 import { periods } from '@/pages/schedule/schedule.periods'
 import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import Select from '@/components/UI/inputs/Select/Select.vue'
+import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
 import StyleTab from '@/components/UI/tabs/StyleTab/StyleTab.vue'
 import { defineComponent } from 'vue'
 import { PhPlus } from '@phosphor-icons/vue'
@@ -243,6 +255,7 @@ export default defineComponent({
     SectionHeader,
     StyleTab,
     Select,
+    TextInput,
     PhPlus,
     Button,
     AdminTable,
@@ -272,14 +285,20 @@ export default defineComponent({
       lessonLabels,
       days: adminDays,
       semester: this.$adminStore.data?.catalogs.semesters.at(0)?.id ?? 0,
+      semesterSearch: this.$adminStore.data?.catalogs.semesters.at(0)?.name ?? '',
       scope: 'group',
       scopeId: this.$adminStore.data?.catalogs.groups.at(0)?.id ?? 0,
+      scopeSearch: this.$adminStore.data?.catalogs.groups.at(0)?.name ?? 'Все',
       week: 1,
       view: 'grid',
       opened: false,
       confirmOpen: false,
       formGroup: 0,
       formSemester: 0,
+      formGroupSearch: '',
+      formSemesterSearch: '',
+      workloadSearch: '',
+      roomSearch: '',
       draft: {
         id: 0,
         workload_id: 0,
@@ -406,7 +425,9 @@ export default defineComponent({
                 course.id === item.course_id &&
                 course.group_id === this.formGroup &&
                 course.semester_id === this.formSemester,
-            ) && data.users.some((user) => user.id === item.teacher_id && user.is_active),
+            ) &&
+            (item.id === this.draft.workload_id ||
+              data.users.some((user) => user.id === item.teacher_id && user.is_active)),
         )
         .map((item) => {
           const course = data.courses.find((value) => value.id === item.course_id)
@@ -426,17 +447,20 @@ export default defineComponent({
   watch: {
     scope() {
       this.scopeId = 0
+      this.scopeSearch = 'Все'
     },
     formGroup: {
       flush: 'sync',
       handler() {
         this.draft.workload_id = 0
+        this.workloadSearch = ''
       },
     },
     formSemester: {
       flush: 'sync',
       handler() {
         this.draft.workload_id = 0
+        this.workloadSearch = ''
       },
     },
   },
@@ -451,7 +475,7 @@ export default defineComponent({
       )
       this.formGroup =
         course?.group_id ??
-        (this.scope === 'group' && this.scopeId
+        (this.scope === 'group' && this.scopeId > 0
           ? this.scopeId
           : Number(this.groupOptions[0]?.value ?? 0))
       this.formSemester = course?.semester_id ?? this.semester
@@ -472,12 +496,24 @@ export default defineComponent({
             day_of_week: day,
             starts_at: period.start,
             ends_at: period.end,
-            room_id: this.scope === 'room' ? this.scopeId : 0,
+            room_id: this.scope === 'room' && this.scopeId > 0 ? this.scopeId : 0,
           }
+      this.formGroupSearch =
+        this.groupOptions.find((option) => option.value === String(this.formGroup))?.label ?? ''
+      this.formSemesterSearch =
+        this.semesterOptions.find((option) => option.value === String(this.formSemester))?.label ??
+        ''
+      this.workloadSearch =
+        this.lessonOptions.find((option) => option.value === String(this.draft.workload_id))
+          ?.label ?? ''
+      this.roomSearch =
+        this.roomOptions.find((option) => option.value === String(this.draft.room_id))?.label ?? ''
       this.$adminStore.error = ''
       this.opened = true
     },
     async save() {
+      if (!this.formGroup || !this.formSemester || !this.draft.workload_id || !this.draft.room_id)
+        return
       if (this.conflicts.length) {
         this.$utilityStore.notifyError(this.conflicts.join(' '))
         return
@@ -486,6 +522,7 @@ export default defineComponent({
       if (saved) {
         this.opened = false
         this.semester = this.formSemester
+        this.semesterSearch = this.formSemesterSearch
         this.week = this.draft.week_number
       }
     },

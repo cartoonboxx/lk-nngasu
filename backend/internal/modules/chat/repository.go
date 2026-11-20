@@ -15,7 +15,6 @@ import (
 
 	"university-api/internal/platform/apperr"
 	"university-api/internal/platform/database"
-	"university-api/internal/platform/filegc"
 )
 
 type Repository struct{ db *pgxpool.Pool }
@@ -384,37 +383,10 @@ func (r *Repository) CreateMessage(ctx context.Context, chatID, senderID int64, 
 	return id, err
 }
 
-func (r *Repository) UpdateMessageBody(ctx context.Context, id int64, body string) error {
-	tag, err := r.db.Exec(ctx,
-		`UPDATE chat_message SET body = $2, edited_at = now() WHERE id = $1 AND deleted_at IS NULL`, id, body)
-	return database.Affected(tag, err, "message_not_found")
-}
-
 func scanID(row pgx.Row) (int64, error) {
 	var id int64
 	err := row.Scan(&id)
 	return id, err
-}
-
-// DeleteMessage удаляет сообщение и связи с вложениями (без tombstone). Возвращает ключи
-// файлов, оставшихся без ссылок, — их нужно удалить с диска после коммита; файл, который
-// используется ещё где-то, остаётся.
-func (r *Repository) DeleteMessage(ctx context.Context, id int64) ([]string, error) {
-	var keys []string
-	err := database.InTx(ctx, r.db, func(tx pgx.Tx) error {
-		fileIDs, err := database.Collect(ctx, tx, scanID,
-			`DELETE FROM chat_message_file WHERE message_id = $1 RETURNING file_id`, id)
-		if err != nil {
-			return err
-		}
-		tag, err := tx.Exec(ctx, `DELETE FROM chat_message WHERE id = $1`, id)
-		if err := database.Affected(tag, err, "message_not_found"); err != nil {
-			return err
-		}
-		keys, err = filegc.Purge(ctx, tx, fileIDs)
-		return err
-	})
-	return keys, err
 }
 
 // Members — кому доставлять события чата сейчас: оба собеседника личного чата; для группы —

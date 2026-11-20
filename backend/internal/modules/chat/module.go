@@ -8,9 +8,9 @@ import (
 )
 
 // Возвращает сервис: его список чатов нужен главной странице (GET /dashboard).
-// Отправка, правка и удаление сообщений — команды WebSocket, регистрируются в hub.
-func Register(r *gin.RouterGroup, pool *pgxpool.Pool, guard Guard, blobs Blobs, hub *realtime.Hub) *Service {
-	h := &Handler{svc: NewService(newRepository(pool), guard, blobs)}
+// Отправка сообщений — команда WebSocket, регистрируется в hub.
+func Register(r *gin.RouterGroup, pool *pgxpool.Pool, guard Guard, hub *realtime.Hub) *Service {
+	h := &Handler{svc: NewService(newRepository(pool), guard)}
 	h.svc.publish = hub.Publish
 	registerCommands(hub, h.svc)
 

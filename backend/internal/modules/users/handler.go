@@ -63,7 +63,7 @@ func (b teacherWriteBody) role() TeacherRole { return TeacherRole{DepartmentID: 
 // role не передан — выводится из профиля (совместимость с прежней формой админки);
 // password не передан — пользователь получит приглашение задать пароль.
 type userCreateBody struct {
-	Role         string                  `json:"role" binding:"omitempty,oneof=student teacher admin"`
+	Role         string                  `json:"role" binding:"omitempty,oneof=student teacher"`
 	Password     string                  `json:"password" binding:"omitempty,min=8"`
 	LastName     string                  `json:"last_name" binding:"required,max=50"`
 	FirstName    string                  `json:"first_name" binding:"required,max=50"`

@@ -3,18 +3,23 @@
     <SectionHeader
       header="Администраторы"
       paragraph="Приглашения и доступ к административной панели"
+      nm
     />
     <p v-if="success" :class="style.success" role="status">{{ success }}</p>
 
     <div :class="style.toolbar">
       <h2>Аккаунты администраторов</h2>
-      <Button
-        variant="secondary"
-        :loading="loading"
-        :disabled="loading || submitting"
-        @click="load(true)"
-        >Обновить</Button
-      >
+      <Tooltip text="Обновить">
+        <IconButton
+          variant="ghost"
+          :loading="loading"
+          :disabled="loading || submitting"
+          round
+          @click="load(true)"
+        >
+          <PhArrowClockwise />
+        </IconButton>
+      </Tooltip>
     </div>
     <div :class="style.panel">
       <div :class="style.tableScroll">
@@ -147,6 +152,9 @@ import StyleTab from '@/components/UI/tabs/StyleTab/StyleTab.vue'
 import { useAuthStore } from '@/stores/auth'
 import style from './Admin.module.scss'
 import pageStyle from './AdministratorsPage.module.scss'
+import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
+import Tooltip from '@/components/UI/Tooltip/Tooltip.vue'
+import { PhArrowClockwise } from '@phosphor-icons/vue'
 
 interface Administrator {
   id: number
@@ -162,7 +170,7 @@ interface Administrator {
 
 export default defineComponent({
   name: 'AdministratorsPage',
-  components: { SectionHeader, TextInput, Button, StyleTab },
+  components: { PhArrowClockwise, Tooltip, IconButton, SectionHeader, TextInput, Button, StyleTab },
   computed: {
     auth() {
       return useAuthStore()

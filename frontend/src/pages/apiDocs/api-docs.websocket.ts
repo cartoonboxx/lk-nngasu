@@ -125,45 +125,10 @@ export const websocketSchemas: ApiSchema[] = [
     example: { chat_id: 44, body: 'Здравствуйте!', file_ids: [] },
   },
   {
-    name: 'MessageEditCommand',
-    description:
-      'Правка body собственного сообщения; edited_at задаёт сервер. Версии и optimistic locking в схеме нет.',
-    fields: [
-      ['chat_id', 'integer', true, 'Доступный чат.'],
-      ['message_id', 'integer', true, 'Собственное сообщение внутри чата.'],
-      [
-        'body',
-        'string',
-        true,
-        'До 4000 символов; пустой текст допустим только при существующих вложениях.',
-      ],
-    ],
-    example: { chat_id: 44, message_id: 300, body: 'Уточнение к сообщению.' },
-  },
-  {
-    name: 'MessageDeleteCommand',
-    description:
-      'Физическое удаление message и связей message_file. is_deleted в схеме закомментирован.',
-    fields: [
-      ['chat_id', 'integer', true, 'Доступный чат.'],
-      ['message_id', 'integer', true, 'Собственное сообщение.'],
-    ],
-    example: { chat_id: 44, message_id: 300 },
-  },
-  {
     name: 'MessageMutation',
-    description: 'Новое или изменённое сообщение; last_message затем вычисляется по истории.',
+    description: 'Новое сообщение; last_message затем вычисляется по истории.',
     fields: [['message', 'Message', true, 'Полное сообщение.']],
     example: { message },
-  },
-  {
-    name: 'MessageRemoval',
-    description: 'Идентификаторы физически удалённого сообщения.',
-    fields: [
-      ['chat_id', 'integer', true, 'Чат.'],
-      ['message_id', 'integer', true, 'Удалённое сообщение.'],
-    ],
-    example: { chat_id: 44, message_id: 300 },
   },
 ]
 
@@ -180,30 +145,6 @@ export const websocketCommands: WebSocketContract[] = [
       'Проверить chat_participant, ограничения body и до 5 вложений. Отправка блокируется до исправления типа и уникального индекса message.sender_id в DBML.',
       'После COMMIT вернуть ack и доставить message.created всем подключённым участникам, включая отправителя. Клиент объединяет ack и событие по message.id.',
       'Автоматически повторять неподтверждённую отправку нельзя: client_message_id отсутствует, повтор может создать дубль.',
-    ],
-  },
-  {
-    type: 'message.edit',
-    title: 'Изменить свой текст',
-    direction: 'command',
-    stage: 'extension',
-    dataSchema: 'MessageEditCommand',
-    resultSchema: 'Message',
-    errors: ['message_not_found', 'forbidden', 'invalid_payload'],
-    notes: [
-      'Опциональный сценарий интерфейса, использующий существующие body/edited_at. При параллельной правке сохраняется последняя запись; контроль версий требует расширения схемы.',
-    ],
-  },
-  {
-    type: 'message.delete',
-    title: 'Удалить своё сообщение',
-    direction: 'command',
-    stage: 'extension',
-    dataSchema: 'MessageDeleteCommand',
-    resultSchema: 'MessageRemoval',
-    errors: ['message_not_found', 'forbidden'],
-    notes: [
-      'Удалить сообщение и связи вложений в транзакции, затем отправить message.deleted. Tombstone не создаётся; файл не удаляется, пока используется другими сущностями.',
     ],
   },
 ]
@@ -226,24 +167,6 @@ export const websocketEvents: WebSocketContract[] = [
     dataSchema: 'MessageMutation',
     notes: ['Добавить по message.id; обновить карточку чата. Событие отправляется после COMMIT.'],
   },
-  {
-    type: 'message.updated',
-    title: 'Текст изменён',
-    direction: 'event',
-    stage: 'extension',
-    dataSchema: 'MessageMutation',
-    notes: [
-      'Заменить сообщение по id. После загрузки истории во время событий перечитать активный чат для согласования состояния.',
-    ],
-  },
-  {
-    type: 'message.deleted',
-    title: 'Сообщение удалено',
-    direction: 'event',
-    stage: 'extension',
-    dataSchema: 'MessageRemoval',
-    notes: ['Убрать сообщение по id, перечитать карточку чата.'],
-  },
 ]
 export const websocketRules = [
   {
@@ -252,7 +175,7 @@ export const websocketRules = [
   },
   {
     title: 'Восстановление соединения',
-    text: 'После обрыва получить новый ticket, подключиться, дождаться session.ready и загрузить GET /chats и историю активного чата. События, полученные во время HTTP-чтения, буферизовать; новые сообщения объединять по id. При правке/удалении во время загрузки повторить чтение. История — источник сохранённых данных; гарантий replay и доставки событий во время отключения нет.',
+    text: 'После обрыва получить новый ticket, подключиться, дождаться session.ready и загрузить GET /chats и историю активного чата. События, полученные во время HTTP-чтения, буферизовать; новые сообщения объединять по id. Редактирование и удаление отправленных сообщений недоступны. История — источник сохранённых данных; гарантий replay и доставки событий во время отключения нет.',
   },
   {
     title: 'Отдельные расширения хранения',

@@ -48,7 +48,7 @@ const userWriteFields: ApiField[] = [
     'role',
     '"student" | "teacher" | "admin"',
     true,
-    'Одна роль; student/teacher согласованы с ней.',
+    'Учебная роль согласована с профилем. При PATCH admin допустим только для действующего администратора; выдать права через этот метод нельзя.',
   ],
   [
     'passport',
@@ -443,7 +443,14 @@ export const apiSchemas: ApiSchema[] = [
     name: 'UserCreateInput',
     description: 'Создание пользователя с паролем; в app_user сохраняется только password_hash.',
     fields: [
-      ...userWriteFields,
+      ...userWriteFields.map(([name, type, required, description]): ApiField => [
+        name,
+        name === 'role' ? '"student" | "teacher"' : type,
+        required,
+        name === 'role'
+          ? 'Учебная роль. Административный доступ выдаётся через раздел «Администраторы».'
+          : description,
+      ]),
       ['password', 'string', true, '8+ символов, до 72 байт UTF-8; хранить только хеш.'],
     ],
     example: { ...userWriteExample, password: '<password>' },

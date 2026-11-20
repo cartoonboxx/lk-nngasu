@@ -114,7 +114,7 @@ func Run(ctx context.Context, cfg config.Config) error {
 	// WebSocket lk-chat.v1: билеты, соединения и рассылка; команды сообщений регистрирует chat.
 	hub := realtime.NewHub()
 	realtime.Register(v1, protected, hub, authSvc, realtime.Options{AllowedOrigins: cfg.AllowedOrigins})
-	chatSvc := chat.Register(protected, pool, checker, storage, hub)
+	chatSvc := chat.Register(protected, pool, checker, hub)
 	files.Register(protected, pool, storage, cfg.MaxUploadBytes)
 	structure.Register(protected, pool)                         // v1 — публичные списки кафедр и групп для регистрации
 	users.Register(v1, protected, pool, checker, users.Options{ // v1 — POST /auth/register

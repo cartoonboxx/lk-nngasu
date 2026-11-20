@@ -9,12 +9,16 @@
         <StatusBadge variant="warning"
           >Ожидают решения: {{ $adminStore.pendingRequestsTotal }}</StatusBadge
         >
-        <Button
-          variant="secondary"
-          :disabled="$adminStore.requestsLoading"
-          @click="loadPage(page, true)"
-          >Обновить</Button
-        >
+        <Tooltip text="Обновить" position="bottom">
+          <IconButton
+            round
+            variant="ghost"
+            :disabled="$adminStore.requestsLoading"
+            @click="loadPage(page, true)"
+          >
+            <PhArrowClockwise />
+          </IconButton>
+        </Tooltip>
       </template>
     </SectionHeader>
     <div :class="style.toolbar">
@@ -62,9 +66,11 @@
           }}</StatusBadge>
         </td>
         <td>
-          <Button variant="ghost" size="sm" @click="openRequest(item)">
-            {{ item.status === 'pending' ? 'Рассмотреть' : 'Подробнее' }}
-          </Button>
+          <Tooltip :text="item.status === 'pending' ? 'Рассмотреть' : 'Подробнее'">
+            <IconButton variant="ghost" size="sm" round @click="openRequest(item)">
+              <PhIdentificationCard />
+            </IconButton>
+          </Tooltip>
         </td>
       </tr>
     </AdminTable>
@@ -168,8 +174,15 @@ import {
   type AdminUser,
 } from './admin.types'
 import style from './Admin.module.scss'
+import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
+import { PhArrowClockwise, PhIdentificationCard } from '@phosphor-icons/vue'
+import Tooltip from '@/components/UI/Tooltip/Tooltip.vue'
 export default defineComponent({
   components: {
+    PhIdentificationCard,
+    Tooltip,
+    PhArrowClockwise,
+    IconButton,
     StatusBadge,
     SectionHeader,
     StyleTab,

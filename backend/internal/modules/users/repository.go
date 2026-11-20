@@ -297,21 +297,11 @@ func errInvalidRole(field, problem string) error {
 
 var errOwnerRequired = apperr.NewForbidden("owner_required", "only the system owner can grant or revoke administrator rights")
 
-// IsOwner — пользователь — владелец системы (can_manage_admins), право перечитывается из БД.
-func (r *Repository) IsOwner(ctx context.Context, userID int64) (bool, error) {
-	var ok bool
-	err := r.db.QueryRow(ctx, `SELECT can_manage_admins FROM app_user WHERE id = $1`, userID).Scan(&ok)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return false, nil
-	}
-	return ok, database.Translate(err)
-}
-
 // AdminUpdate частично обновляет пользователя и его роль одной транзакцией.
 //
 // Роль одна: при смене role профиль новой роли нужно передать (если его ещё нет),
 // профиль прежней снимается автоматически; снять профиль с учебными данными нельзя
-// (409 role_in_use). Выдать или снять роль admin может только владелец; последнего
+// (409 role_in_use). Выдача роли admin здесь запрещена, снять её может только владелец; последнего
 // активного администратора нельзя заблокировать или лишить роли (409 last_active_admin).
 func (r *Repository) AdminUpdate(ctx context.Context, id, actorID int64, in AdminUpdate) error {
 	return database.InTx(ctx, r.db, func(tx pgx.Tx) error {
@@ -342,6 +332,10 @@ func (r *Repository) AdminUpdate(ctx context.Context, id, actorID int64, in Admi
 		role := current
 		if in.Role.Value != nil {
 			role = *in.Role.Value
+		}
+
+		if role == RoleAdmin && !isAdmin {
+			return apperr.NewForbidden("admin_invitation_required", "administrator access must be granted through administrator management")
 		}
 
 		// 2. Профили согласованы с ролью: свой — передан или уже есть, чужой — не передан.

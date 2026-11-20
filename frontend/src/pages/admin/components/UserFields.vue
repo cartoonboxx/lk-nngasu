@@ -33,21 +33,21 @@
         full-width
       />
     </div>
-    <label v-if="!user.is_admin || auth.user?.can_manage_admins" :class="style.field">
+    <label v-if="!user.is_admin" :class="style.field">
       Учебная роль
       <Select v-model="role" :options="roleOptions" full-width />
     </label>
     <div v-if="user.student" :class="style.grid">
-      <label :class="style.field">
-        Учебная группа
-        <Select
-          :model-value="String(user.student.group_id)"
-          :options="groupOptions"
-          @update:model-value="user.student.group_id = Number($event)"
-          full-width
-          placeholder="Выберите группу"
-        />
-      </label>
+      <TextInput
+        v-model="groupSearch"
+        label="Учебная группа"
+        :options="groupOptions"
+        @update:model-value="user.student.group_id = 0"
+        @select="user.student.group_id = Number($event.value)"
+        full-width
+        required
+        placeholder="Введите название группы"
+      />
       <TextInput
         v-model="user.student.record_book_number"
         label="Номер зачётной книжки"
@@ -56,18 +56,25 @@
       />
       <Checkbox v-model="user.student.is_headman" label="Староста группы" />
     </div>
-    <label v-if="user.teacher" :class="style.field">
-      Кафедра
-      <Select
-        :model-value="String(user.teacher.department_id)"
-        :options="departmentOptions"
-        @update:model-value="user.teacher.department_id = Number($event)"
-        full-width
-        placeholder="Выберите кафедру"
-      />
-    </label>
+    <TextInput
+      v-if="user.teacher"
+      v-model="departmentSearch"
+      label="Кафедра"
+      :options="departmentOptions"
+      @update:model-value="user.teacher.department_id = 0"
+      @select="user.teacher.department_id = Number($event.value)"
+      full-width
+      required
+      placeholder="Введите название кафедры"
+    />
+    <p v-if="user.student && !user.student.group_id" :class="style.muted">
+      Выберите учебную группу из списка.
+    </p>
+    <p v-if="user.teacher && !user.teacher.department_id" :class="style.muted">
+      Выберите кафедру из списка.
+    </p>
     <p v-if="!registration" :class="style.muted">
-      Административный доступ: {{ user.is_admin ? 'есть' : 'нет' }}. Назначается владельцем в
+      Административный доступ: {{ user.is_admin ? 'есть' : 'нет' }}. Управляется владельцем в
       разделе «Администраторы».
     </p>
   </div>
@@ -76,7 +83,6 @@
 import Select from '@/components/UI/inputs/Select/Select.vue'
 import { defineComponent, type PropType } from 'vue'
 import type { AdminUser } from '../admin.types'
-import { useAuthStore } from '@/stores/auth'
 import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
 import Checkbox from '@/components/UI/inputs/Checkbox/Checkbox.vue'
 import style from '../Admin.module.scss'
@@ -89,20 +95,22 @@ export default defineComponent({
   data() {
     return {
       style,
+      groupSearch:
+        this.$adminStore.data?.catalogs.groups.find(
+          (item) => item.id === this.modelValue.student?.group_id,
+        )?.name ?? '',
+      departmentSearch:
+        this.$adminStore.data?.catalogs.departments.find(
+          (item) => item.id === this.modelValue.teacher?.department_id,
+        )?.name ?? '',
     }
   },
   computed: {
-    auth() {
-      return useAuthStore()
-    },
     roleOptions(): FloatingPopupItem[] {
       return [
         { value: '', label: 'Выберите роль' },
         { value: 'student', label: 'Студент' },
         { value: 'teacher', label: 'Преподаватель' },
-        ...(!this.registration && this.auth.user?.can_manage_admins
-          ? [{ value: 'admin', label: 'Администратор' }]
-          : []),
       ]
     },
     role: {
@@ -117,10 +125,11 @@ export default defineComponent({
       },
       set(value: string) {
         if (value === this.role) return
-        this.user.is_admin = value === 'admin'
         this.user.student =
           value === 'student' ? { group_id: 0, record_book_number: '', is_headman: false } : null
         this.user.teacher = value === 'teacher' ? { department_id: 0 } : null
+        this.groupSearch = ''
+        this.departmentSearch = ''
       },
     },
     groupOptions(): FloatingPopupItem[] {

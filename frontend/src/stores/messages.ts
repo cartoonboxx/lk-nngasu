@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia'
 import { useAuthStore } from './auth'
-import { ChatConnection, type ChatEvent, type ConnectionState } from '@/api/realtime'
+import { ChatConnection, type ConnectionState } from '@/api/realtime'
 import type { ServerChat, ServerMessage, MessagePage } from '@/api/cabinet.types'
 import type { Chat, Message } from '@/pages/messages/messages.types'
 
@@ -57,7 +57,7 @@ export const useMessageStore = defineStore('messages', {
     cursors: {} as Record<string, number | null>,
     connectionState: 'disconnected' as ConnectionState,
     revision: 0,
-    changes: {} as Record<string, Record<string, { revision: number; message: Message | null }>>,
+    changes: {} as Record<string, Record<string, { revision: number; message: Message }>>,
     version: 0,
   }),
   getters: {
@@ -72,7 +72,7 @@ export const useMessageStore = defineStore('messages', {
           if (version === this.version) this.connectionState = state
         },
         (event) => {
-          if (version === this.version) this.receiveEvent(event)
+          if (version === this.version) this.applyMessage(event.data.message)
         },
         () => {
           if (version !== this.version) return
@@ -207,8 +207,7 @@ export const useMessageStore = defineStore('messages', {
         for (const message of messages) merged.set(String(message.id), mapMessage(message))
         for (const [messageId, change] of Object.entries(this.changes[id] ?? {})) {
           if (change.revision <= revision) continue
-          if (change.message) merged.set(messageId, change.message)
-          else merged.delete(messageId)
+          merged.set(messageId, change.message)
         }
         current.messages = [...merged.values()].sort((a, b) => Number(a.id) - Number(b.id))
         this.hasOlder[id] = page.has_more
@@ -228,13 +227,6 @@ export const useMessageStore = defineStore('messages', {
         }
       }
     },
-    receiveEvent(event: ChatEvent) {
-      if (event.type === 'message.deleted') {
-        this.applyRemoval(String(event.data.chat_id), String(event.data.message_id))
-      } else {
-        this.applyMessage(event.data.message)
-      }
-    },
     applyMessage(message: ServerMessage) {
       const id = String(message.chat_id)
       const saved = mapMessage(message)
@@ -251,17 +243,6 @@ export const useMessageStore = defineStore('messages', {
       chat.messages = [...chat.messages].sort((a, b) => Number(a.id) - Number(b.id))
       if (!chat.lastMessage || Number(saved.id) >= Number(chat.lastMessage.id))
         chat.lastMessage = saved
-    },
-    applyRemoval(id: string, messageId: string) {
-      this.changes[id] ??= {}
-      this.changes[id][messageId] = { revision: ++this.revision, message: null }
-      const chat = this.chats.find((item) => item.id === id)
-      if (!chat) return
-      chat.messages = chat.messages.filter((item) => item.id !== messageId)
-      if (chat.lastMessage?.id === messageId) {
-        chat.lastMessage = chat.messages.at(-1)
-        void this.fetchChat(id)
-      }
     },
     async send(id: string, text: string, fileIds: number[] = []): Promise<boolean> {
       if (this.sending || !connection) return false

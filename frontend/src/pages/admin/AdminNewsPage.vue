@@ -27,46 +27,55 @@
         <td>{{ statusLabels[item.status] }}</td>
         <td>
           <div :class="style.actions">
-            <Button
-              v-if="item.status !== 'archived'"
-              size="sm"
-              variant="ghost"
-              :disabled="saving"
-              @click="openEditor(item)"
-              >Изменить</Button
-            >
-            <Button
-              v-if="item.status !== 'published'"
-              size="sm"
-              variant="ghost"
-              :disabled="saving"
-              @click="changeStatus(item, 'published')"
-              >Опубликовать</Button
-            >
-            <Button
-              v-if="item.status !== 'draft'"
-              size="sm"
-              variant="ghost"
-              :disabled="saving"
-              @click="changeStatus(item, 'draft')"
-              >В черновики</Button
-            >
-            <Button
-              v-if="item.status !== 'archived'"
-              size="sm"
-              variant="ghost"
-              :disabled="saving"
-              @click="changeStatus(item, 'archived')"
-              >В архив</Button
-            >
-            <Button
-              v-if="item.status !== 'published'"
-              size="sm"
-              variant="ghost"
-              :disabled="saving"
-              @click="target = item"
-              >Удалить</Button
-            >
+            <Tooltip text="Изменить" v-if="item.status !== 'archived'">
+              <IconButton
+                size="sm"
+                variant="ghost"
+                :disabled="saving"
+                round
+                @click="openEditor(item)"
+              >
+                <PhPencilSimple />
+              </IconButton>
+            </Tooltip>
+            <Tooltip text="Опубликовать" v-if="item.status !== 'published'">
+              <IconButton
+                size="sm"
+                variant="ghost"
+                :disabled="saving"
+                round
+                @click="changeStatus(item, 'published')"
+              >
+                <PhPaperPlaneTilt />
+              </IconButton>
+            </Tooltip>
+            <Tooltip text="В черновики" v-if="item.status !== 'draft'">
+              <IconButton
+                size="sm"
+                variant="ghost"
+                :disabled="saving"
+                round
+                @click="changeStatus(item, 'draft')"
+              >
+                <PhFloppyDisk />
+              </IconButton>
+            </Tooltip>
+            <Tooltip text="В архив" v-if="item.status !== 'archived'">
+              <IconButton
+                size="sm"
+                variant="ghost"
+                :disabled="saving"
+                round
+                @click="changeStatus(item, 'archived')"
+              >
+                <PhArchive />
+              </IconButton>
+            </Tooltip>
+            <Tooltip text="Удалить" v-if="item.status !== 'published'">
+              <IconButton size="sm" variant="ghost" :disabled="saving" round @click="target = item">
+                <PhTrash />
+              </IconButton>
+            </Tooltip>
           </div>
         </td>
       </tr>
@@ -126,10 +135,33 @@ import Select from '@/components/UI/inputs/Select/Select.vue'
 import AdminDialog from './components/AdminDialog.vue'
 import AdminTable from './components/AdminTable.vue'
 import style from './Admin.module.scss'
+import Tooltip from '@/components/UI/Tooltip/Tooltip.vue'
+import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
+import {
+  PhArchive,
+  PhFloppyDisk,
+  PhPaperPlaneTilt,
+  PhPencilSimple,
+  PhTrash,
+} from '@phosphor-icons/vue'
 
 export default defineComponent({
   name: 'AdminNewsPage',
-  components: { SectionHeader, Button, TextInput, Select, AdminDialog, AdminTable },
+  components: {
+    PhTrash,
+    PhArchive,
+    PhFloppyDisk,
+    PhPaperPlaneTilt,
+    PhPencilSimple,
+    IconButton,
+    Tooltip,
+    SectionHeader,
+    Button,
+    TextInput,
+    Select,
+    AdminDialog,
+    AdminTable,
+  },
   data() {
     return {
       style,

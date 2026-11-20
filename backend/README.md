@@ -185,10 +185,10 @@ migrations         001–017 *.sql, встроены в бинарник (embed.
 | POST | /realtime/tickets | одноразовый билет на WebSocket (30 с, привязан к сессии и Origin) |
 | GET | /realtime?ticket= | WebSocket, подпротокол `lk-chat.v1`; первое событие `session.ready` |
 
-WebSocket `lk-chat.v1`: команды `message.send`, `message.edit`, `message.delete` (`{type, request_id, data}`) →
+WebSocket `lk-chat.v1`: команда `message.send` (`{type, request_id, data}`) →
 `ack` с тем же `request_id` или `error {code, message, details}`; после COMMIT всем подключённым участникам
-чата — `message.created` / `message.updated` / `message.deleted` с `occurred_at`. Ошибка команды соединение
-не закрывает; 4401 — истёк допуск (`expires_at` из `session.ready`) или сессия отозвана. Отправки сообщений через REST нет.
+чата — `message.created` с `occurred_at`. Ошибка команды соединение
+не закрывает. Редактирование и удаление отправленных сообщений недоступны; 4401 — истёк допуск (`expires_at` из `session.ready`) или сессия отозвана. Отправки сообщений через REST нет.
 
 nginx для `/api/v1/realtime` должен пропускать Upgrade и держать долгое соединение:
 `proxy_http_version 1.1; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade";

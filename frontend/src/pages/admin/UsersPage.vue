@@ -63,19 +63,27 @@
         </td>
         <td>
           <div :class="style.actions">
-            <Button variant="ghost" size="sm" @click="openUser(item)">Карточка</Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              @click="
-                () => {
-                  target = item
-                  confirmOpen = true
-                }
-              "
-            >
-              {{ item.is_active ? 'Заблокировать' : 'Восстановить' }}
-            </Button>
+            <Tooltip text="Карточка">
+              <IconButton variant="ghost" size="sm" round @click="openUser(item)">
+                <PhIdentificationCard />
+              </IconButton>
+            </Tooltip>
+            <Tooltip :text="item.is_active ? 'Заблокировать' : 'Восстановить'">
+              <IconButton
+                variant="ghost"
+                size="sm"
+                round
+                @click="
+                  () => {
+                    target = item
+                    confirmOpen = true
+                  }
+                "
+              >
+                <PhProhibit v-if="item.is_active" />
+                <PhLockOpen v-else />
+              </IconButton>
+            </Tooltip>
           </div>
         </td>
       </tr>
@@ -135,7 +143,7 @@ import StatusBadge from '@/components/UI/StatusBadge/StatusBadge.vue'
 import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import Select from '@/components/UI/inputs/Select/Select.vue'
 import { defineComponent } from 'vue'
-import { PhPlus } from '@phosphor-icons/vue'
+import { PhIdentificationCard, PhLockOpen, PhPlus, PhProhibit } from '@phosphor-icons/vue'
 import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
 import AdminTable from './components/AdminTable.vue'
@@ -145,8 +153,15 @@ import { useAuthStore } from '@/stores/auth'
 import { normalizeUser, type AdminUserResponse } from './admin.repository'
 import type { AdminUser } from './admin.types'
 import style from './Admin.module.scss'
+import Tooltip from '@/components/UI/Tooltip/Tooltip.vue'
+import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 export default defineComponent({
   components: {
+    PhLockOpen,
+    PhProhibit,
+    PhIdentificationCard,
+    IconButton,
+    Tooltip,
     StatusBadge,
     SectionHeader,
     Select,

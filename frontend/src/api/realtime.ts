@@ -3,9 +3,7 @@ import { ApiError } from './client'
 import type { ServerMessage } from './cabinet.types'
 
 export type ConnectionState = 'connecting' | 'connected' | 'disconnected'
-export type ChatEvent =
-  | { type: 'message.created' | 'message.updated'; data: { message: ServerMessage } }
-  | { type: 'message.deleted'; data: { chat_id: number; message_id: number } }
+export type ChatEvent = { type: 'message.created'; data: { message: ServerMessage } }
 
 type Frame =
   | ChatEvent
@@ -107,12 +105,7 @@ export class ChatConnection {
                 frame.error?.details?.fields,
               ),
             )
-        } else if (
-          this.ready &&
-          (frame.type === 'message.created' ||
-            frame.type === 'message.updated' ||
-            frame.type === 'message.deleted')
-        ) {
+        } else if (this.ready && frame.type === 'message.created') {
           this.onEvent(frame)
         }
       }

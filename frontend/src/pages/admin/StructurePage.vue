@@ -45,27 +45,37 @@
         </td>
         <td>
           <div :class="style.actions">
-            <Button
-              v-if="kind === 'semesters' && !item.is_current"
-              size="sm"
-              variant="ghost"
-              :disabled="$adminStore.saving"
-              @click="$adminStore.setCurrentSemester(item.id)"
-              >Сделать текущим</Button
-            >
-            <Button size="sm" variant="ghost" @click="openEntry(item)"> Изменить </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              @click="
-                () => {
-                  target = item
-                  confirmOpen = true
-                }
-              "
-            >
-              Удалить
-            </Button>
+            <Tooltip v-if="kind === 'semesters' && !item.is_current" text="Сделать текущим">
+              <IconButton
+                size="sm"
+                variant="ghost"
+                round
+                :disabled="$adminStore.saving"
+                @click="$adminStore.setCurrentSemester(item.id)"
+              >
+                <PhGraduationCap />
+              </IconButton>
+            </Tooltip>
+            <Tooltip text="Изменить">
+              <IconButton size="sm" variant="ghost" @click="openEntry(item)" round>
+                <PhPencilSimple />
+              </IconButton>
+            </Tooltip>
+            <Tooltip text="Удалить">
+              <IconButton
+                size="sm"
+                variant="ghost"
+                round
+                @click="
+                  () => {
+                    target = item
+                    confirmOpen = true
+                  }
+                "
+              >
+                <PhTrash />
+              </IconButton>
+            </Tooltip>
           </div>
         </td>
       </tr>
@@ -90,16 +100,19 @@
           full-width
         />
         <template v-if="kind === 'groups'">
-          <label :class="style.field">
-            Направление
-            <Select
-              :model-value="String(draft.specialization_id ?? 0)"
-              :options="specializationOptions"
-              @update:model-value="draft.specialization_id = Number($event)"
-              full-width
-              placeholder="Выберите направление"
-            />
-          </label>
+          <TextInput
+            v-model="specializationSearch"
+            label="Направление"
+            :options="specializationOptions"
+            @update:model-value="draft.specialization_id = 0"
+            @select="draft.specialization_id = Number($event.value)"
+            full-width
+            required
+            placeholder="Введите код или название направления"
+          />
+          <p v-if="specializationSearch && !draft.specialization_id" :class="style.muted">
+            Выберите направление из списка.
+          </p>
           <label :class="style.field">
             Год поступления<input
               v-model.number="draft.admission_year"
@@ -133,7 +146,12 @@
         </div>
         <div :class="style.dialogFooter">
           <Button variant="ghost" @click="opened = false">Отмена</Button>
-          <Button type="submit" :loading="$adminStore.saving">Сохранить</Button>
+          <Button
+            type="submit"
+            :loading="$adminStore.saving"
+            :disabled="kind === 'groups' && !draft.specialization_id"
+            >Сохранить</Button
+          >
         </div>
       </form>
     </AdminDialog>
@@ -157,15 +175,22 @@ import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import Select from '@/components/UI/inputs/Select/Select.vue'
 import StyleTab from '@/components/UI/tabs/StyleTab/StyleTab.vue'
 import { defineComponent } from 'vue'
-import { PhPlus } from '@phosphor-icons/vue'
+import { PhGraduationCap, PhPencilSimple, PhPlus, PhTrash } from '@phosphor-icons/vue'
 import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
 import AdminTable from './components/AdminTable.vue'
 import AdminDialog from './components/AdminDialog.vue'
 import { catalogLabels, type CatalogKind, type CatalogEntry } from './admin.types'
 import style from './Admin.module.scss'
+import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
+import Tooltip from '@/components/UI/Tooltip/Tooltip.vue'
 export default defineComponent({
   components: {
+    PhGraduationCap,
+    Tooltip,
+    PhTrash,
+    PhPencilSimple,
+    IconButton,
     StatusBadge,
     SectionHeader,
     StyleTab,
@@ -187,6 +212,7 @@ export default defineComponent({
       catalogLabels,
       kind: 'groups' as CatalogKind,
       search: '',
+      specializationSearch: '',
       opened: false,
       confirmOpen: false,
       target: null as CatalogEntry | null,
@@ -252,6 +278,10 @@ export default defineComponent({
           specialization_id: item?.specialization_id ?? 0,
           admission_year: item?.admission_year ?? 2026,
         })
+      this.specializationSearch =
+        this.specializationOptions.find(
+          (option) => option.value === String(this.draft.specialization_id),
+        )?.label ?? ''
       if (this.kind === 'semesters')
         Object.assign(this.draft, {
           academic_year_start: item?.academic_year_start ?? 2026,
@@ -261,6 +291,7 @@ export default defineComponent({
       this.opened = true
     },
     async save() {
+      if (this.kind === 'groups' && !this.draft.specialization_id) return
       const saved = await this.$adminStore.saveCatalog(this.kind, this.draft)
       if (saved) {
         this.opened = false

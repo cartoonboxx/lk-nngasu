@@ -183,20 +183,14 @@ func checkRoleProfiles(role string, st *StudentRole, te *TeacherRole) error {
 
 // Create создаёт пользователя (UserCreateInput). С паролем учётка сразу активна
 // (хранится только хеш); без пароля — приглашение на email, пароль пользователь
-// задаёт сам (расширение /auth/activate). Роль admin выдаёт только владелец.
+// задаёт сам (расширение /auth/activate). Административный доступ выдаётся в отдельном разделе.
 // Аватар — только файл, загруженный самим администратором.
 func (s *Service) Create(ctx context.Context, in CreateUser) (AdminUser, error) {
 	if err := checkRoleProfiles(in.Role, in.Student, in.Teacher); err != nil {
 		return AdminUser{}, err
 	}
 	if in.Role == RoleAdmin {
-		owner, err := s.repo.IsOwner(ctx, in.CreatedBy)
-		if err != nil {
-			return AdminUser{}, err
-		}
-		if !owner {
-			return AdminUser{}, errOwnerRequired
-		}
+		return AdminUser{}, apperr.NewForbidden("admin_invitation_required", "administrator access must be granted through administrator management")
 	}
 	if in.Password == "" && s.opts.Inviter == nil {
 		return AdminUser{}, apperr.New(apperr.Unavailable, "invitations_disabled", "invitations are not configured")

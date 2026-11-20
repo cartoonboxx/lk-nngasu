@@ -6,9 +6,9 @@
 // таблиц student и workload — состав меняется сам при переводе студента или смене нагрузки.
 //
 // REST отдаёт контакты, список чатов и историю (GET /chats/:id/messages?before=<id>).
-// Отправка, правка и удаление — команды WebSocket (протокол lk-chat.v1, см. ws.go):
-// message.send / message.edit / message.delete; после COMMIT всем подключённым
-// участникам чата уходят события message.created / message.updated / message.deleted.
+// Отправка — команда WebSocket message.send (протокол lk-chat.v1, см. ws.go).
+// После COMMIT участникам чата уходит событие message.created.
+// Редактирование и удаление отправленных сообщений недоступны.
 package chat
 
 import "time"
@@ -93,12 +93,6 @@ type Message struct {
 	Files      []FileRef  `json:"files"`
 	CreatedAt  time.Time  `json:"created_at"`
 	EditedAt   *time.Time `json:"edited_at"`
-}
-
-// MessageRemoval — ack команды message.delete и данные события message.deleted.
-type MessageRemoval struct {
-	ChatID    int64 `json:"chat_id"`
-	MessageID int64 `json:"message_id"`
 }
 
 // chatRow — строка таблицы chat (для проверок доступа).

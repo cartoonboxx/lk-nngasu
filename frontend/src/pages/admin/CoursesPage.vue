@@ -6,30 +6,33 @@
       nm
     >
       <template #actions>
-        <Button @click="openCourse()"><PhPlus :size="18" />Назначить дисциплину</Button>
+        <Button :disabled="!group || !semester" @click="openCourse()">
+          <PhPlus :size="18" />Назначить дисциплину
+        </Button>
       </template>
     </SectionHeader>
     <div :class="style.grid">
-      <label :class="style.field">
-        Учебная группа
-        <Select
-          :model-value="String(group)"
-          :options="groupOptions"
-          @update:model-value="group = Number($event)"
-          full-width
-        />
-      </label>
-      <label :class="style.field">
-        Семестр
-        <Select
-          :model-value="String(semester)"
-          :options="semesterOptions"
-          @update:model-value="semester = Number($event)"
-          full-width
-        />
-      </label>
+      <TextInput
+        v-model="groupSearch"
+        label="Учебная группа"
+        :options="groupOptions"
+        @update:model-value="group = 0"
+        @select="group = Number($event.value)"
+        placeholder="Введите название группы"
+        full-width
+      />
+      <TextInput
+        v-model="semesterSearch"
+        label="Семестр"
+        :options="semesterOptions"
+        @update:model-value="semester = 0"
+        @select="semester = Number($event.value)"
+        placeholder="Введите учебный год или семестр"
+        full-width
+      />
     </div>
     <AdminTable
+      :class="style.coursesTable"
       :columns="columns"
       :total="courses.length"
       :reset-key="`${group}-${semester}`"
@@ -45,40 +48,51 @@
         </td>
         <td>
           <div :class="style.actions">
-            <Button
-              size="sm"
-              variant="ghost"
-              @click="
-                () => {
-                  contentCourseId = item.id
-                  contentOpen = true
-                }
-              "
-              >Материалы и задания</Button
-            >
-            <Button
-              :variant="selectedId === item.id ? 'secondary' : 'ghost'"
-              size="sm"
-              @click="selectedId = item.id"
-            >
-              Нагрузка
-            </Button>
-            <Button size="sm" variant="ghost" @click="openCourse(item)">
-              Заменить дисциплину
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              @click="
-                () => {
-                  removeKind = 'courses'
-                  targetId = item.id
-                  confirmOpen = true
-                }
-              "
-            >
-              Исключить
-            </Button>
+            <Tooltip text="Материалы и задания">
+              <IconButton
+                size="sm"
+                variant="ghost"
+                round
+                @click="
+                  () => {
+                    contentCourseId = item.id
+                    contentOpen = true
+                  }
+                "
+              >
+                <PhBookBookmark />
+              </IconButton>
+            </Tooltip>
+            <Tooltip text="Нагрузка">
+              <IconButton
+                :variant="selectedId === item.id ? 'secondary' : 'ghost'"
+                size="sm"
+                @click="selectedId = item.id"
+              >
+                <PhBarbell />
+              </IconButton>
+            </Tooltip>
+            <Tooltip text="Заменить дисциплину">
+              <IconButton size="sm" variant="ghost" round @click="openCourse(item)">
+                <PhPencilSimple />
+              </IconButton>
+            </Tooltip>
+            <Tooltip text="Исключить">
+              <IconButton
+                size="sm"
+                variant="ghost"
+                round
+                @click="
+                  () => {
+                    removeKind = 'courses'
+                    targetId = item.id
+                    confirmOpen = true
+                  }
+                "
+              >
+                <PhTrash />
+              </IconButton>
+            </Tooltip>
           </div>
         </td>
       </tr>
@@ -137,23 +151,28 @@
           {{ selectedGroupName }} ·
           {{ selectedSemesterName }}
         </p>
-        <label :class="style.field">
-          Дисциплина
-          <Select
-            :model-value="String(courseDraft.subject_id)"
-            :options="subjectOptions"
-            @update:model-value="courseDraft.subject_id = Number($event)"
-            full-width
-            placeholder="Выберите дисциплину"
-          />
-        </label>
+        <TextInput
+          v-model="subjectSearch"
+          label="Дисциплина"
+          :options="subjectOptions"
+          @update:model-value="courseDraft.subject_id = 0"
+          @select="courseDraft.subject_id = Number($event.value)"
+          full-width
+          required
+          placeholder="Введите название дисциплины"
+        />
+        <p v-if="subjectSearch && !courseDraft.subject_id" :class="style.muted">
+          Выберите дисциплину из списка.
+        </p>
         <p v-if="courseDraft.id" :class="style.muted">
           Нагрузка, преподаватели и занятия в расписании сохранятся и будут относиться к выбранной
           дисциплине.
         </p>
         <div :class="style.dialogFooter">
           <Button variant="ghost" @click="courseOpen = false">Отмена</Button>
-          <Button type="submit" :loading="$adminStore.saving">Сохранить</Button>
+          <Button type="submit" :loading="$adminStore.saving" :disabled="!courseDraft.subject_id"
+            >Сохранить</Button
+          >
         </div>
       </form>
     </AdminDialog>
@@ -223,16 +242,34 @@
 <script lang="ts">
 import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
 import Select from '@/components/UI/inputs/Select/Select.vue'
+import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
 import { defineComponent } from 'vue'
-import { PhPlus } from '@phosphor-icons/vue'
+import { PhBarbell, PhBookBookmark, PhPencilSimple, PhPlus, PhTrash } from '@phosphor-icons/vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
 import AdminTable from './components/AdminTable.vue'
 import AdminDialog from './components/AdminDialog.vue'
 import CourseContent from './components/CourseContent.vue'
 import { lessonLabels, type CourseOffering, type AdminWorkload } from './admin.types'
 import style from './Admin.module.scss'
+import Tooltip from '@/components/UI/Tooltip/Tooltip.vue'
+import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 export default defineComponent({
-  components: { SectionHeader, Select, PhPlus, Button, AdminTable, AdminDialog, CourseContent },
+  components: {
+    PhTrash,
+    PhPencilSimple,
+    PhBarbell,
+    PhBookBookmark,
+    IconButton,
+    Tooltip,
+    SectionHeader,
+    Select,
+    TextInput,
+    PhPlus,
+    Button,
+    AdminTable,
+    AdminDialog,
+    CourseContent,
+  },
   data() {
     return {
       columns: ['Дисциплина', 'Нагрузка', 'Действия'],
@@ -247,6 +284,9 @@ export default defineComponent({
       lessonLabels,
       group: this.$adminStore.data?.catalogs.groups.at(0)?.id ?? 0,
       semester: this.$adminStore.data?.catalogs.semesters.at(0)?.id ?? 0,
+      groupSearch: this.$adminStore.data?.catalogs.groups.at(0)?.name ?? '',
+      semesterSearch: this.$adminStore.data?.catalogs.semesters.at(0)?.name ?? '',
+      subjectSearch: '',
       selectedId: 0,
       contentOpen: false,
       contentCourseId: 0,
@@ -368,6 +408,9 @@ export default defineComponent({
       this.courseDraft = item
         ? { ...item }
         : { id: 0, group_id: this.group, semester_id: this.semester, subject_id: 0 }
+      this.subjectSearch =
+        this.subjectOptions.find((option) => option.value === String(this.courseDraft.subject_id))
+          ?.label ?? ''
       this.$adminStore.error = ''
       this.courseOpen = true
     },
@@ -385,6 +428,7 @@ export default defineComponent({
       this.workloadOpen = true
     },
     async saveCourse() {
+      if (!this.courseDraft.subject_id) return
       const saved = await this.$adminStore.saveCourse(this.courseDraft)
       if (saved) {
         this.courseOpen = false
