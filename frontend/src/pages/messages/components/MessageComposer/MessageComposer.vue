@@ -6,7 +6,6 @@
         type="file"
         multiple
         hidden
-        accept=".pdf,.docx,.pptx,.xlsx,.xls,.zip,.rar"
         @change="
           ($emit('attach', Array.from(($event.target as HTMLInputElement).files ?? [])),
           (($event.target as HTMLInputElement).value = ''))
@@ -14,7 +13,6 @@
       />
       <IconButton
         variant="secondary"
-        title="Прикрепить файлы"
         round
         :disabled="sending"
         @click="($refs.fileInput as HTMLInputElement).click()"

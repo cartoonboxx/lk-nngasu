@@ -1890,9 +1890,9 @@ export const apiGroups: ApiGroup[] = [
           status: 201,
           schema: 'FileInfo',
         },
-        errors: ['413 file_too_large', '415 unsupported_file_type', '400 invalid_file_signature'],
+        errors: ['413 file_too_large'],
         notes: [
-          'attachment: PDF, DOCX, PPTX, XLS/XLSX, ZIP, RAR; до 20 MiB. avatar: JPEG, PNG, WebP до 2 MiB. Проверять расширение, MIME и сигнатуру.',
+          'attachment: любые типы файлов, без ограничения размера по умолчанию (MAX_UPLOAD_MB=0). avatar: любые типы файлов до 2 MiB.',
           'Успешная загрузка ещё не означает привязку; после неё отправить id в команду соответствующей сущности.',
         ],
       },

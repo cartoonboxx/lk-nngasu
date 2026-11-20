@@ -39,7 +39,7 @@ func (s *Storage) resolve(key string) (string, error) {
 	return filepath.Join(s.dir, filepath.FromSlash(key)), nil
 }
 
-// Save пишет поток в файл и возвращает размер; больше max байт — errTooLarge.
+// Save пишет поток в файл; max=0 отключает ограничение размера.
 func (s *Storage) Save(key string, r io.Reader, max int64) (int64, error) {
 	p, err := s.resolve(key)
 	if err != nil {
@@ -52,11 +52,14 @@ func (s *Storage) Save(key string, r io.Reader, max int64) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	n, err := io.Copy(f, io.LimitReader(r, max+1))
+	if max > 0 {
+		r = io.LimitReader(r, max+1)
+	}
+	n, err := io.Copy(f, r)
 	if cerr := f.Close(); err == nil {
 		err = cerr
 	}
-	if err == nil && n > max {
+	if err == nil && max > 0 && n > max {
 		err = errTooLarge
 	}
 	if err != nil {

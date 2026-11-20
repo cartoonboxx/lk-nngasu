@@ -8,15 +8,46 @@
     <div :class="style.layout">
       <header :class="style.header">
         <div :class="style.heading">
-          <p :class="style.eyebrow">{{ courseTitle }}</p>
-          <h2>{{ assignment?.title || 'Задание' }}</h2>
+          <p :class="style.eyebrow">
+            {{ courseTitle }} <span v-if="topicIndex >= 0">· Тема {{ topicIndex + 1 }}</span>
+          </p>
+          <div :class="style.titleRow">
+            <h2>{{ assignment?.title || 'Задание' }}</h2>
+            <StatusBadge
+              v-if="assignment"
+              :variant="
+                reviewed ? 'success' : assignment.submission?.submitted_at ? 'info' : 'neutral'
+              "
+            >
+              {{
+                reviewed
+                  ? 'Работа проверена'
+                  : assignment.submission?.submitted_at
+                    ? 'Ожидает проверки'
+                    : assignment.submission
+                      ? 'Черновик'
+                      : 'Не отправлено'
+              }}
+            </StatusBadge>
+          </div>
           <p v-if="assignment?.deadline_at" :class="style.deadline">
-            Срок сдачи: {{ new Date(assignment.deadline_at).toLocaleString('ru-RU') }}
+            <PhCalendarBlank :size="23" />
+            <span
+              >Срок сдачи:
+              <strong>{{ new Date(assignment.deadline_at).toLocaleString('ru-RU') }}</strong></span
+            >
           </p>
         </div>
-        <Button variant="secondary" :disabled="saving" @click="$emit('update:modelValue', false)"
-          >Закрыть</Button
-        >
+        <IconButton
+          :class="style.close"
+          variant="ghost"
+          size="md"
+          round
+          title="Закрыть"
+          :disabled="saving"
+          @click="$emit('update:modelValue', false)"
+          ><PhX :size="24"
+        /></IconButton>
       </header>
       <p v-if="loading">Загрузка задания…</p>
 
@@ -25,60 +56,138 @@
         <section :class="style.task">
           <h3>Задание</h3>
           <p>{{ assignment.description }}</p>
-          <Button
+          <MediaButton
             v-for="file in assignment.files"
             :key="file.id"
-            variant="secondary"
             @click="download(file.id, file.name)"
-            >{{ file.name }}</Button
-          >
-        </section>
-        <section v-if="assignment.submission?.status === 'reviewed'" :class="style.review">
-          <h3>Оценка: {{ assignment.submission.grade }}</h3>
-          <p>{{ assignment.submission.review_comment }}</p>
-        </section>
-        <p v-if="success" role="status">{{ success }}</p>
-        <form v-if="auth.user?.student" :class="style.form" @submit.prevent="submit(true)">
-          <p v-if="assignment.submission?.submitted_at">
-            Отправлено: {{ new Date(assignment.submission.submitted_at).toLocaleString('ru-RU') }}
-          </p>
-          <TextInput
-            v-model="comment"
-            label="Ответ"
-            multiline
-            full-width
-            :maxlength="2000"
-            :disabled="saving || reviewed"
+            :title="file.name"
+            :filename="file.name"
           />
-          <ul :class="style.files">
-            <li v-for="attachment in attachments" :key="attachment.id">
-              <Button variant="secondary" type="button" @click="downloadAttachment(attachment)">{{
-                attachment.name
-              }}</Button>
-              <Button
-                v-if="!reviewed"
-                variant="ghost"
-                type="button"
-                :disabled="saving"
-                @click="attachments = attachments.filter((item) => item.id !== attachment.id)"
-                >Убрать</Button
-              >
+        </section>
+        <section v-if="assignment.submission && !isEditing" :class="style.form">
+          <div :class="style.answerHeading">
+            <h3>Ваш ответ</h3>
+            <p v-if="assignment.submission.submitted_at" :class="style.muted">
+              Отправлен {{ new Date(assignment.submission.submitted_at).toLocaleString('ru-RU') }}
+            </p>
+          </div>
+          <p v-if="assignment.submission.answer_text" :class="style.comment">
+            {{ assignment.submission.answer_text }}
+          </p>
+          <ul v-if="assignment.submission.files.length" :class="style.files">
+            <li v-for="file in assignment.submission.files" :key="file.id">
+              <MediaButton
+                :title="file.name"
+                :filename="file.name"
+                @click="download(file.id, file.name)"
+              />
             </li>
           </ul>
-          <label v-if="!reviewed" :class="style.field"
-            >Прикрепить файлы
-            <input
-              type="file"
-              multiple
-              accept=".pdf,.docx,.pptx,.xlsx,.xls,.zip,.rar"
+          <section v-if="reviewed" :class="style.review">
+            <div :class="style.gradeBlock">
+              <p :class="style.muted">Оценка работы</p>
+              <p :class="style.grade">{{ assignment.submission.grade }}</p>
+            </div>
+            <div :class="style.feedback">
+              <h3>Комментарий преподавателя</h3>
+              <p :class="style.comment">
+                {{
+                  assignment.submission.review_comment || 'Преподаватель не оставил комментарий.'
+                }}
+              </p>
+            </div>
+          </section>
+          <footer :class="style.actions">
+            <template v-if="!reviewed && auth.user?.student"
+              ><Button variant="danger" :disabled="saving" @click="withdrawOpen = true"
+                >Удалить ответ</Button
+              ><Button variant="secondary" @click="isEditing = true"
+                >Редактировать ответ</Button
+              ></template
+            >
+            <Button v-else variant="secondary" @click="$emit('update:modelValue', false)"
+              >Закрыть</Button
+            >
+          </footer>
+        </section>
+        <form
+          v-if="auth.user?.student && isEditing && !reviewed"
+          :class="style.form"
+          @submit.prevent="submit(true)"
+        >
+          <div :class="style.field">
+            <div :class="style.labelRow">
+              <label :for="`${id}-comment`">Комментарий к ответу</label
+              ><span :class="style.muted">Необязательно</span>
+            </div>
+            <Input
+              :id="`${id}-comment`"
+              v-model="comment"
+              multiline
+              full-width
+              :base-height="104"
+              :maxlength="2000"
               :disabled="saving"
-              @change="addFiles"
+              placeholder="Добавьте пояснение к работе"
             />
-          </label>
-          <p v-if="!reviewed" :class="style.muted">
-            До 5 файлов: PDF, DOCX, PPTX, XLSX, XLS, ZIP, RAR. До 15 МБ каждый.
-          </p>
+            <p :class="style.counter">{{ comment.length }} / 2000</p>
+          </div>
+          <div :class="style.field">
+            <label :for="`${id}-files`">Файлы работы</label>
+            <div
+              :class="[style.dropzone, dragging && style.dragging]"
+              @dragover.prevent="!saving && (dragging = true)"
+              @dragleave="dragging = false"
+              @drop.prevent="
+                (event: DragEvent) => {
+                  dragging = false
+                  if (!saving) appendFiles(Array.from(event.dataTransfer?.files ?? []))
+                }
+              "
+            >
+              <PhUploadSimple :size="34" />
+              <div :class="style.uploadCopy">
+                <p>Перетащите файлы сюда</p>
+                <span>или выберите на устройстве</span>
+              </div>
+              <input
+                :id="`${id}-files`"
+                :class="style.fileInput"
+                type="file"
+                multiple
+                :disabled="saving"
+                @change="addFiles"
+              />
+            </div>
+            <p :class="style.muted">До 5 файлов любого типа без ограничения размера.</p>
+            <ul v-if="attachments.length" :class="style.files">
+              <li v-for="attachment in attachments" :key="attachment.id">
+                <MediaButton
+                  :title="attachment.name"
+                  :filename="attachment.name"
+                  :meta="attachment.size ? `${(attachment.size / 1024).toFixed(1)} КБ` : ''"
+                  @click="downloadAttachment(attachment)"
+                >
+                  <template #actions
+                    ><IconButton
+                      variant="ghost"
+                      size="sm"
+                      round
+                      :disabled="saving"
+                      @click="attachments = attachments.filter((item) => item.id !== attachment.id)"
+                      ><PhX :size="20" /></IconButton
+                  ></template>
+                </MediaButton>
+              </li>
+            </ul>
+          </div>
           <footer v-if="!reviewed" :class="style.actions">
+            <Button
+              variant="secondary"
+              :disabled="saving"
+              @click="assignment.submission ? resetDraft() : $emit('update:modelValue', false)"
+              >Отмена</Button
+            >
             <Button
               v-if="!assignment.submission?.submitted_at"
               variant="secondary"
@@ -108,21 +217,29 @@
       :width="400"
       @update:model-value="!saving && (withdrawOpen = $event)"
     >
-      <h2>Удалить ответ?</h2>
-      <p>
-        Текст и прикреплённые файлы ответа будут удалены. После этого можно отправить новый ответ.
-      </p>
-      <Button variant="ghost" :disabled="saving" @click="withdrawOpen = false">Отмена</Button>
-      <Button variant="danger" :loading="saving" @click="withdraw">Удалить</Button>
+      <div :class="style.confirm">
+        <h2>Удалить ответ?</h2>
+        <p>
+          Текст и прикреплённые файлы ответа будут удалены. После этого можно отправить новый ответ.
+        </p>
+        <div :class="style.confirmActions">
+          <Button variant="ghost" :disabled="saving" @click="withdrawOpen = false">Отмена</Button>
+          <Button variant="danger" :loading="saving" @click="withdraw">Удалить</Button>
+        </div>
+      </div>
     </Modal>
   </Modal>
 </template>
 <script lang="ts">
+import MediaButton from '@/components/UI/buttons/MediaButton/MediaButton.vue'
 import { apiNotifications } from '@/api/client'
-import { defineComponent } from 'vue'
+import { defineComponent, useId } from 'vue'
+import { PhCalendarBlank, PhUploadSimple, PhX } from '@phosphor-icons/vue'
+import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
+import StatusBadge from '@/components/UI/StatusBadge/StatusBadge.vue'
 import Modal from '@/components/UI/modal/BaseModal/Modal.vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
-import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
+import Input from '@/components/UI/inputs/Input/Input.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFilesStore } from '@/stores/files'
 import type { Assignment } from '@/api/cabinet.types'
@@ -130,22 +247,35 @@ import type { AssignmentAttachment } from '../../course.types'
 import style from './AssignmentModal.module.scss'
 export default defineComponent({
   name: 'AssignmentModal',
-  components: { Modal, Button, TextInput },
+  components: {
+    MediaButton,
+    Modal,
+    Button,
+    Input,
+    IconButton,
+    StatusBadge,
+    PhCalendarBlank,
+    PhUploadSimple,
+    PhX,
+  },
   props: {
     modelValue: Boolean,
     assignmentId: { type: Number, required: true },
     courseTitle: { type: String, default: '' },
+    topicIndex: { type: Number, default: -1 },
   },
   emits: ['update:modelValue', 'submitted'],
   data() {
     return {
       style,
+      id: useId(),
+      dragging: false,
+      isEditing: true,
       assignment: null as Assignment | null,
       attachments: [] as AssignmentAttachment[],
       comment: '',
       loading: false,
       saving: false,
-      success: '',
       withdrawOpen: false,
       version: 0,
     }
@@ -175,7 +305,7 @@ export default defineComponent({
       const version = ++this.version
       this.loading = true
 
-      this.success = ''
+      this.withdrawOpen = false
       this.assignment = null
       this.attachments = []
       this.comment = ''
@@ -183,6 +313,8 @@ export default defineComponent({
         const assignment = await this.$subjectsStore.getAssignment(this.assignmentId)
         if (version !== this.version) return
         this.assignment = assignment
+        this.isEditing = !assignment.submission
+        this.dragging = false
         this.comment = assignment.submission?.answer_text ?? ''
         this.attachments = (assignment.submission?.files ?? []).map((file) => ({
           id: String(file.id),
@@ -198,18 +330,28 @@ export default defineComponent({
     addFiles(event: Event) {
       const input = event.target as HTMLInputElement
 
-      for (const file of Array.from(input.files ?? [])) {
-        if (
-          this.attachments.length >= 5 ||
-          file.size > 15 * 1024 * 1024 ||
-          !/\.(pdf|docx|pptx|xlsx|xls|zip|rar)$/i.test(file.name)
-        ) {
-          this.$utilityStore.notifyError('Проверьте тип, размер и количество файлов.')
+      this.appendFiles(Array.from(input.files ?? []))
+      input.value = ''
+    },
+    appendFiles(files: File[]) {
+      if (this.saving || this.reviewed) return
+      for (const file of files) {
+        if (this.attachments.length >= 5) {
+          this.$utilityStore.notifyError('Можно прикрепить до 5 файлов.')
           continue
         }
         this.attachments.push({ id: crypto.randomUUID(), name: file.name, size: file.size, file })
       }
-      input.value = ''
+    },
+    resetDraft() {
+      this.comment = this.assignment?.submission?.answer_text ?? ''
+      this.attachments = (this.assignment?.submission?.files ?? []).map((file) => ({
+        id: String(file.id),
+        name: file.name,
+        size: 0,
+      }))
+      this.isEditing = false
+      this.dragging = false
     },
     async downloadAttachment(attachment: AssignmentAttachment) {
       if (attachment.file) {
@@ -233,7 +375,6 @@ export default defineComponent({
       const version = this.version
       this.saving = true
 
-      this.success = ''
       try {
         const submission = await this.$subjectsStore.submitAnswer(
           this.assignment.id,
@@ -245,7 +386,11 @@ export default defineComponent({
         )
         if (version !== this.version) return
         this.assignment.submission = submission
-        this.success = send ? 'Ответ отправлен на проверку.' : 'Черновик сохранён на сервере.'
+        this.isEditing = false
+        this.$utilityStore.notify(
+          send ? 'Ответ отправлен на проверку.' : 'Черновик сохранён на сервере.',
+          'success',
+        )
         this.$emit('submitted')
       } catch (error) {
         apiNotifications.onError?.(error)

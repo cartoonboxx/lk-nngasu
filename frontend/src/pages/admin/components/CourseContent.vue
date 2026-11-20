@@ -38,13 +38,12 @@
           >
         </div>
         <div v-for="material in topic.materials" :key="material.id" :class="style.actions">
-          <Button
+          <MediaButton
             v-if="material.file"
-            size="sm"
-            variant="ghost"
             @click="download(material.file.id, material.file.name)"
-            >{{ material.file.name }}</Button
-          >
+            :title="material.file.name"
+            :filename="material.file.name"
+          />
           <a
             v-if="material.external_url"
             :href="material.external_url"
@@ -140,22 +139,28 @@
         <template v-if="kind !== 'topic'">
           <ul>
             <li v-for="(file, index) in draft.files" :key="index">
-              {{ file.name }}
-              <button type="button" :disabled="saving" @click="draft.files.splice(index, 1)">
-                Убрать
-              </button>
+              <MediaButton :title="file.name" :filename="file.name" readonly>
+                <template #actions
+                  ><IconButton
+                    variant="ghost"
+                    size="sm"
+                    title="Убрать файл"
+                    :disabled="saving"
+                    @click="draft.files.splice(index, 1)"
+                    ><PhX :size="20" /></IconButton
+                ></template>
+              </MediaButton>
             </li>
           </ul>
           <label :class="style.field"
             >Файлы<input
               type="file"
               :multiple="kind === 'assignment'"
-              accept=".pdf,.docx,.pptx,.xlsx,.xls,.zip,.rar"
               :disabled="saving"
               @change="addFiles"
           /></label>
           <p :class="style.muted">
-            PDF, DOCX, PPTX, XLSX, XLS, ZIP, RAR, до 15 МБ каждый.
+            Любые типы файлов без ограничения размера.
             {{ kind === 'material' ? 'Один файл или внешняя ссылка.' : 'До пяти файлов.' }}
           </p>
         </template>
@@ -218,13 +223,13 @@
         ><p style="white-space: pre-wrap">{{ submission.answer_text }}</p>
         <p>Оценка: {{ submission.grade ?? '—' }}</p>
         <p>{{ submission.review_comment }}</p>
-        <Button
+        <MediaButton
           v-for="file in submission.files"
           :key="file.id"
-          variant="ghost"
           @click="download(file.id, file.name)"
-          >{{ file.name }}</Button
-        >
+          :title="file.name"
+          :filename="file.name"
+        />
         <Button
           variant="secondary"
           @click="download(`/submissions/${submission.id}/archive`, 'submission.zip')"
@@ -235,6 +240,9 @@
   </AdminDialog>
 </template>
 <script lang="ts">
+import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
+import { PhX } from '@phosphor-icons/vue'
+import MediaButton from '@/components/UI/buttons/MediaButton/MediaButton.vue'
 import { defineComponent } from 'vue'
 import { useAuthStore } from '@/stores/auth'
 import { useFilesStore } from '@/stores/files'
@@ -255,7 +263,7 @@ type WorkRow = {
 }
 
 export default defineComponent({
-  components: { Button, TextInput, AdminDialog, AdminTable },
+  components: { IconButton, PhX, MediaButton, Button, TextInput, AdminDialog, AdminTable },
   props: { modelValue: Boolean, courseId: { type: Number, required: true } },
   emits: ['update:modelValue'],
   data() {
@@ -356,12 +364,8 @@ export default defineComponent({
     addFiles(event: Event) {
       const input = event.target as HTMLInputElement
       for (const file of Array.from(input.files ?? [])) {
-        if (
-          this.draft.files.length >= (this.kind === 'material' ? 1 : 5) ||
-          file.size > 15 * 1024 * 1024 ||
-          !/\.(pdf|docx|pptx|xlsx|xls|zip|rar)$/i.test(file.name)
-        ) {
-          this.$utilityStore.notifyError('Проверьте тип, размер и количество файлов.')
+        if (this.draft.files.length >= (this.kind === 'material' ? 1 : 5)) {
+          this.$utilityStore.notifyError('Превышено допустимое количество файлов.')
           continue
         }
         this.draft.files.push({ name: file.name, file })

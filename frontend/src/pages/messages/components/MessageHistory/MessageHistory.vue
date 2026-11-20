@@ -17,15 +17,13 @@
           {{ message.sender }}
         </span>
         <p>{{ message.text }}</p>
-        <Button
+        <MediaButton
           v-for="file in message.files"
           :key="file.id"
-          size="sm"
-          variant="ghost"
           @click="download(file.id, file.name)"
-        >
-          {{ file.name }}
-        </Button>
+          :title="file.name"
+          :filename="file.name"
+        />
         <div :class="style.messageMeta">
           <span v-if="message.editedAt">изменено</span>
           <time :datetime="message.sentAt">
@@ -39,21 +37,17 @@
 </template>
 
 <script lang="ts">
+import MediaButton from '@/components/UI/buttons/MediaButton/MediaButton.vue'
 import { apiNotifications } from '@/api/client'
 import { defineComponent, type PropType } from 'vue'
 import style from './MessageHistory.module.scss'
 import { PhChatCircleText, PhCheck } from '@phosphor-icons/vue'
 import { useFilesStore } from '@/stores/files'
-import Button from '@/components/UI/buttons/Button/Button.vue'
 import type { Chat, Message } from '../../messages.types'
 import { messageTimeFormatter, dayLabel } from '../../messages.format'
 export default defineComponent({
   name: 'MessageHistory',
-  components: {
-    PhChatCircleText,
-    PhCheck,
-    Button,
-  },
+  components: { MediaButton, PhChatCircleText, PhCheck },
   props: {
     chat: { type: Object as PropType<Chat>, required: true },
   },

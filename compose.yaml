@@ -35,7 +35,7 @@ services:
       TIMEZONE: Europe/Moscow
       WEEK_ONE_DATE: ${WEEK_ONE_DATE:-2026-09-01}
       LESSON_MINUTES: "90"
-      MAX_UPLOAD_MB: "15"
+      MAX_UPLOAD_MB: "0"
     volumes:
       - uploads:/data/uploads
     healthcheck:

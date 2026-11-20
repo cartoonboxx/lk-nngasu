@@ -11,11 +11,7 @@
       @click="download"
     >
       <span :class="style.leftPart">
-        <span
-          v-if="$slots.icon"
-          :class="style.icon"
-          :style="{ '--file-icon-color': fileType.color }"
-        >
+        <span :class="style.icon" :style="{ '--file-icon-color': fileType.color }">
           <component :is="fileType.icon" :size="28" />
         </span>
         <span :class="style.content">

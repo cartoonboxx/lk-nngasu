@@ -38,6 +38,7 @@
           v-model="assignmentOpen"
           :course-title="subject.label"
           :assignment-id="selectedAssignmentId"
+          :topic-index="topics.findIndex((topic) => topic.assignment?.id === selectedAssignmentId)"
         />
       </template>
     </template>

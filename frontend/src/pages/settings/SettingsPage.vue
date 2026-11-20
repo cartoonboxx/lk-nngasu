@@ -20,12 +20,11 @@
             </div>
             <div :class="style.profileInfo">
               <h3>Фото профиля</h3>
-              <p>JPG, PNG или WebP · до 2 МБ</p>
+              <p>До 2 МБ</p>
             </div>
             <input
               ref="avatarInput"
               type="file"
-              accept="image/jpeg,image/png,image/webp"
               hidden
               @change="uploadAvatar"
             />
@@ -284,11 +283,8 @@ export default defineComponent({
       input.value = ''
       if (!file || this.savingAvatar) return
 
-      if (
-        file.size > 2 * 1024 * 1024 ||
-        !['image/jpeg', 'image/png', 'image/webp'].includes(file.type)
-      ) {
-        this.$utilityStore.notifyError('Выберите JPEG, PNG или WebP размером до 2 МБ.')
+      if (file.size > 2 * 1024 * 1024) {
+        this.$utilityStore.notifyError('Выберите файл размером до 2 МБ.')
         return
       }
       const userId = this.auth.user?.id

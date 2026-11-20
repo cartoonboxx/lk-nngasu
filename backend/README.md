@@ -168,7 +168,7 @@ migrations         001–017 *.sql, встроены в бинарник (embed.
 ### Файлы
 | Метод | Путь | Описание |
 |---|---|---|
-| POST | /files | multipart, поле `file`, `purpose=attachment|avatar`; проверка расширения и сигнатуры, лимит `MAX_UPLOAD_MB` |
+| POST | /files | multipart, поле `file`, `purpose=attachment|avatar`; вложения любых типов; `MAX_UPLOAD_MB=0` отключает лимит размера; аватары любых типов до 2 МБ |
 | GET | /files/:id, /files/:id/meta | скачать / метаданные (по правилам доступа) |
 | DELETE | /files/:id | только свой неиспользуемый файл |
 

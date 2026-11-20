@@ -47,13 +47,22 @@
     <MessageHistory :chat="chat" />
     <ul v-if="attachments.length" :class="style.attachments">
       <li v-for="(attachment, index) in attachments" :key="index">
-        {{ attachment.file.name }}
-        <button
-          :disabled="uploading || $messageStore.sending"
-          @click="attachments.splice(index, 1)"
+        <MediaButton
+          :title="attachment.file.name"
+          :filename="attachment.file.name"
+          :meta="`${(attachment.file.size / 1024).toFixed(1)} КБ`"
+          readonly
         >
-          Убрать
-        </button>
+          <template #actions
+            ><IconButton
+              variant="ghost"
+              size="sm"
+              round
+              :disabled="uploading || $messageStore.sending"
+              @click="attachments.splice(index, 1)"
+              ><PhX :size="20" /></IconButton
+          ></template>
+        </MediaButton>
       </li>
     </ul>
     <ChatParticipantsModal
@@ -76,9 +85,10 @@
 </template>
 
 <script lang="ts">
+import MediaButton from '@/components/UI/buttons/MediaButton/MediaButton.vue'
 import { defineComponent, type PropType } from 'vue'
 import style from './ChatConversation.module.scss'
-import { PhArrowLeft, PhCaretDown } from '@phosphor-icons/vue'
+import { PhArrowLeft, PhCaretDown, PhX } from '@phosphor-icons/vue'
 import Button from '@/components/UI/buttons/Button/Button.vue'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 import ChatParticipantsModal from '../ChatParticipantsModal/ChatParticipantsModal.vue'
@@ -92,6 +102,8 @@ import { apiNotifications } from '@/api/client'
 export default defineComponent({
   name: 'ChatConversation',
   components: {
+    MediaButton,
+    PhX,
     Button,
     PhArrowLeft,
     PhCaretDown,
@@ -147,14 +159,8 @@ export default defineComponent({
       if (this.uploading || this.$messageStore.sending) return
       this.fileDrafts[this.chat.id] ??= []
       for (const file of files) {
-        if (
-          this.attachments.length >= 5 ||
-          file.size > 15 * 1024 * 1024 ||
-          !/\.(pdf|docx|pptx|xlsx|xls|zip|rar)$/i.test(file.name)
-        ) {
-          this.$utilityStore.notifyError(
-            'До 5 файлов: PDF, DOCX, PPTX, XLSX, XLS, ZIP, RAR, не более 15 МБ каждый.',
-          )
+        if (this.attachments.length >= 5) {
+          this.$utilityStore.notifyError('До 5 файлов')
           continue
         }
         this.fileDrafts[this.chat.id]!.push({ file })

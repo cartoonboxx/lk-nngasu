@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"sort"
 	"strings"
 
 	"github.com/gin-gonic/gin"
@@ -19,7 +18,7 @@ import (
 )
 
 // maxAvatarBytes — потолок для картинок профиля, независимо от общего лимита.
-const maxAvatarBytes = 2 << 20 // 2 MiB по контракту (JPEG, PNG, WebP)
+const maxAvatarBytes = 2 << 20 // 2 MiB
 
 // Handler — HTTP-слой модуля files. Отдельного сервиса нет:
 // handler сам работает с таблицей file (repo) и файлами на диске (storage).
@@ -94,28 +93,33 @@ func (h *Handler) info(id int64, f stored) (Info, bool) {
 
 // POST /files  (multipart/form-data FileUpload: "file" и обязательное "purpose" = attachment | avatar)
 //
-// Проверки по порядку: размер → расширение из белого списка → MIME части формы → сигнатура содержимого.
+// Файлы принимаются любых типов. Для аватаров проверяется размер.
 // Затем файл пишется на диск, и только после этого создаётся запись в file.
 // Ответ — 201 с Info; полученный id клиент передаёт в задание, ответ или профиль.
 func (h *Handler) Upload(c *gin.Context) {
 	p := middleware.Me(c)
 
-	// Ограничиваем тело ДО любого чтения формы: PostForm и FormFile разбирают
-	// multipart целиком, и лимит, поставленный после них, уже ничего не ограничивает.
-	// Здесь общий лимит (+1 МБ на служебную часть multipart); более строгий лимит
-	// аватара проверяется ниже по fh.Size и в storage.Save.
-	c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, h.maxBytes+(1<<20))
-
-	// purpose определяет допустимые типы и лимит: для аватара — только картинки
-	// и не больше maxAvatarBytes (но и не больше общего лимита).
-	types, limit := attachmentTypes, h.maxBytes
+	// Нулевой общий лимит означает отсутствие ограничения для вложений.
+	if h.maxBytes > 0 {
+		c.Request.Body = http.MaxBytesReader(c.Writer, c.Request.Body, h.maxBytes+(1<<20))
+	}
+	// Крупные multipart-файлы остаются на диске только до завершения запроса.
+	defer func() {
+		if c.Request.MultipartForm != nil {
+			_ = c.Request.MultipartForm.RemoveAll()
+		}
+	}()
+	limit := h.maxBytes
 	switch purpose, given := c.GetPostForm("purpose"); {
 	case !given:
 		httpx.Fail(c, formErr("purpose", "required: attachment or avatar"))
 		return
 	case purpose == "attachment":
 	case purpose == "avatar":
-		types, limit = avatarTypes, min(h.maxBytes, maxAvatarBytes)
+		limit = maxAvatarBytes
+		if h.maxBytes > 0 {
+			limit = min(limit, h.maxBytes)
+		}
 	default:
 		httpx.Fail(c, formErr("purpose", "must be attachment or avatar"))
 		return
@@ -133,19 +137,13 @@ func (h *Handler) Upload(c *gin.Context) {
 		return
 	}
 	// Быстрая проверка по размеру, заявленному в multipart.
-	if fh.Size > limit {
+	if limit > 0 && fh.Size > limit {
 		httpx.Fail(c, errTooBig())
 		return
 	}
 
-	// Очищаем имя от путей и опасных символов (защита от path traversal)
-	// и проверяем расширение по белому списку для данного purpose.
 	name := CleanName(fh.Filename)
-	ft, ok := types[extOf(name)]
-	if !ok || !ft.acceptsMIME(fh.Header.Get("Content-Type")) {
-		httpx.Fail(c, apperr.NewUnsupported("unsupported_file_type", "file type is not allowed: "+allowedList(types)))
-		return
-	}
+	ft := fileType{mime: mimeFor(name)}
 
 	src, err := fh.Open()
 	if err != nil {
@@ -154,15 +152,12 @@ func (h *Handler) Upload(c *gin.Context) {
 	}
 	defer src.Close()
 
-	// Проверяем сигнатуру (magic bytes): содержимое должно соответствовать расширению,
-	// чтобы нельзя было загрузить, например, исполняемый файл под видом .pdf.
-	// Ошибку ReadFull игнорируем: файл короче 16 байт — не ошибка, берём сколько прочитали.
-	head := make([]byte, 16)
+	// Для вложений тип определяется без ограничений на содержимое.
+	head := make([]byte, 512)
 	n, _ := io.ReadFull(src, head)
 	head = head[:n]
-	if !ft.magic(head) {
-		httpx.Fail(c, apperr.NewInvalid("invalid_file_signature", "file content does not match its extension"))
-		return
+	if ft.mime == "application/octet-stream" {
+		ft.mime = http.DetectContentType(head)
 	}
 
 	// Ключ "<user_id>/<random>/<имя>" — владелец и имя хранятся в нём самом.
@@ -194,16 +189,6 @@ func (h *Handler) Upload(c *gin.Context) {
 		return
 	}
 	httpx.Created(c, Info{ID: id, Name: name, MimeType: ft.mime, SizeBytes: size})
-}
-
-// allowedList возвращает список разрешённых расширений через запятую — для текста ошибки.
-func allowedList(types map[string]fileType) string {
-	exts := make([]string, 0, len(types))
-	for ext := range types {
-		exts = append(exts, ext)
-	}
-	sort.Strings(exts) // порядок карты случаен — сортируем, чтобы сообщение было стабильным
-	return strings.Join(exts, ", ")
 }
 
 // GET /files/:id — скачивание (всегда как вложение, без исполнения в браузере).

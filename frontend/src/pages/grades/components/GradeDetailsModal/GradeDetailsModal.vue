@@ -39,13 +39,13 @@
         </p>
       </section>
 
-      <Button
+      <MediaButton
         v-for="file in assignment.files"
         :key="file.id"
-        variant="secondary"
         @click="download(file.id, file.name)"
-        >{{ file.name }}</Button
-      >
+        :title="file.name"
+        :filename="file.name"
+      />
       <section :class="style.detailSection">
         <h3>Комментарий преподавателя</h3>
         <p>
@@ -62,11 +62,11 @@
 </template>
 
 <script lang="ts">
+import MediaButton from '@/components/UI/buttons/MediaButton/MediaButton.vue'
 import { apiNotifications } from '@/api/client'
 import { defineComponent, type PropType } from 'vue'
 import { PhX } from '@phosphor-icons/vue'
 import Modal from '@/components/UI/modal/BaseModal/Modal.vue'
-import Button from '@/components/UI/buttons/Button/Button.vue'
 import { useFilesStore } from '@/stores/files'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 import GradeStatus from '../GradeStatus/GradeStatus.vue'
@@ -76,7 +76,7 @@ import style from './GradeDetailsModal.module.scss'
 
 export default defineComponent({
   name: 'GradeDetailsModal',
-  components: { Modal, IconButton, Button, PhX, GradeStatus },
+  components: { MediaButton, Modal, IconButton, PhX, GradeStatus },
   props: {
     modelValue: { type: Boolean, default: false },
     assignment: { type: Object as PropType<GradeAssignment | null>, default: null },
