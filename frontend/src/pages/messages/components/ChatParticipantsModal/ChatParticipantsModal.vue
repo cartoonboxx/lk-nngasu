@@ -15,7 +15,6 @@
     </header>
     <p v-if="loading" :class="style.feedback">Загрузка участников…</p>
     <div v-else-if="error" :class="style.feedback">
-      <p>{{ error }}</p>
       <Button variant="secondary" @click="loadParticipants">Повторить</Button>
     </div>
     <p v-else-if="!participants.length" :class="style.feedback">Участников пока нет.</p>
@@ -114,8 +113,10 @@ export default defineComponent({
         )
         if (version === this.version) this.participants = people ?? []
       } catch (error) {
-        if (version === this.version)
+        if (version === this.version) {
+          apiNotifications.onError?.(error)
           this.error = error instanceof Error ? error.message : 'Не удалось загрузить участников.'
+        }
       } finally {
         if (version === this.version) this.loading = false
       }

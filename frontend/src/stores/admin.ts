@@ -134,6 +134,7 @@ export const useAdminStore = defineStore('adminStore', {
         }
       } catch (error) {
         if (version === this.loadVersion) {
+          apiNotifications.onError?.(error)
           this.error =
             error instanceof Error ? error.message : 'Не удалось загрузить данные с сервера.'
         }
@@ -172,6 +173,7 @@ export const useAdminStore = defineStore('adminStore', {
         return true
       } catch (error) {
         if (version === this.requestsVersion) {
+          apiNotifications.onError?.(error)
           this.requestsTotal = 0
           this.error = error instanceof Error ? error.message : 'Не удалось загрузить заявки.'
         }

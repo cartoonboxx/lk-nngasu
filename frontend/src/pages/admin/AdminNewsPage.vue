@@ -9,7 +9,7 @@
     </div>
     <p v-if="loading">Загрузка новостей…</p>
     <p v-else-if="error">
-      {{ error }} <Button variant="ghost" @click="loadNews">Повторить</Button>
+      <Button variant="ghost" @click="loadNews">Повторить</Button>
     </p>
     <AdminTable
       v-else
@@ -213,8 +213,10 @@ export default defineComponent({
         const items = await useAuthStore().list<AdminNews>('/admin/news')
         if (version === this.version) this.news = items
       } catch (error) {
-        if (version === this.version)
+        if (version === this.version) {
+          apiNotifications.onError?.(error)
           this.error = error instanceof Error ? error.message : 'Не удалось загрузить новости.'
+        }
       } finally {
         if (version === this.version) this.loading = false
       }

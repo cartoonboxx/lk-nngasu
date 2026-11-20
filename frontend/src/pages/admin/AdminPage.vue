@@ -10,16 +10,13 @@
         <p v-if="$adminStore.success" :class="style.success" role="status">
           {{ $adminStore.success }}
         </p>
-        <div v-if="$adminStore.error" :class="style.error">
-          <p>{{ $adminStore.error }}</p>
-          <Button
-            v-if="!$adminStore.data"
-            variant="ghost"
-            @click="$adminStore.initialize(String($route.name))"
-          >
-            Повторить
-          </Button>
-        </div>
+        <Button
+          v-if="$adminStore.error && !$adminStore.data && !$adminStore.loading"
+          variant="ghost"
+          @click="$adminStore.initialize(String($route.name))"
+        >
+          Повторить
+        </Button>
         <div v-if="$adminStore.loading" :class="style.empty" role="status">Загрузка данных…</div>
         <RouterView v-else-if="$adminStore.data" />
       </template>

@@ -2,7 +2,6 @@
   <section ref="page" :class="style.page" :style="viewportStyle">
     <p v-if="$messageStore.loading && !chats.length">Загрузка чатов…</p>
     <p v-if="$messageStore.error">
-      {{ $messageStore.error }}
       <button @click="refreshMessages">Повторить</button>
     </p>
     <p v-if="$route.query.chat && !selectedChat && !$messageStore.loading">Чат не найден.</p>

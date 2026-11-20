@@ -2,7 +2,7 @@
   <section :class="style.dashboardPage">
     <SectionHeader header="Главная" paragraph="Расписание, общение и события университета" />
     <p v-if="cabinet.dashboardError">
-      {{ cabinet.dashboardError }} <button @click="cabinet.fetchDashboard()">Повторить</button>
+      <button @click="cabinet.fetchDashboard()">Повторить</button>
     </p>
     <section :class="style.content">
       <div :class="style.scheduler">

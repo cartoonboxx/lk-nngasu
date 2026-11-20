@@ -1,3 +1,4 @@
+import { apiNotifications } from '@/api/client'
 import { defineStore } from 'pinia'
 import { useAuthStore } from './auth'
 import { ChatConnection, type ConnectionState } from '@/api/realtime'
@@ -150,8 +151,10 @@ export const useMessageStore = defineStore('messages', {
         const chats = await useAuthStore().list<ServerChat>('/chats')
         if (version === this.version) this.applyChats(chats, true, revision)
       } catch (error) {
-        if (version === this.version)
+        if (version === this.version) {
+          apiNotifications.onError?.(error)
           this.error = error instanceof Error ? error.message : 'Не удалось загрузить чаты.'
+        }
       } finally {
         if (version === this.version) this.loading = false
       }
@@ -167,9 +170,11 @@ export const useMessageStore = defineStore('messages', {
         this.applyChats([chat], false, revision)
         await this.fetchMessages(id)
       } catch (error) {
-        if (version === this.version)
+        if (version === this.version) {
+          apiNotifications.onError?.(error)
           this.conversationError =
             error instanceof Error ? error.message : 'Не удалось обновить чат.'
+        }
       }
     },
     async openDirect(userId: number) {
@@ -246,9 +251,11 @@ export const useMessageStore = defineStore('messages', {
         )
           void this.markRead(id, Number(last.id))
       } catch (error) {
-        if (version === this.version)
+        if (version === this.version) {
+          apiNotifications.onError?.(error)
           this.conversationError =
             error instanceof Error ? error.message : 'Не удалось загрузить сообщения.'
+        }
       } finally {
         if (version === this.version) {
           delete this.pendingChatIds[id]
@@ -321,9 +328,11 @@ export const useMessageStore = defineStore('messages', {
           this.applyRead(id, target)
         }
       } catch (error) {
-        if (version === this.version)
+        if (version === this.version) {
+          apiNotifications.onError?.(error)
           this.conversationError =
             error instanceof Error ? error.message : 'Не удалось отметить сообщения прочитанными.'
+        }
       } finally {
         if (version === this.version) delete this.pendingReads[id]
       }
@@ -345,6 +354,7 @@ export const useMessageStore = defineStore('messages', {
         return true
       } catch (error) {
         if (version === this.version) {
+          apiNotifications.onError?.(error)
           this.sendError =
             error instanceof Error ? error.message : 'Не удалось отправить сообщение.'
           void this.fetchMessages(id)

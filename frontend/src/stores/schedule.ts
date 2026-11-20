@@ -1,4 +1,4 @@
-import { ApiError } from '@/api/client'
+import { apiNotifications, ApiError } from '@/api/client'
 import { defineStore } from 'pinia'
 import { useAuthStore } from './auth'
 import type { CalendarLesson } from '@/api/cabinet.types'
@@ -42,8 +42,10 @@ export const useScheduleStore = defineStore('schedule', {
         const groups = await useAuthStore().list<{ id: number; name: string }>('/schedule/groups')
         if (useAuthStore().user?.id === userId) this.groups = groups
       } catch (error) {
-        if (useAuthStore().user?.id === userId)
+        if (useAuthStore().user?.id === userId) {
+          apiNotifications.onError?.(error)
           this.groupsError = error instanceof Error ? error.message : 'Не удалось загрузить группы.'
+        }
       }
     },
     async fetchSchedule(from?: Date, to?: Date) {
@@ -80,8 +82,10 @@ export const useScheduleStore = defineStore('schedule', {
         this.schedule.forEach((day) => day.lessons.sort((a, b) => a.start.localeCompare(b.start)))
       } catch (error) {
         if (error instanceof ApiError && error.code === 'current_semester_not_set') return
-        if (version === this.requestVersion)
+        if (version === this.requestVersion) {
+          apiNotifications.onError?.(error)
           this.error = error instanceof Error ? error.message : 'Не удалось загрузить расписание.'
+        }
       } finally {
         if (version === this.requestVersion) this.loading = false
       }

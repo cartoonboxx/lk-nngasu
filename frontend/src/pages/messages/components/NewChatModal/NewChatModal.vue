@@ -25,7 +25,7 @@
       :maxlength="200"
     />
     <p v-if="error" :class="style.contactsEmpty">
-      {{ error }} <button @click="loadContacts()">Повторить</button>
+      <button @click="loadContacts()">Повторить</button>
     </p>
     <p v-if="loading" :class="style.contactsEmpty">Загрузка контактов…</p>
     <p v-else-if="!error && !contacts.length" :class="style.contactsEmpty">Контакты не найдены.</p>
@@ -157,8 +157,10 @@ export default defineComponent({
           }),
         )
       } catch (error) {
-        if (version === this.version)
+        if (version === this.version) {
+          apiNotifications.onError?.(error)
           this.error = error instanceof Error ? error.message : 'Не удалось загрузить контакты.'
+        }
       } finally {
         if (version === this.version) this.loading = false
       }

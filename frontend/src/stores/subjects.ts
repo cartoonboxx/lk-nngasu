@@ -1,3 +1,4 @@
+import { apiNotifications } from '@/api/client'
 import { defineStore } from 'pinia'
 import { useAuthStore } from './auth'
 import { useFilesStore } from './files'
@@ -35,8 +36,10 @@ export const useSubjectsStore = defineStore('subjects', {
           semesterLabel: course.semester_name,
         }))
       } catch (error) {
-        if (version === this.requestVersion)
+        if (version === this.requestVersion) {
+          apiNotifications.onError?.(error)
           this.error = error instanceof Error ? error.message : 'Не удалось загрузить предметы.'
+        }
       } finally {
         if (version === this.requestVersion) this.loading = false
       }
@@ -60,8 +63,10 @@ export const useSubjectsStore = defineStore('subjects', {
           topics: course.topics,
         }
       } catch (error) {
-        if (version === this.requestVersion)
+        if (version === this.requestVersion) {
+          apiNotifications.onError?.(error)
           this.error = error instanceof Error ? error.message : 'Не удалось загрузить курс.'
+        }
       } finally {
         if (version === this.requestVersion) this.loading = false
       }

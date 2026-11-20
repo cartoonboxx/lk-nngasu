@@ -35,7 +35,6 @@
     </header>
     <p v-if="$messageStore.messagesLoading">Загрузка сообщений…</p>
     <p v-if="$messageStore.conversationError">
-      {{ $messageStore.conversationError }}
       <button @click="$messageStore.fetchMessages(chat.id)">Повторить</button>
     </p>
     <Button
@@ -46,7 +45,6 @@
       >Предыдущие сообщения</Button
     >
     <MessageHistory :chat="chat" />
-    <p v-if="$messageStore.sendError" :class="style.feedback">{{ $messageStore.sendError }}</p>
     <ul v-if="attachments.length" :class="style.attachments">
       <li v-for="(attachment, index) in attachments" :key="index">
         {{ attachment.file.name }}

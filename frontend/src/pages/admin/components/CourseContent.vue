@@ -6,7 +6,7 @@
     @update:model-value="$emit('update:modelValue', $event)"
   >
     <p v-if="loading">Загрузка курса…</p>
-    <p v-if="error">{{ error }} <Button variant="ghost" @click="load">Повторить</Button></p>
+    <p v-if="error"><Button variant="ghost" @click="load">Повторить</Button></p>
     <template v-if="course && !loading">
       <h3>{{ course.subject_name }} · {{ course.group_name }}</h3>
       <Button :disabled="saving" @click="edit('topic')">Добавить тему</Button>
@@ -318,8 +318,10 @@ export default defineComponent({
         const course = await useAuthStore().request<CourseDetail>(`/courses/${this.courseId}`)
         if (version === this.version) this.course = course
       } catch (error) {
-        if (version === this.version)
+        if (version === this.version) {
+          apiNotifications.onError?.(error)
           this.error = error instanceof Error ? error.message : 'Не удалось загрузить курс.'
+        }
       } finally {
         if (version === this.version) this.loading = false
       }

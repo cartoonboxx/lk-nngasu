@@ -1,3 +1,4 @@
+import { apiNotifications } from '@/api/client'
 import { defineStore } from 'pinia'
 import { useAuthStore } from './auth'
 import { useMessageStore } from './messages'
@@ -31,8 +32,10 @@ export const useCabinetStore = defineStore('cabinet', {
         const news = await useAuthStore().list<News>('/news')
         if (version === this.version) this.news = news
       } catch (error) {
-        if (version === this.version)
+        if (version === this.version) {
+          apiNotifications.onError?.(error)
           this.newsError = error instanceof Error ? error.message : 'Не удалось загрузить новости.'
+        }
       } finally {
         if (version === this.version) this.newsLoading = false
       }
@@ -46,9 +49,11 @@ export const useCabinetStore = defineStore('cabinet', {
         const news = await useAuthStore().request<NewsDetail>(`/news/${encodeURIComponent(id)}`)
         if (version === this.detailVersion) this.currentNews = news
       } catch (error) {
-        if (version === this.detailVersion)
+        if (version === this.detailVersion) {
+          apiNotifications.onError?.(error)
           this.detailError =
             error instanceof Error ? error.message : 'Не удалось загрузить новость.'
+        }
       } finally {
         if (version === this.detailVersion) this.detailLoading = false
       }
@@ -69,9 +74,11 @@ export const useCabinetStore = defineStore('cabinet', {
           data.chats.filter((chat) => !messages.chats.some((item) => item.id === String(chat.id))),
         )
       } catch (error) {
-        if (version === this.version)
+        if (version === this.version) {
+          apiNotifications.onError?.(error)
           this.dashboardError =
             error instanceof Error ? error.message : 'Не удалось загрузить главную.'
+        }
       } finally {
         if (version === this.version) this.dashboardLoading = false
       }
@@ -110,8 +117,10 @@ export const useCabinetStore = defineStore('cabinet', {
           answer: '',
         }))
       } catch (error) {
-        if (version === this.version)
+        if (version === this.version) {
+          apiNotifications.onError?.(error)
           this.gradesError = error instanceof Error ? error.message : 'Не удалось загрузить оценки.'
+        }
       } finally {
         if (version === this.version) this.gradesLoading = false
       }
