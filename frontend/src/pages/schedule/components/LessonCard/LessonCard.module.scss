@@ -30,7 +30,13 @@
 .lab {
   --lesson-color: var(--schedule-lab);
 }
+.consultation {
+  --lesson-color: var(--schedule-consultation);
+}
 
+.exam {
+  --lesson-color: var(--schedule-exam);
+}
 .subject {
   color: var(--color-text-primary);
   font-size: 12px;

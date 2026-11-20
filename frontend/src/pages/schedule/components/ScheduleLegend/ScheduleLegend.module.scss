@@ -34,6 +34,13 @@
 .lab {
   background: var(--schedule-lab);
 }
+.consultation {
+  background: var(--schedule-consultation);
+}
+
+.exam {
+  background: var(--schedule-exam);
+}
 
 @media (max-width: breakpoints.$screen-phone-max) {
   .legend {
