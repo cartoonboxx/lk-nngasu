@@ -100,6 +100,10 @@
   .tabTooltip {
     width: 100%;
   }
+
+  .unreadBadge {
+    margin-left: auto;
+  }
 }
 
 .navigation.collapsed {
@@ -110,6 +114,14 @@
   .tabTooltip {
     width: var(--control-height-md);
     align-self: center;
+  }
+
+  .unreadBadge {
+    position: absolute;
+    top: 0;
+    right: 0;
+    transform: scale(0.8);
+    transform-origin: top right;
   }
 
   .header {

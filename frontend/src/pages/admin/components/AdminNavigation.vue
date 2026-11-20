@@ -43,6 +43,18 @@
             </template>
           </NavTab>
         </Tooltip>
+        <Tooltip :class="desktop.tabTooltip" text="Сообщения" position="right" :is-show="collapsed">
+          <NavTab :to="{ name: 'messages' }" text="Сообщения" :icon="chatIcon" :compact="collapsed">
+            <template #trailing>
+              <Badge
+                v-if="$messageStore.unreadCount"
+                :class="desktop.unreadBadge"
+                :value="$messageStore.unreadCount"
+                inline
+              />
+            </template>
+          </NavTab>
+        </Tooltip>
       </div>
     </div>
     <Tooltip
@@ -74,6 +86,7 @@
       text="Ещё"
       :icon="moreIcon"
       :active="isMoreActive"
+      :notification="$messageStore.unreadCount > 0"
       variant="bottom"
       @click="menuOpen = true"
     />
@@ -103,6 +116,16 @@
           :active="$route.name === `admin-${item.path}`"
           @select="menuOpen = false"
         />
+        <NavTab
+          :to="{ name: 'messages' }"
+          text="Сообщения"
+          :icon="chatIcon"
+          @select="menuOpen = false"
+        >
+          <template #trailing>
+            <Badge v-if="$messageStore.unreadCount" :value="$messageStore.unreadCount" inline />
+          </template>
+        </NavTab>
       </nav>
       <StudentCard
         :name="auth.user?.full_name || 'Аккаунт'"
@@ -143,6 +166,7 @@ import {
   PhSquaresFour,
   PhX,
   PhEnvelope,
+  PhChatsCircle,
 } from '@phosphor-icons/vue'
 import BrandHeader from '@/components/BrandHeader/BrandHeader.vue'
 import StudentCard from '@/components/navigation/StudentCard/StudentCard.vue'
@@ -184,6 +208,7 @@ export default defineComponent({
       isMobile: false,
       mediaQuery: null as MediaQueryList | null,
       moreIcon: markRaw(PhSquaresFour),
+      chatIcon: markRaw(PhChatsCircle),
       navigation: [
         { path: 'requests', label: 'Заявки', icon: markRaw(PhEnvelope) },
         { path: 'users', label: 'Пользователи', icon: markRaw(PhUsers) },

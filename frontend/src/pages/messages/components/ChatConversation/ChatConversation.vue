@@ -190,13 +190,16 @@ export default defineComponent({
       const id = this.chat.id
       const userId = useAuthStore().user?.id
       const attachments = this.attachments
+      const draft = this.draft
+      delete this.$messageStore.drafts[id]
+      let sent = false
       this.uploading = true
       try {
         for (const attachment of attachments) {
           if (!attachment.id) attachment.id = (await useFilesStore().upload(attachment.file)).id
           if (useAuthStore().user?.id !== userId) return
         }
-        const sent = await this.$messageStore.send(
+        sent = await this.$messageStore.send(
           id,
           text,
           attachments.map((attachment) => attachment.id!),
@@ -205,6 +208,10 @@ export default defineComponent({
       } catch (error) {
         apiNotifications.onError?.(error)
       } finally {
+        if (!sent && useAuthStore().user?.id === userId) {
+          const nextDraft = this.$messageStore.drafts[id]
+          this.$messageStore.drafts[id] = nextDraft ? `${draft}\n${nextDraft}` : draft
+        }
         this.uploading = false
       }
       await this.$nextTick()

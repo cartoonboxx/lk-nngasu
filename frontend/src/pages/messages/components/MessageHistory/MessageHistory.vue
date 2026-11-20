@@ -9,7 +9,10 @@
       <div v-if="isNewDay(index)" :class="style.dateDivider">
         <span>{{ dayLabel(message.sentAt) }}</span>
       </div>
-      <article :class="[style.message, message.own && style.ownMessage]">
+      <article
+        :class="[style.message, message.own && style.ownMessage]"
+        :data-message-id="message.own ? undefined : message.id"
+      >
         <span v-if="chat.group && !message.own" :class="style.sender">
           {{ message.sender }}
         </span>
@@ -70,14 +73,24 @@ export default defineComponent({
     this.historyWidth = history.clientWidth
     this.resizeObserver = new ResizeObserver(this.onResize)
     this.resizeObserver.observe(history)
+    document.addEventListener('visibilitychange', this.markVisibleMessages)
+    document.addEventListener('focusin', this.markVisibleMessages)
+    document.addEventListener('close', this.markVisibleMessages, true)
+    window.addEventListener('focus', this.markVisibleMessages)
     await this.scrollToEnd()
+    this.markVisibleMessages()
   },
   beforeUnmount() {
     this.resizeObserver?.disconnect()
+    document.removeEventListener('visibilitychange', this.markVisibleMessages)
+    document.removeEventListener('focusin', this.markVisibleMessages)
+    document.removeEventListener('close', this.markVisibleMessages, true)
+    window.removeEventListener('focus', this.markVisibleMessages)
   },
   watch: {
     async 'chat.id'() {
       await this.scrollToEnd()
+      this.markVisibleMessages()
     },
     async 'chat.messages'(messages: Message[], previous: Message[]) {
       const history = this.$refs.history as HTMLElement | undefined
@@ -86,6 +99,8 @@ export default defineComponent({
         await this.$nextTick()
         if (history) history.scrollTop += history.scrollHeight - before
       } else if (this.followingLatest || messages.at(-1)?.own) await this.scrollToEnd()
+      else await this.$nextTick()
+      this.markVisibleMessages()
     },
   },
   methods: {
@@ -103,6 +118,7 @@ export default defineComponent({
       if (history.clientHeight !== this.historyHeight || history.clientWidth !== this.historyWidth)
         return
       this.followingLatest = history.scrollHeight - history.clientHeight - history.scrollTop <= 48
+      this.markVisibleMessages()
     },
     async onResize() {
       const history = this.$refs.history as HTMLElement
@@ -110,6 +126,52 @@ export default defineComponent({
       this.historyWidth = history.clientWidth
       // Keep the bottom anchored when the keyboard or the growing composer changes the viewport.
       if (this.followingLatest) await this.scrollToEnd()
+      this.markVisibleMessages()
+    },
+    markVisibleMessages() {
+      if (
+        this.$messageStore.activeChatId !== this.chat.id ||
+        document.visibilityState !== 'visible' ||
+        !document.hasFocus()
+      )
+        return
+      const history = this.$refs.history as HTMLElement | undefined
+      if (!history) return
+      const bounds = history.getBoundingClientRect()
+      const viewport = window.visualViewport
+      const top = Math.max(bounds.top, viewport?.offsetTop ?? 0)
+      const bottom = Math.min(
+        bounds.bottom,
+        (viewport?.offsetTop ?? 0) + (viewport?.height ?? innerHeight),
+      )
+      const left = Math.max(bounds.left, viewport?.offsetLeft ?? 0)
+      const right = Math.min(
+        bounds.right,
+        (viewport?.offsetLeft ?? 0) + (viewport?.width ?? innerWidth),
+      )
+      const elements = history.querySelectorAll<HTMLElement>('[data-message-id]')
+      for (let index = elements.length - 1; index >= 0; index--) {
+        const element = elements[index]!
+        const rect = element.getBoundingClientRect()
+        const visibleTop = Math.max(rect.top, top)
+        const visibleBottom = Math.min(rect.bottom, bottom)
+        const visibleLeft = Math.max(rect.left, left)
+        const visibleRight = Math.min(rect.right, right)
+        if (
+          visibleBottom - visibleTop < Math.min(32, rect.height / 2) ||
+          visibleRight <= visibleLeft
+        )
+          continue
+        const visibleElement = document.elementFromPoint(
+          (visibleLeft + visibleRight) / 2,
+          (visibleTop + visibleBottom) / 2,
+        )
+        if (!visibleElement || !element.contains(visibleElement)) continue
+        const messageId = Number(element.dataset.messageId)
+        if (messageId > this.chat.lastReadMessageId)
+          void this.$messageStore.markRead(this.chat.id, messageId)
+        break
+      }
     },
     isNewDay(index: number): boolean {
       const messages = this.chat.messages

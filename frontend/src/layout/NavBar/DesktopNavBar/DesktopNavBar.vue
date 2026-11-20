@@ -63,8 +63,16 @@
             text="Сообщения"
             :icon="icons.chats"
             :active="$route.name === 'messages'"
-            @select="navigate('messages')"
+            :to="{ name: 'messages' }"
           >
+            <template #trailing>
+              <Badge
+                v-if="$messageStore.unreadCount"
+                :class="style.unreadBadge"
+                :value="$messageStore.unreadCount"
+                inline
+              />
+            </template>
           </NavTab>
         </Tooltip>
         <Tooltip
@@ -88,6 +96,20 @@
             :icon="icons.gear"
             :active="$route.name === 'settings'"
             @select="navigate('settings')"
+          />
+        </Tooltip>
+        <Tooltip
+          v-if="auth.user?.is_admin"
+          :class="style.tabTooltip"
+          text="Администрирование"
+          position="right"
+          :is-show="collapsed"
+        >
+          <NavTab
+            :compact="collapsed"
+            text="Администрирование"
+            :icon="icons.admin"
+            :to="{ name: 'admin-requests' }"
           />
         </Tooltip>
       </div>
@@ -116,6 +138,7 @@ import {
   PhHouse,
   PhSidebarSimple,
   PhSquaresFour,
+  PhShieldCheck,
 } from '@phosphor-icons/vue'
 import { defineComponent, markRaw } from 'vue'
 
@@ -124,11 +147,12 @@ import StudentCard from '@/components/navigation/StudentCard/StudentCard.vue'
 import NavTab from '@/components/UI/tabs/NavTab/NavTab.vue'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 import Tooltip from '@/components/UI/Tooltip/Tooltip.vue'
+import Badge from '@/components/UI/Badge/Badge.vue'
 import style from './DesktopNavBar.module.scss'
 
 export default defineComponent({
   name: 'DesktopNavBar',
-  components: { PhSidebarSimple, BrandHeader, StudentCard, NavTab, IconButton, Tooltip },
+  components: { PhSidebarSimple, BrandHeader, StudentCard, NavTab, IconButton, Tooltip, Badge },
   emits: ['collapse-change'],
   data() {
     return { style, collapsed: false }
@@ -154,6 +178,7 @@ export default defineComponent({
         chats: markRaw(PhChatsCircle),
         squares: markRaw(PhSquaresFour),
         gear: markRaw(PhGearSix),
+        admin: markRaw(PhShieldCheck),
       }
     },
     isSubjectsActive() {

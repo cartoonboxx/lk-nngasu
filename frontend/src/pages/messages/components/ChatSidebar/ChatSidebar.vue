@@ -25,12 +25,12 @@
       <li v-for="chat in filteredChats" :key="chat.id">
         <div :class="style.chatWrapper">
           <StyleTab
-            :class="style.chatRow"
+            :class="[style.chatRow, chat.unreadCount > 0 && style.unreadChat]"
             :active="selectedId === chat.id"
+            :to="{ name: 'messages', query: { chat: chat.id } }"
             :trigger-attrs="{
               'data-chat-id': chat.id,
             }"
-            @select="$emit('select', chat.id)"
           >
             <span :class="style.chatContent">
               <ChatAvatar :initials="chat.initials" :group="chat.group" />
@@ -45,12 +45,12 @@
                 </span>
                 <span :class="style.chatLine">
                   <span :class="style.preview">{{ chat.preview }}</span>
-                  <span v-if="chat.unreadCount > 0" :class="style.unreadBadge">{{
-                    chat.unreadCount
-                  }}</span>
                 </span>
               </span>
             </span>
+            <template #trailing>
+              <Badge v-if="chat.unreadCount > 0" :value="chat.unreadCount" inline />
+            </template>
           </StyleTab>
         </div>
       </li>
@@ -71,6 +71,7 @@ import { defineComponent, type PropType } from 'vue'
 import style from './ChatSidebar.module.scss'
 import { PhNotePencil, PhMagnifyingGlass } from '@phosphor-icons/vue'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
+import Badge from '@/components/UI/Badge/Badge.vue'
 import Input from '@/components/UI/inputs/Input/Input.vue'
 import StyleTab from '@/components/UI/tabs/StyleTab/StyleTab.vue'
 import ChatAvatar from '../ChatAvatar/ChatAvatar.vue'
@@ -82,12 +83,13 @@ export default defineComponent({
     PhNotePencil,
     PhMagnifyingGlass,
     IconButton,
+    Badge,
     Input,
     StyleTab,
     ChatAvatar,
   },
   props: { chats: { type: Array as PropType<Chat[]>, required: true }, selectedId: String },
-  emits: { select: (id: string) => !!id, compose: () => true },
+  emits: ['compose'],
   data() {
     return { style, search: '' }
   },
@@ -102,7 +104,7 @@ export default defineComponent({
           return {
             ...chat,
             lastMessage: message,
-            timestamp: message ? Date.parse(message.sentAt) : Number.MAX_SAFE_INTEGER,
+            timestamp: message ? Date.parse(message.sentAt) : 0,
             preview: message
               ? `${message.own ? 'Вы: ' : chat.group ? `${message.sender.split(' ')[0]}: ` : ''}${message.text}`
               : 'Начните разговор',

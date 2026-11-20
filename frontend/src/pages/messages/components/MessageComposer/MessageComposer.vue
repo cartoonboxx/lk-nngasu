@@ -13,12 +13,14 @@
         "
       />
       <IconButton
-        variant="ghost"
+        variant="secondary"
         title="Прикрепить файлы"
+        round
         :disabled="sending"
         @click="($refs.fileInput as HTMLInputElement).click()"
-        ><PhPaperclip :size="21"
-      /></IconButton>
+      >
+        <PhPaperclip :size="21" />
+      </IconButton>
       <TextInput
         ref="messageField"
         v-model="draft"
@@ -42,7 +44,7 @@
         @pointerleave="sendPointer = null"
         title="Отправить сообщение"
       >
-        <PhPaperPlaneRight :size="21" weight="bold" />
+        <PhPaperPlaneRight :size="21" />
       </IconButton>
     </div>
     <span :class="style.composerHint">Enter — отправить · Shift + Enter — новая строка</span>

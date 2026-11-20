@@ -20,6 +20,7 @@
       text="Ещё"
       :icon="icons.squares"
       :active="isMoreActive || mobileOpen"
+      :notification="$messageStore.unreadCount > 0"
       variant="bottom"
       @click="isMobile && (mobileOpen = true)"
     />
@@ -46,7 +47,13 @@
           :text="item.text"
           :icon="item.icon"
           :active="$route.name === item.route"
-          @click="navigate(item.route)"
+          :to="{ name: item.route }"
+          :badge="
+            item.route === 'messages' && $messageStore.unreadCount
+              ? $messageStore.unreadCount
+              : undefined
+          "
+          @click="closeMobileMenu()"
         />
       </div>
       <StudentCard
@@ -70,6 +77,7 @@ import {
   PhHouse,
   PhX,
   PhSquaresFour,
+  PhShieldCheck,
 } from '@phosphor-icons/vue'
 import { defineComponent, markRaw } from 'vue'
 
@@ -180,6 +188,9 @@ export default defineComponent({
         { route: 'messages', text: 'Сообщения', icon: this.icons.chats },
         { route: 'resources', text: 'Ресурсы и сервисы', icon: this.icons.squares },
         { route: 'settings', text: 'Настройки', icon: this.icons.gear },
+        ...(this.auth.user?.is_admin
+          ? [{ route: 'admin-requests', text: 'Администрирование', icon: this.icons.admin }]
+          : []),
       ]
     },
     isMoreActive() {
@@ -194,6 +205,7 @@ export default defineComponent({
         chats: markRaw(PhChatsCircle),
         squares: markRaw(PhSquaresFour),
         gear: markRaw(PhGearSix),
+        admin: markRaw(PhShieldCheck),
       }
     },
     isSubjectsActive() {
