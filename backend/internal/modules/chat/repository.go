@@ -36,8 +36,8 @@ const myGroupsCTE = `WITH my_groups AS (
 	  AND (s.is_current OR NOT EXISTS (SELECT 1 FROM semester WHERE is_current))
 )`
 
-// EnsureGroupChats создаёт недостающие чаты групп пользователя и «точку отсчёта» прочитанного:
-// история, написанная до первого захода, не считается непрочитанной.
+// EnsureGroupChats создаёт недостающие чаты групп и начальную позицию чтения.
+// Просмотр списка чатов не помечает сообщения прочитанными.
 func (r *Repository) EnsureGroupChats(ctx context.Context, userID int64) error {
 	if _, err := r.db.Exec(ctx, myGroupsCTE+`
 		INSERT INTO chat (kind, group_id)
@@ -47,7 +47,7 @@ func (r *Repository) EnsureGroupChats(ctx context.Context, userID int64) error {
 	}
 	_, err := r.db.Exec(ctx, myGroupsCTE+`
 		INSERT INTO chat_read (chat_id, user_id, last_read_message_id)
-		SELECT ch.id, $1::int, COALESCE((SELECT MAX(m.id) FROM chat_message m WHERE m.chat_id = ch.id), 0)
+		SELECT ch.id, $1::int, 0
 		FROM chat ch
 		WHERE ch.kind = 'group' AND ch.group_id IN (SELECT group_id FROM my_groups)
 		ON CONFLICT DO NOTHING`, userID)
@@ -131,7 +131,7 @@ func (r *Repository) OpenGroup(ctx context.Context, groupID, userID int64) (int6
 	}
 	_, err := r.db.Exec(ctx, `
 		INSERT INTO chat_read (chat_id, user_id, last_read_message_id)
-		VALUES ($1, $2, COALESCE((SELECT MAX(m.id) FROM chat_message m WHERE m.chat_id = $1), 0))
+		VALUES ($1, $2, 0)
 		ON CONFLICT DO NOTHING`, id, userID)
 	return id, database.Translate(err)
 }
@@ -144,7 +144,11 @@ func chatQuery(extra string) string {
 	       peer.id, ` + database.FullName("peer") + `,
 	       lm.id, lm.sender_id, ` + database.FullName("ls") + `,
 	       lm.body, lm.created_at,
-	       EXISTS (SELECT 1 FROM chat_message_file mf WHERE mf.message_id = lm.id)` + extra + `
+	       EXISTS (SELECT 1 FROM chat_message_file mf WHERE mf.message_id = lm.id),
+           COALESCE(cr.last_read_message_id, 0),
+           (SELECT count(*) FROM chat_message unread
+            WHERE unread.chat_id = ch.id AND unread.deleted_at IS NULL
+              AND unread.sender_id <> $1 AND unread.id > COALESCE(cr.last_read_message_id, 0))` + extra + `
 	FROM chat ch
 	LEFT JOIN study_group g ON g.id = ch.group_id
 	LEFT JOIN app_user peer ON ch.kind = 'direct'
@@ -171,7 +175,7 @@ func scanChat(row pgx.Row, extra ...any) (Chat, error) {
 		lmFiles  bool
 	)
 	dest := append([]any{&c.ID, &c.Kind, &c.GroupID, &groupNm, &c.CreatedAt, &peerID, &peerName,
-		&lmID, &lmSender, &lmName, &lmBody, &lmAt, &lmFiles}, extra...)
+		&lmID, &lmSender, &lmName, &lmBody, &lmAt, &lmFiles, &c.LastReadMessageID, &c.UnreadCount}, extra...)
 	if err := row.Scan(dest...); err != nil {
 		return Chat{}, err
 	}
@@ -358,6 +362,16 @@ const markReadSQL = `
 	ON CONFLICT (chat_id, user_id)
 	DO UPDATE SET last_read_message_id = GREATEST(chat_read.last_read_message_id, EXCLUDED.last_read_message_id)`
 
+// MarkRead сохраняет позицию чтения, не позволяя сдвинуть её назад.
+func (r *Repository) MarkRead(ctx context.Context, chatID, userID, messageID int64) error {
+	tag, err := r.db.Exec(ctx, `
+        INSERT INTO chat_read (chat_id, user_id, last_read_message_id)
+        SELECT $1, $2, id FROM chat_message WHERE id = $3 AND chat_id = $1 AND deleted_at IS NULL
+        ON CONFLICT (chat_id, user_id) DO UPDATE
+        SET last_read_message_id = GREATEST(chat_read.last_read_message_id, EXCLUDED.last_read_message_id)`, chatID, userID, messageID)
+	return database.Affected(tag, err, "message_not_found")
+}
+
 // CreateMessage сохраняет сообщение с вложениями; отправитель по определению прочитал чат до него.
 func (r *Repository) CreateMessage(ctx context.Context, chatID, senderID int64, body string, fileIDs []int64) (int64, error) {
 	var id int64
@@ -417,6 +431,10 @@ func (r *Repository) Participants(ctx context.Context, chatID int64) ([]Person, 
 	if err != nil {
 		return nil, err
 	}
+	if len(ids) == 0 {
+		return []Person{}, nil
+	}
+
 	return database.Collect(ctx, r.db, func(row pgx.Row) (Person, error) {
 		var person Person
 		err := row.Scan(&person.ID, &person.Name)

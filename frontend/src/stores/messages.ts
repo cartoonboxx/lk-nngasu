@@ -22,6 +22,8 @@ function mapChat(chat: ServerChat, previous?: Chat): Chat {
   const name = chat.peer?.name || chat.title
   return {
     id: String(chat.id),
+    unreadCount: chat.unread_count ?? 0,
+    lastReadMessageId: chat.last_read_message_id ?? 0,
     name,
     group: chat.kind === 'group',
     initials: name
@@ -51,6 +53,9 @@ export const useMessageStore = defineStore('messages', {
     pendingChatIds: {} as Record<string, boolean>,
     reloadChatIds: {} as Record<string, boolean>,
     activeChatId: '',
+    pendingReads: {} as Record<string, boolean>,
+    readTargets: {} as Record<string, number>,
+    syncedMessageIds: {} as Record<string, number>,
     sending: false,
     sendError: '',
     hasOlder: {} as Record<string, boolean>,
@@ -96,13 +101,20 @@ export const useMessageStore = defineStore('messages', {
       const revision = since ?? this.revision
       const previous = new Map(this.chats.map((item) => [item.id, item]))
       const mapped = chats.map((chat) => {
+        this.syncedMessageIds[String(chat.id)] = chat.last_message?.id ?? 0
         const old = previous.get(String(chat.id))
         const saved = mapChat(chat, old)
         if (
           old &&
           Object.values(this.changes[saved.id] ?? {}).some((change) => change.revision > revision)
-        )
+        ) {
           saved.lastMessage = old.lastMessage
+          saved.unreadCount = old.unreadCount
+        }
+        if (old && old.lastReadMessageId > saved.lastReadMessageId) {
+          saved.lastReadMessageId = old.lastReadMessageId
+          saved.unreadCount = old.unreadCount
+        }
         return saved
       })
       this.chats = [
@@ -213,6 +225,14 @@ export const useMessageStore = defineStore('messages', {
         this.hasOlder[id] = page.has_more
         this.cursors[id] = page.next_before
         current.lastMessage = current.messages.at(-1)
+        const last = current.messages.at(-1)
+        if (
+          last &&
+          id === this.activeChatId &&
+          document.visibilityState === 'visible' &&
+          document.hasFocus()
+        )
+          void this.markRead(id, Number(last.id))
       } catch (error) {
         if (version === this.version)
           this.conversationError =
@@ -238,11 +258,53 @@ export const useMessageStore = defineStore('messages', {
         return
       }
       const index = chat.messages.findIndex((item) => item.id === saved.id)
-      if (index < 0) chat.messages.push(saved)
-      else chat.messages.splice(index, 1, saved)
+      if (index < 0) {
+        chat.messages.push(saved)
+        if (
+          !saved.own &&
+          Number(saved.id) > chat.lastReadMessageId &&
+          Number(saved.id) > (this.syncedMessageIds[id] ?? 0)
+        )
+          chat.unreadCount++
+      } else chat.messages.splice(index, 1, saved)
       chat.messages = [...chat.messages].sort((a, b) => Number(a.id) - Number(b.id))
       if (!chat.lastMessage || Number(saved.id) >= Number(chat.lastMessage.id))
         chat.lastMessage = saved
+      if (id === this.activeChatId && document.visibilityState === 'visible' && document.hasFocus())
+        void this.markRead(id, Number(saved.id))
+    },
+    async markRead(id: string, messageId: number) {
+      const chat = this.chats.find((item) => item.id === id)
+      if (!chat || messageId <= chat.lastReadMessageId) return
+      this.readTargets[id] = Math.max(this.readTargets[id] ?? 0, messageId)
+      if (this.pendingReads[id]) return
+      const version = this.version
+      this.pendingReads[id] = true
+      try {
+        while (version === this.version && (this.readTargets[id] ?? 0) > chat.lastReadMessageId) {
+          const target = this.readTargets[id]!
+          await useAuthStore().request(`/chats/${id}/read`, {
+            method: 'POST',
+            body: JSON.stringify({ message_id: target }),
+            notifyOnError: false,
+          })
+          if (version !== this.version) return
+          const current = this.chats.find((item) => item.id === id)
+          if (!current) return
+          current.lastReadMessageId = Math.max(current.lastReadMessageId, target)
+          current.unreadCount = Object.values(this.changes[id] ?? {}).filter(
+            (change) =>
+              !change.message.own && Number(change.message.id) > current.lastReadMessageId,
+          ).length
+          chat.lastReadMessageId = current.lastReadMessageId
+        }
+      } catch (error) {
+        if (version === this.version)
+          this.conversationError =
+            error instanceof Error ? error.message : 'Не удалось отметить сообщения прочитанными.'
+      } finally {
+        if (version === this.version) delete this.pendingReads[id]
+      }
     },
     async send(id: string, text: string, fileIds: number[] = []): Promise<boolean> {
       if (this.sending || !connection) return false

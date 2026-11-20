@@ -96,6 +96,8 @@ export interface ServerMessage {
 }
 
 export interface ServerChat {
+  unread_count: number
+  last_read_message_id: number
   id: number
   kind: 'direct' | 'group'
   title: string

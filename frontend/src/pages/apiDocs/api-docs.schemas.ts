@@ -1416,6 +1416,13 @@ export const apiSchemas: ApiSchema[] = [
       ['peer', 'PersonRef | null', true, 'Только у личного.'],
       ['created_at', 'datetime', true, 'Время создания chat.'],
       ['last_message', 'MessagePreview | null', true, 'Последнее сообщение.'],
+      ['unread_count', 'integer', true, 'Чужие сообщения после позиции чтения.'],
+      [
+        'last_read_message_id',
+        'integer',
+        true,
+        'Последнее прочитанное сообщение; 0 до первого чтения.',
+      ],
     ],
     example: {
       id: 44,
@@ -1425,7 +1432,15 @@ export const apiSchemas: ApiSchema[] = [
       peer: { id: 2, name: 'Петров Алексей Викторович' },
       created_at: '2026-11-13T09:00:00Z',
       last_message: null,
+      unread_count: 0,
+      last_read_message_id: 0,
     },
+  },
+  {
+    name: 'ChatReadInput',
+    description: 'Последнее сообщение, которое пользователь прочитал в открытом чате.',
+    fields: [['message_id', 'integer', true, 'Положительный ID сообщения этого чата.']],
+    example: { message_id: 300 },
   },
   {
     name: 'Message',

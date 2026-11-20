@@ -21,6 +21,7 @@ func Register(r *gin.RouterGroup, pool *pgxpool.Pool, guard Guard, hub *realtime
 	r.GET("/chats/:id", h.Get)
 
 	r.GET("/chats/:id/messages", h.Messages)
+	r.POST("/chats/:id/read", h.MarkRead)
 	r.GET("/chats/:id/participants", h.Participants)
 
 	return h.svc

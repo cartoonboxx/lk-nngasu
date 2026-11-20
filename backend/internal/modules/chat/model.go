@@ -48,13 +48,15 @@ type Preview struct {
 
 // Chat — чат глазами конкретного пользователя.
 type Chat struct {
-	ID          int64     `json:"id"`
-	Kind        string    `json:"kind"`
-	Title       string    `json:"title"`    // группа — её название, личный — имя собеседника
-	GroupID     *int64    `json:"group_id"` // только у группового
-	Peer        *Person   `json:"peer"`     // только у личного
-	CreatedAt   time.Time `json:"created_at"`
-	LastMessage *Preview  `json:"last_message"`
+	UnreadCount       int       `json:"unread_count"`
+	LastReadMessageID int64     `json:"last_read_message_id"`
+	ID                int64     `json:"id"`
+	Kind              string    `json:"kind"`
+	Title             string    `json:"title"`    // группа — её название, личный — имя собеседника
+	GroupID           *int64    `json:"group_id"` // только у группового
+	Peer              *Person   `json:"peer"`     // только у личного
+	CreatedAt         time.Time `json:"created_at"`
+	LastMessage       *Preview  `json:"last_message"`
 }
 
 // Contact — пользователь, которому можно написать (GET /contacts).

@@ -80,6 +80,8 @@ export default defineComponent({
   },
   async mounted() {
     this.$messageStore.connect()
+    document.addEventListener('visibilitychange', this.onReadingVisibilityChange)
+    window.addEventListener('focus', this.onReadingVisibilityChange)
     document.documentElement.dataset.messagesPage = 'true'
     // Search in NewChatModal is teleported outside the page element.
     document.addEventListener('focusin', this.scheduleViewportUpdate)
@@ -93,6 +95,8 @@ export default defineComponent({
     await this.refreshMessages()
   },
   beforeUnmount() {
+    document.removeEventListener('visibilitychange', this.onReadingVisibilityChange)
+    window.removeEventListener('focus', this.onReadingVisibilityChange)
     this.$messageStore.activeChatId = ''
     cancelAnimationFrame(this.viewportFrame)
     delete document.documentElement.dataset.messagesPage
@@ -125,6 +129,13 @@ export default defineComponent({
     },
   },
   methods: {
+    onReadingVisibilityChange() {
+      if (document.visibilityState !== 'visible' || !document.hasFocus()) return
+      const chat = this.selectedChat
+      const last = chat?.messages.at(-1)
+      if (!chat || !last) return
+      void this.$messageStore.markRead(chat.id, Number(last.id))
+    },
     scheduleViewportUpdate() {
       if (!this.$refs.page || this.viewportFrame) return
       this.viewportFrame = requestAnimationFrame(() => {

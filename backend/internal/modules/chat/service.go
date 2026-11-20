@@ -202,6 +202,14 @@ func (s *Service) Messages(ctx context.Context, p middleware.Principal, chatID i
 	return s.repo.ListMessages(ctx, chatID, before, limit)
 }
 
+// MarkRead отмечает прочитанными сообщения только в доступном пользователю чате.
+func (s *Service) MarkRead(ctx context.Context, p middleware.Principal, chatID, messageID int64) error {
+	if _, err := s.member(ctx, p, chatID); err != nil {
+		return err
+	}
+	return s.repo.MarkRead(ctx, chatID, p.UserID, messageID)
+}
+
 // participant — пользователь состоит в чате (те же правила, что member), иначе deny.
 func (s *Service) participant(ctx context.Context, p middleware.Principal, chatID int64, deny error) (chatRow, error) {
 	c, err := s.member(ctx, p, chatID)

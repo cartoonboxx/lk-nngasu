@@ -9,6 +9,8 @@ export interface Message {
 }
 
 export interface Chat {
+  unreadCount: number
+  lastReadMessageId: number
   id: string
   name: string
   initials: string

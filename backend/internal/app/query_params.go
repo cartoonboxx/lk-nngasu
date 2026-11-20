@@ -115,6 +115,7 @@ var queryParams = map[string][]string{
 	"POST /api/v1/chats/direct":                       {},
 	"POST /api/v1/chats/group":                        {},
 	"GET /api/v1/chats/:id":                           {},
+	"POST /api/v1/chats/:id/read":                     {},
 	"GET /api/v1/chats/:id/messages":                  {"before", "limit"},
 	"POST /api/v1/realtime/tickets":                   {},
 	"GET /api/v1/realtime":                            {"ticket"},

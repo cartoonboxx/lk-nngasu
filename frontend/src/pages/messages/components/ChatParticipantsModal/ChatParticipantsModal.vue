@@ -108,11 +108,11 @@ export default defineComponent({
       this.error = ''
       this.participants = []
       try {
-        const people = await useAuthStore().request<{ id: number; name: string }[]>(
+        const people = await useAuthStore().request<{ id: number; name: string }[] | null>(
           `/chats/${this.chatId}/participants`,
           { notifyOnError: false },
         )
-        if (version === this.version) this.participants = people
+        if (version === this.version) this.participants = people ?? []
       } catch (error) {
         if (version === this.version)
           this.error = error instanceof Error ? error.message : 'Не удалось загрузить участников.'

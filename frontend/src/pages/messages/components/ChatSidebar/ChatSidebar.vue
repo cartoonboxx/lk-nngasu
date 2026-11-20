@@ -36,7 +36,7 @@
               <ChatAvatar :initials="chat.initials" :group="chat.group" />
               <span :class="style.chatCopy">
                 <span :class="style.chatLine">
-                  <span :class="style.chatName">
+                  <span :class="[style.chatName, chat.unreadCount > 0 && style.unreadName]">
                     {{ chat.name }}
                   </span>
                   <time v-if="chat.lastMessage" :class="style.chatTime">
@@ -45,6 +45,9 @@
                 </span>
                 <span :class="style.chatLine">
                   <span :class="style.preview">{{ chat.preview }}</span>
+                  <span v-if="chat.unreadCount > 0" :class="style.unreadBadge">{{
+                    chat.unreadCount
+                  }}</span>
                 </span>
               </span>
             </span>

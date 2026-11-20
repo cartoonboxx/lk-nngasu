@@ -68,7 +68,7 @@ const (
 // dashboard — ответ GET /dashboard. Дата — серверная, Europe/Moscow.
 // week = null, если не задан WEEK_ONE_DATE; lessons — пары пользователя на сегодня
 // (у администратора и без текущего семестра — []). Карточки чатов клиент дальше
-// обновляет по событиям WebSocket; unread в текущей схеме нет.
+// обновляет по событиям WebSocket; счётчик непрочитанных учитывает chat_read.
 type dashboard struct {
 	Week    *schedule.WeekInfo `json:"week"`
 	Lessons []schedule.Lesson  `json:"lessons"`

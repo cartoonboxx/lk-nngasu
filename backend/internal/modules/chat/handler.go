@@ -146,3 +146,18 @@ func (h *Handler) Participants(c *gin.Context) {
 	list, err := h.svc.Participants(c.Request.Context(), middleware.Me(c), id)
 	httpx.Reply(c, list, err)
 }
+
+// POST /chats/:id/read
+func (h *Handler) MarkRead(c *gin.Context) {
+	id, ok := httpx.ID(c, "id")
+	if !ok {
+		return
+	}
+	var req struct {
+		MessageID int64 `json:"message_id" binding:"required,gt=0"`
+	}
+	if !httpx.Bind(c, &req) {
+		return
+	}
+	httpx.ReplyEmpty(c, h.svc.MarkRead(c.Request.Context(), middleware.Me(c), id, req.MessageID))
+}
