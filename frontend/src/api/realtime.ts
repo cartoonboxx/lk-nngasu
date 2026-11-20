@@ -3,7 +3,10 @@ import { ApiError } from './client'
 import type { ServerMessage } from './cabinet.types'
 
 export type ConnectionState = 'connecting' | 'connected' | 'disconnected'
-export type ChatEvent = { type: 'message.created'; data: { message: ServerMessage } }
+export type ChatEvent =
+  | { type: 'message.created'; data: { message: ServerMessage } }
+  | { type: 'chat.read'; data: { chat_id: number; last_read_message_id: number } }
+  | { type: 'sync.required'; data: Record<string, never> }
 
 type Frame =
   | ChatEvent
@@ -30,10 +33,25 @@ export class ChatConnection {
   >()
   private userId = useAuthStore().user?.id
   private resume = () => {
-    if (!this.stopped && !this.socket && document.visibilityState === 'visible') {
-      window.clearTimeout(this.timer)
-      void this.start()
+    if (this.stopped || document.visibilityState !== 'visible') return
+    // Телефон может сохранить OPEN у сокета, который оборвался во время сна.
+    // Новый билет и соединение гарантируют повторную синхронизацию истории.
+    this.generation++
+    this.connecting = false
+    window.clearTimeout(this.timer)
+    window.clearTimeout(this.handshakeTimer)
+    const socket = this.socket
+    this.socket = null
+    this.ready = false
+    for (const pending of this.pending.values()) {
+      window.clearTimeout(pending.timer)
+      pending.reject(
+        new Error('Соединение обновляется. Проверьте историю перед повторной отправкой.'),
+      )
     }
+    this.pending.clear()
+    socket?.close(4000, 'resume')
+    void this.start()
   }
 
   constructor(
@@ -105,7 +123,12 @@ export class ChatConnection {
                 frame.error?.details?.fields,
               ),
             )
-        } else if (this.ready && frame.type === 'message.created') {
+        } else if (
+          this.ready &&
+          (frame.type === 'message.created' ||
+            frame.type === 'chat.read' ||
+            frame.type === 'sync.required')
+        ) {
           this.onEvent(frame)
         }
       }

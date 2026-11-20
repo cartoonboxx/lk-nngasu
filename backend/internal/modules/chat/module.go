@@ -1,6 +1,8 @@
 package chat
 
 import (
+	"context"
+
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -9,9 +11,11 @@ import (
 
 // Возвращает сервис: его список чатов нужен главной странице (GET /dashboard).
 // Отправка сообщений — команда WebSocket, регистрируется в hub.
-func Register(r *gin.RouterGroup, pool *pgxpool.Pool, guard Guard, hub *realtime.Hub) *Service {
+func Register(ctx context.Context, r *gin.RouterGroup, pool *pgxpool.Pool, guard Guard, hub *realtime.Hub) *Service {
 	h := &Handler{svc: NewService(newRepository(pool), guard)}
 	h.svc.publish = hub.Publish
+	h.svc.resync = hub.RequestSync
+	go h.svc.listenMessages(ctx)
 	registerCommands(hub, h.svc)
 
 	r.GET("/contacts", h.Contacts)

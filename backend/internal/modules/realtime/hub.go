@@ -67,6 +67,17 @@ func (h *Hub) Publish(userIDs []int64, typ string, data any) {
 	}
 }
 
+// RequestSync восстанавливает состояние клиентов после перерыва в уведомлениях БД.
+func (h *Hub) RequestSync() {
+	h.mu.RLock()
+	users := make([]int64, 0, len(h.conns))
+	for id := range h.conns {
+		users = append(users, id)
+	}
+	h.mu.RUnlock()
+	h.Publish(users, "sync.required", struct{}{})
+}
+
 func (h *Hub) add(c *client) {
 	h.mu.Lock()
 	defer h.mu.Unlock()

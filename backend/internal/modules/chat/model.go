@@ -115,3 +115,9 @@ type userInfo struct {
 	Teacher bool
 	GroupID *int64 // у студента
 }
+
+// ReadPosition синхронизирует прочтение между устройствами одного пользователя.
+type ReadPosition struct {
+	ChatID            int64 `json:"chat_id"`
+	LastReadMessageID int64 `json:"last_read_message_id"`
+}

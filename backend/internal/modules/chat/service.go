@@ -2,6 +2,7 @@ package chat
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"strings"
 	"unicode/utf8"
@@ -16,14 +17,16 @@ type Guard interface {
 }
 
 type Service struct {
-	repo  *Repository
-	guard Guard
+	repo       *Repository
+	guard      Guard
+	instanceID string
 	// publish — рассылка события WebSocket пользователям (realtime.Hub.Publish); nil — без событий.
 	publish func(userIDs []int64, typ string, data any)
+	resync  func()
 }
 
 func NewService(repo *Repository, guard Guard) *Service {
-	return &Service{repo: repo, guard: guard}
+	return &Service{repo: repo, guard: guard, instanceID: rand.Text()}
 }
 
 var (
@@ -207,7 +210,11 @@ func (s *Service) MarkRead(ctx context.Context, p middleware.Principal, chatID, 
 	if _, err := s.member(ctx, p, chatID); err != nil {
 		return err
 	}
-	return s.repo.MarkRead(ctx, chatID, p.UserID, messageID)
+	position, err := s.repo.MarkRead(ctx, chatID, p.UserID, messageID, s.instanceID)
+	if err == nil && s.publish != nil {
+		s.publish([]int64{p.UserID}, "chat.read", ReadPosition{ChatID: chatID, LastReadMessageID: position})
+	}
+	return err
 }
 
 // participant — пользователь состоит в чате (те же правила, что member), иначе deny.
@@ -266,7 +273,7 @@ func (s *Service) Send(ctx context.Context, p middleware.Principal, chatID int64
 			return Message{}, errChatForbidden // собеседник заблокирован
 		}
 	}
-	id, err := s.repo.CreateMessage(ctx, chatID, p.UserID, body, fileIDs)
+	id, err := s.repo.CreateMessage(ctx, chatID, p.UserID, body, fileIDs, s.instanceID)
 	if apperr.IsNotFound(err) || isCode(err, "file_not_found") {
 		return Message{}, errFileNotFound
 	}

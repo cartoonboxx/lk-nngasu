@@ -363,17 +363,33 @@ const markReadSQL = `
 	DO UPDATE SET last_read_message_id = GREATEST(chat_read.last_read_message_id, EXCLUDED.last_read_message_id)`
 
 // MarkRead сохраняет позицию чтения, не позволяя сдвинуть её назад.
-func (r *Repository) MarkRead(ctx context.Context, chatID, userID, messageID int64) error {
-	tag, err := r.db.Exec(ctx, `
+func (r *Repository) MarkRead(ctx context.Context, chatID, userID, messageID int64, instanceID string) (int64, error) {
+	var position int64
+	err := database.InTx(ctx, r.db, func(tx pgx.Tx) error {
+		err := tx.QueryRow(ctx, `
         INSERT INTO chat_read (chat_id, user_id, last_read_message_id)
         SELECT $1, $2, id FROM chat_message WHERE id = $3 AND chat_id = $1 AND deleted_at IS NULL
         ON CONFLICT (chat_id, user_id) DO UPDATE
-        SET last_read_message_id = GREATEST(chat_read.last_read_message_id, EXCLUDED.last_read_message_id)`, chatID, userID, messageID)
-	return database.Affected(tag, err, "message_not_found")
+        SET last_read_message_id = GREATEST(chat_read.last_read_message_id, EXCLUDED.last_read_message_id)
+        RETURNING last_read_message_id`, chatID, userID, messageID).Scan(&position)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperr.NewNotFound("message_not_found")
+		}
+		if err != nil {
+			return database.Translate(err)
+		}
+		payload, err := json.Marshal(messageNotification{ChatID: chatID, UserID: userID, LastReadMessageID: position, InstanceID: instanceID})
+		if err != nil {
+			return err
+		}
+		_, err = tx.Exec(ctx, `SELECT pg_notify('lk_chat_messages', $1)`, string(payload))
+		return database.Translate(err)
+	})
+	return position, err
 }
 
 // CreateMessage сохраняет сообщение с вложениями; отправитель по определению прочитал чат до него.
-func (r *Repository) CreateMessage(ctx context.Context, chatID, senderID int64, body string, fileIDs []int64) (int64, error) {
+func (r *Repository) CreateMessage(ctx context.Context, chatID, senderID int64, body string, fileIDs []int64, instanceID string) (int64, error) {
 	var id int64
 	err := database.InTx(ctx, r.db, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx,
@@ -392,6 +408,15 @@ func (r *Repository) CreateMessage(ctx context.Context, chatID, senderID int64, 
 			}
 		}
 		_, err := tx.Exec(ctx, markReadSQL, chatID, senderID, id)
+		if err != nil {
+			return database.Translate(err)
+		}
+		payload, err := json.Marshal(messageNotification{MessageID: id, InstanceID: instanceID})
+		if err != nil {
+			return err
+		}
+		// PostgreSQL доставляет уведомление только после успешного COMMIT.
+		_, err = tx.Exec(ctx, `SELECT pg_notify('lk_chat_messages', $1)`, string(payload))
 		return database.Translate(err)
 	})
 	return id, err

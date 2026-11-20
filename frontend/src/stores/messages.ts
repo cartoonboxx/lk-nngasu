@@ -77,7 +77,12 @@ export const useMessageStore = defineStore('messages', {
           if (version === this.version) this.connectionState = state
         },
         (event) => {
-          if (version === this.version) this.applyMessage(event.data.message)
+          if (version !== this.version) return
+          if (event.type === 'message.created') this.applyMessage(event.data.message)
+          else if (event.type === 'chat.read') {
+            this.applyRead(String(event.data.chat_id), event.data.last_read_message_id)
+            void this.fetchChat(String(event.data.chat_id))
+          } else void this.resync()
         },
         () => {
           if (version !== this.version) return
@@ -109,7 +114,13 @@ export const useMessageStore = defineStore('messages', {
           Object.values(this.changes[saved.id] ?? {}).some((change) => change.revision > revision)
         ) {
           saved.lastMessage = old.lastMessage
-          saved.unreadCount = old.unreadCount
+          saved.unreadCount += Object.values(this.changes[saved.id] ?? {}).filter(
+            (change) =>
+              change.revision > revision &&
+              !change.message.own &&
+              Number(change.message.id) > (chat.last_message?.id ?? 0) &&
+              Number(change.message.id) > saved.lastReadMessageId,
+          ).length
         }
         if (old && old.lastReadMessageId > saved.lastReadMessageId) {
           saved.lastReadMessageId = old.lastReadMessageId
@@ -147,12 +158,13 @@ export const useMessageStore = defineStore('messages', {
     },
     async fetchChat(id: string) {
       const version = this.version
+      const revision = this.revision
       try {
         const chat = await useAuthStore().request<ServerChat>(`/chats/${id}`, {
           notifyOnError: false,
         })
         if (version !== this.version) return
-        this.applyChats([chat])
+        this.applyChats([chat], false, revision)
         await this.fetchMessages(id)
       } catch (error) {
         if (version === this.version)
@@ -270,8 +282,21 @@ export const useMessageStore = defineStore('messages', {
       chat.messages = [...chat.messages].sort((a, b) => Number(a.id) - Number(b.id))
       if (!chat.lastMessage || Number(saved.id) >= Number(chat.lastMessage.id))
         chat.lastMessage = saved
+      if (saved.own) this.applyRead(id, Number(saved.id))
       if (id === this.activeChatId && document.visibilityState === 'visible' && document.hasFocus())
         void this.markRead(id, Number(saved.id))
+    },
+    applyRead(id: string, messageId: number) {
+      const chat = this.chats.find((item) => item.id === id)
+      if (!chat || messageId <= chat.lastReadMessageId) return
+      chat.lastReadMessageId = messageId
+      // Источник позиции — сервер; события после неё могут уже находиться в очереди клиента.
+      const messages = new Map(chat.messages.map((message) => [message.id, message]))
+      for (const change of Object.values(this.changes[id] ?? {}))
+        messages.set(change.message.id, change.message)
+      chat.unreadCount = [...messages.values()].filter(
+        (message) => !message.own && Number(message.id) > messageId,
+      ).length
     },
     async markRead(id: string, messageId: number) {
       const chat = this.chats.find((item) => item.id === id)
@@ -281,7 +306,11 @@ export const useMessageStore = defineStore('messages', {
       const version = this.version
       this.pendingReads[id] = true
       try {
-        while (version === this.version && (this.readTargets[id] ?? 0) > chat.lastReadMessageId) {
+        while (
+          version === this.version &&
+          (this.readTargets[id] ?? 0) >
+            (this.chats.find((item) => item.id === id)?.lastReadMessageId ?? Infinity)
+        ) {
           const target = this.readTargets[id]!
           await useAuthStore().request(`/chats/${id}/read`, {
             method: 'POST',
@@ -289,14 +318,7 @@ export const useMessageStore = defineStore('messages', {
             notifyOnError: false,
           })
           if (version !== this.version) return
-          const current = this.chats.find((item) => item.id === id)
-          if (!current) return
-          current.lastReadMessageId = Math.max(current.lastReadMessageId, target)
-          current.unreadCount = Object.values(this.changes[id] ?? {}).filter(
-            (change) =>
-              !change.message.own && Number(change.message.id) > current.lastReadMessageId,
-          ).length
-          chat.lastReadMessageId = current.lastReadMessageId
+          this.applyRead(id, target)
         }
       } catch (error) {
         if (version === this.version)

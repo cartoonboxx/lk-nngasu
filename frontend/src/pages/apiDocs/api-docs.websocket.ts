@@ -24,6 +24,21 @@ const message = {
 
 export const websocketSchemas: ApiSchema[] = [
   {
+    name: 'ChatReadPosition',
+    description: 'Сохранённая позиция чтения пользователя в чате.',
+    fields: [
+      ['chat_id', 'integer', true, 'ID чата.'],
+      ['last_read_message_id', 'integer', true, 'Сообщения до этого ID включительно прочитаны.'],
+    ],
+    example: { chat_id: 44, last_read_message_id: 300 },
+  },
+  {
+    name: 'SyncRequired',
+    description: 'Сервер восстановил канал уведомлений БД. Перечитать чаты и историю.',
+    fields: [],
+    example: {},
+  },
+  {
     name: 'WebSocketTicket',
     description:
       'Одноразовый допуск к Upgrade; инфраструктура авторизации вне предметных таблиц DBML.',
@@ -149,6 +164,24 @@ export const websocketCommands: WebSocketContract[] = [
   },
 ]
 export const websocketEvents: WebSocketContract[] = [
+  {
+    type: 'chat.read',
+    title: 'Позиция чтения обновлена',
+    direction: 'event',
+    stage: 'core',
+    dataSchema: 'ChatReadPosition',
+    notes: [
+      'Доставляется устройствам пользователя. Позиция чтения не уменьшается; обновить непрочитанные.',
+    ],
+  },
+  {
+    type: 'sync.required',
+    title: 'Требуется синхронизация',
+    direction: 'service',
+    stage: 'core',
+    dataSchema: 'SyncRequired',
+    notes: ['Перечитать GET /chats и загруженную историю после восстановления LISTEN/NOTIFY.'],
+  },
   {
     type: 'session.ready',
     title: 'Соединение готово',

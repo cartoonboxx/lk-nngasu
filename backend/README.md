@@ -179,6 +179,7 @@ migrations         001–017 *.sql, встроены в бинарник (embed.
 | GET | /chats | свои чаты, страница (`q`, `limit`, `offset`) |
 | POST | /chats/direct, /chats/group | открыть личный / групповой чат (200) |
 | GET | /chats/:id/participants | участники доступного чата: `[{id, name}]` |
+| POST | /chats/:id/read | сохранить позицию чтения `{message_id}` (204) |
 | GET | /chats/:id, /chats/:id/messages | чат; история `before`, `limit` → `{items, has_more, next_before}` |
 | GET | /dashboard | неделя, пары на сегодня, последние чаты и новости |
 | GET | /resources | внешние сервисы и контакты из `RESOURCES_FILE` (по умолчанию — встроенный набор) |
@@ -189,6 +190,15 @@ WebSocket `lk-chat.v1`: команда `message.send` (`{type, request_id, data}
 `ack` с тем же `request_id` или `error {code, message, details}`; после COMMIT всем подключённым участникам
 чата — `message.created` с `occurred_at`. Ошибка команды соединение
 не закрывает. Редактирование и удаление отправленных сообщений недоступны; 4401 — истёк допуск (`expires_at` из `session.ready`) или сессия отозвана. Отправки сообщений через REST нет.
+
+Позиции чтения хранятся в `chat_read`; `unread_count` считает чужие сообщения после позиции.
+Событие `chat.read` (`{chat_id, last_read_message_id}`) синхронизирует устройства пользователя.
+Экземпляры API с общей БД передают события через PostgreSQL LISTEN/NOTIFY (`lk_chat_messages`);
+каждому API нужно отдельное постоянное подключение к PostgreSQL для LISTEN (transaction pooling не подходит).
+После восстановления LISTEN сервер отправляет `sync.required`, клиент перечитывает чаты и историю.
+Обновлять нужно все экземпляры API, включая локальный при работе через SSH-туннель:
+изменения исходников бэкенда требуют пересборки Docker-образа. Для конфигурации с туннелем:
+`docker compose -f compose.yaml -f compose.ssh.yaml up -d --build --no-deps backend`.
 
 nginx для `/api/v1/realtime` должен пропускать Upgrade и держать долгое соединение:
 `proxy_http_version 1.1; proxy_set_header Upgrade $http_upgrade; proxy_set_header Connection "upgrade";
