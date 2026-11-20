@@ -15,7 +15,7 @@
       </template>
     </SectionHeader>
     <ScheduleControls />
-    <p v-if="$scheduleStore.loading">Загрузка расписания…</p>
+    <PageLoader v-if="$scheduleStore.loading" />
     <p v-else-if="$scheduleStore.error">
       <button @click="$scheduleStore.fetchSchedule()">Повторить</button>
     </p>
@@ -35,7 +35,7 @@ import ScheduleTable from './components/ScheduleTable/ScheduleTable.vue'
 import ScheduleLegend from './components/ScheduleLegend/ScheduleLegend.vue'
 import style from './SchedulePage.module.scss'
 import SchedulePeriodPicker from './components/SchedulePeriodPicker/SchedulePeriodPicker.vue'
-
+import PageLoader from '@/components/PageLoader/PageLoader.vue'
 export default defineComponent({
   name: 'SchedulePage',
   components: {
@@ -45,6 +45,7 @@ export default defineComponent({
     MobileSchedule,
     ScheduleTable,
     ScheduleLegend,
+    PageLoader
   },
   async created() {
     await this.$scheduleStore.fetchSchedule()

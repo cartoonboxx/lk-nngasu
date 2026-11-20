@@ -1,0 +1,40 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-surface-level-1);
+}
+
+.loader {
+  width: 128px;
+  height: 128px;
+  box-sizing: border-box;
+
+  border: 6px solid var(--color-border-level-1);
+  border-top-color: var(--color-text-primary);
+  border-radius: 50%;
+
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 1024px) {
+  .loader {
+    width: 96px;
+    height: 96px;
+  }
+}
+
+@media (max-width: 640px) {
+  .loader {
+    width: 64px;
+    height: 64px;
+  }
+}

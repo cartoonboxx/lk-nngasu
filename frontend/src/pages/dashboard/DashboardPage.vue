@@ -6,7 +6,7 @@
     </p>
     <section :class="style.content">
       <div :class="style.scheduler">
-        <p v-if="cabinet.dashboardLoading">Загрузка расписания…</p>
+        <PageLoader v-if="cabinet.dashboardLoading" />
         <ScheduleDay
           v-else-if="!cabinet.dashboardError"
           :class="style.scheduleCard"
@@ -40,7 +40,7 @@ import { PhCalendar } from '@phosphor-icons/vue'
 import { pressFeedback } from '@/directives/pressFeedback'
 import NewsComponent from '@/pages/dashboard/components/NewsComponent/NewsComponent.vue'
 import ChatComponent from './components/ChatComponent/ChatComponent.vue'
-
+import PageLoader from '@/components/PageLoader/PageLoader.vue'
 export default defineComponent({
   name: 'DashboardPage',
   components: {
@@ -49,6 +49,7 @@ export default defineComponent({
     PhCalendar,
     ScheduleDay,
     SectionHeader,
+    PageLoader
   },
   directives: { press: pressFeedback },
   async created() {

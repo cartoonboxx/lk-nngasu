@@ -13,7 +13,7 @@
         <PhX :size="20" />
       </IconButton>
     </header>
-    <p v-if="loading" :class="style.feedback">Загрузка участников…</p>
+    <PageLoader v-if="loading" />
     <div v-else-if="error" :class="style.feedback">
       <p>{{ error }}</p>
       <Button variant="secondary" @click="loadParticipants">Повторить</Button>
@@ -63,10 +63,10 @@ import Button from '@/components/UI/buttons/Button/Button.vue'
 import IconButton from '@/components/UI/buttons/IconButton/IconButton.vue'
 import ChatAvatar from '../ChatAvatar/ChatAvatar.vue'
 import style from './ChatParticipantsModal.module.scss'
-
+import PageLoader from '@/components/PageLoader/PageLoader.vue'
 export default defineComponent({
   name: 'ChatParticipantsModal',
-  components: { Modal, Button, IconButton, ChatAvatar, PhX },
+  components: { Modal, Button, IconButton, ChatAvatar, PhX, PageLoader },
   props: {
     modelValue: Boolean,
     chatId: { type: String, required: true },

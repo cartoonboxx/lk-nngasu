@@ -1,6 +1,6 @@
 <template>
   <section :class="style.coursePage">
-    <p v-if="$subjectsStore.loading">Загрузка курса…</p>
+    <PageLoader v-if="$subjectsStore.loading" />
     <p v-else-if="$subjectsStore.error">
       <button @click="$subjectsStore.fetchSubject(String($route.params.id))">Повторить</button>
     </p>
@@ -53,10 +53,10 @@ import ContentCourseComponent from './components/ContentCourseComponent/ContentC
 import AssignmentModal from './components/AssignmentModal/AssignmentModal.vue'
 import type { CourseTopic } from './course.types'
 import style from './CoursePage.module.scss'
-
+import PageLoader from '@/components/PageLoader/PageLoader.vue'
 export default defineComponent({
   name: 'CoursePage',
-  components: { SectionHeader, AsideCoursePanel, ContentCourseComponent, AssignmentModal },
+  components: { SectionHeader, AsideCoursePanel, ContentCourseComponent, AssignmentModal,PageLoader },
   data() {
     return {
       style,

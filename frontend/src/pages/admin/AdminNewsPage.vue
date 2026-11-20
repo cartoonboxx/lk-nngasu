@@ -7,7 +7,7 @@
       <TextInput v-model="search" label="Поиск новостей" type="search" full-width />
       <Select v-model="status" :options="statusOptions" full-width />
     </div>
-    <p v-if="loading">Загрузка новостей…</p>
+    <PageLoader v-if="loading" />
     <p v-else-if="error">
       {{ error }} <Button variant="ghost" @click="loadNews">Повторить</Button>
     </p>
@@ -126,10 +126,10 @@ import Select from '@/components/UI/inputs/Select/Select.vue'
 import AdminDialog from './components/AdminDialog.vue'
 import AdminTable from './components/AdminTable.vue'
 import style from './Admin.module.scss'
-
+import PageLoader from '@/components/PageLoader/PageLoader.vue'
 export default defineComponent({
   name: 'AdminNewsPage',
-  components: { SectionHeader, Button, TextInput, Select, AdminDialog, AdminTable },
+  components: { SectionHeader, Button, TextInput, Select, AdminDialog, AdminTable, PageLoader },
   data() {
     return {
       style,

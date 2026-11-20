@@ -18,7 +18,7 @@
           >Закрыть</Button
         >
       </header>
-      <p v-if="loading">Загрузка задания…</p>
+      <PageLoader v-if="loading" />
 
       <Button v-if="!loading && !assignment" variant="secondary" @click="load">Повторить</Button>
       <template v-if="assignment && !loading">
@@ -128,9 +128,10 @@ import { useFilesStore } from '@/stores/files'
 import type { Assignment } from '@/api/cabinet.types'
 import type { AssignmentAttachment } from '../../course.types'
 import style from './AssignmentModal.module.scss'
+import PageLoader from '@/components/PageLoader/PageLoader.vue'
 export default defineComponent({
   name: 'AssignmentModal',
-  components: { Modal, Button, TextInput },
+  components: { Modal, Button, TextInput, PageLoader },
   props: {
     modelValue: Boolean,
     assignmentId: { type: Number, required: true },

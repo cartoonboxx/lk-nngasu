@@ -6,7 +6,7 @@
         Все <PhArrowUpRight :size="15" />
       </RouterLink>
     </header>
-    <p v-if="$messageStore.loading">Загрузка чатов…</p>
+    <PageLoader v-if="$messageStore.loading" />
     <p v-else-if="$messageStore.error">
       <button @click="$messageStore.fetchChats()">Повторить</button>
     </p>
@@ -60,10 +60,10 @@ import { RouterLink } from 'vue-router'
 import { PhChatsCircle, PhNotePencil, PhArrowUpRight, PhUsersThree } from '@phosphor-icons/vue'
 import { pressFeedback } from '@/directives/pressFeedback'
 import style from './ChatComponent.module.scss'
-
+import PageLoader from '@/components/PageLoader/PageLoader.vue'
 export default defineComponent({
   name: 'ChatComponent',
-  components: { RouterLink, PhChatsCircle, PhNotePencil, PhArrowUpRight, PhUsersThree },
+  components: { RouterLink, PhChatsCircle, PhNotePencil, PhArrowUpRight, PhUsersThree,PageLoader },
   directives: { press: pressFeedback },
   data() {
     return {

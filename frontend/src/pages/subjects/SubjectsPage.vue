@@ -12,7 +12,7 @@
       <StyleSelect v-model="selectedSemester" :options="semesterOptions" />
     </section>
 
-    <p v-if="$subjectsStore.loading">Загрузка предметов…</p>
+    <PageLoader v-if="$subjectsStore.loading" />
     <p v-else-if="$subjectsStore.error">
       <button @click="$subjectsStore.fetchSubjects()">Повторить</button>
     </p>
@@ -44,6 +44,7 @@ import StyleSelect from '@/components/UI/inputs/Select/Select.vue'
 import buttonStyle from '@/components/UI/buttons/Button/Button.module.scss'
 import baseButtonStyle from '@/components/UI/buttons/BaseButton/BaseButton.module.scss'
 import SectionHeader from '@/components/SectionHeader/SectionHeader.vue'
+import PageLoader from '@/components/PageLoader/PageLoader.vue'
 
 export default defineComponent({
   name: 'SubjectsPage',
@@ -55,6 +56,7 @@ export default defineComponent({
     StyleSelect,
     PhMagnifyingGlass,
     RouterLink,
+    PageLoader,
   },
 
   data() {

@@ -21,7 +21,7 @@
     <p v-if="error" :class="style.contactsEmpty">
       {{ error }} <button @click="loadContacts()">Повторить</button>
     </p>
-    <p v-if="loading" :class="style.contactsEmpty">Загрузка контактов…</p>
+    <PageLoader v-if="loading" />
     <p v-else-if="!error && !contacts.length" :class="style.contactsEmpty">Контакты не найдены.</p>
     <ul :class="style.contacts">
       <li v-for="contact in contacts" :key="contact.id">
@@ -59,9 +59,10 @@ import Button from '@/components/UI/buttons/Button/Button.vue'
 import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
 import { useAuthStore } from '@/stores/auth'
 import style from './NewChatModal.module.scss'
+import PageLoader from '@/components/PageLoader/PageLoader.vue'
 export default defineComponent({
   name: 'NewChatModal',
-  components: { Modal, Button, TextInput },
+  components: { Modal, Button, TextInput, PageLoader },
   props: { modelValue: Boolean },
   emits: ['update:modelValue', 'select'],
   computed: {

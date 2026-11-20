@@ -2,7 +2,7 @@
   <section :class="style.newsPage">
     <SectionHeader header="Новости" paragraph="Новости и объявления университета" />
     <StyleInput v-model="searchQuery" placeholder="Поиск новостей" full-width />
-    <p v-if="cabinet.newsLoading">Загрузка новостей…</p>
+    <PageLoader v-if="cabinet.newsLoading" />
     <p v-else-if="cabinet.newsError">
       <button @click="cabinet.fetchNews()">Повторить</button>
     </p>
@@ -28,9 +28,10 @@ import StyleInput from '@/components/UI/inputs/Input/Input.vue'
 import NewsCard from './components/NewsCard.vue'
 import { useCabinetStore } from '@/stores/cabinet'
 import style from './NewsPage.module.scss'
+import PageLoader from '@/components/PageLoader/PageLoader.vue'
 export default defineComponent({
   name: 'NewsPage',
-  components: { SectionHeader, StyleInput, NewsCard },
+  components: { SectionHeader, StyleInput, NewsCard,PageLoader },
   data() {
     return { style, searchQuery: '' }
   },

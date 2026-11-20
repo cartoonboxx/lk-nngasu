@@ -20,7 +20,8 @@
             Повторить
           </Button>
         </div>
-        <div v-if="$adminStore.loading" :class="style.empty" role="status">Загрузка данных…</div>
+        <!-- <div v-if="$adminStore.loading" :class="style.empty" role="status">Загрузка данных…</div> -->
+         <PageLoader v-if="$adminStore.loading" />
         <RouterView v-else-if="$adminStore.data" />
       </template>
     </div>
@@ -35,8 +36,9 @@ import AdminNavigation from './components/AdminNavigation.vue'
 import home from '@/layout/HomeLayout/HomeLayout.module.scss'
 import layout from './AdminLayout.module.scss'
 import style from './Admin.module.scss'
+import PageLoader from '@/components/PageLoader/PageLoader.vue'
 export default defineComponent({
-  components: { RouterView, Button, AdminNavigation },
+  components: { RouterView, Button, AdminNavigation, PageLoader },
   computed: {
     auth() {
       return useAuthStore()

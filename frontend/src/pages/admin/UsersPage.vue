@@ -9,7 +9,7 @@
         <Button @click="openUser()"><PhPlus :size="18" />Создать пользователя</Button>
       </template>
     </SectionHeader>
-    <p v-if="detailLoading" role="status">Загрузка карточки…</p>
+    <PageLoader v-if="detailLoading" />
     <div :class="style.toolbar">
       <TextInput
         v-model="search"
@@ -145,6 +145,7 @@ import { useAuthStore } from '@/stores/auth'
 import { normalizeUser, type AdminUserResponse } from './admin.repository'
 import type { AdminUser } from './admin.types'
 import style from './Admin.module.scss'
+import PageLoader from '@/components/PageLoader/PageLoader.vue'
 export default defineComponent({
   components: {
     StatusBadge,
@@ -156,6 +157,7 @@ export default defineComponent({
     AdminTable,
     AdminDialog,
     UserFields,
+    PageLoader
   },
   data() {
     return {

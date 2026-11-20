@@ -1,7 +1,7 @@
 <template>
   <section :class="style.newsDetailsPage">
     <RouterLink to="/news">Назад к новостям</RouterLink>
-    <p v-if="cabinet.detailLoading">Загрузка новости…</p>
+    <PageLoader v-if="$subjectsStore.loading" />
     <p v-else-if="cabinet.detailError">
       <button @click="cabinet.fetchNewsDetail(String($route.params.idNews))">Повторить</button>
     </p>
@@ -22,9 +22,10 @@ import { defineComponent } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useCabinetStore } from '@/stores/cabinet'
 import style from './NewsDetailsPage.module.scss'
+import PageLoader from '@/components/PageLoader/PageLoader.vue'
 export default defineComponent({
   name: 'NewsDetailsPage',
-  components: { RouterLink },
+  components: { RouterLink, PageLoader },
   data() {
     return { style }
   },

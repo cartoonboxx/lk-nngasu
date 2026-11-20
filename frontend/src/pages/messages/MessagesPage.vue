@@ -1,6 +1,6 @@
 <template>
   <section ref="page" :class="style.page" :style="viewportStyle">
-    <p v-if="$messageStore.loading && !chats.length">Загрузка чатов…</p>
+    <PageLoader v-if="$messageStore.loading && !chats.length" />
     <p v-if="$messageStore.error">
       {{ $messageStore.error }}
       <button @click="refreshMessages">Повторить</button>
@@ -36,9 +36,10 @@ import MessagesWelcome from './components/MessagesWelcome/MessagesWelcome.vue'
 import NewChatModal from './components/NewChatModal/NewChatModal.vue'
 import type { Chat } from './messages.types'
 import style from './MessagesPage.module.scss'
+import PageLoader from '@/components/PageLoader/PageLoader.vue'
 export default defineComponent({
   name: 'MessagesPage',
-  components: { ChatSidebar, ChatConversation, MessagesWelcome, NewChatModal },
+  components: { ChatSidebar, ChatConversation, MessagesWelcome, NewChatModal, PageLoader },
   data() {
     return {
       style,

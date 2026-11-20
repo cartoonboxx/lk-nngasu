@@ -4,7 +4,7 @@
       <h2 :class="style.heading">Новости</h2>
       <RouterLink to="/news">Все новости</RouterLink>
     </header>
-    <p v-if="cabinet.newsLoading">Загрузка новостей…</p>
+    <PageLoader v-if="cabinet.newsLoading" />
     <p v-else-if="cabinet.newsError">
       <button @click="cabinet.fetchNews()">Повторить</button>
     </p>
@@ -28,9 +28,10 @@ import { defineComponent } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useCabinetStore } from '@/stores/cabinet'
 import style from './NewsComponent.module.scss'
+import PageLoader from '@/components/PageLoader/PageLoader.vue'
 export default defineComponent({
   name: 'NewsComponent',
-  components: { RouterLink },
+  components: { RouterLink,PageLoader },
   computed: {
     cabinet() {
       return useCabinetStore()

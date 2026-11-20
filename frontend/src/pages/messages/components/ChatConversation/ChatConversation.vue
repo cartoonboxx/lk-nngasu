@@ -35,7 +35,7 @@
         <PhCaretDown v-if="chat.group" :size="16" :class="style.participantsIndicator" />
       </component>
     </header>
-    <p v-if="$messageStore.messagesLoading">Загрузка сообщений…</p>
+    <PageLoader v-if="$messageStore.messagesLoading" />
     <p v-if="$messageStore.conversationError">
       {{ $messageStore.conversationError }}
       <button @click="$messageStore.fetchMessages(chat.id)">Повторить</button>
@@ -93,6 +93,7 @@ import type { Chat } from '../../messages.types'
 import { useFilesStore } from '@/stores/files'
 import { useAuthStore } from '@/stores/auth'
 import { apiNotifications } from '@/api/client'
+import PageLoader from '@/components/PageLoader/PageLoader.vue'
 export default defineComponent({
   name: 'ChatConversation',
   components: {
@@ -104,6 +105,7 @@ export default defineComponent({
     ChatAvatar,
     MessageHistory,
     MessageComposer,
+    PageLoader
   },
   props: {
     chat: {

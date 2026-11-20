@@ -9,11 +9,11 @@
       :subject-options="subjectOptions"
       :semester-options="semesterOptions"
     />
-    <p v-if="cabinet.gradesLoading">Загрузка оценок…</p>
+    <PageLoader v-if="cabinet.gradesLoading" />
     <p v-else-if="cabinet.gradesError">
       <button @click="cabinet.fetchGrades()">Повторить</button>
     </p>
-    <p v-if="detailsLoading">Загрузка ответа…</p>
+    <PageLoader v-if="detailsLoading" />
 
     <GradesTable
       v-if="!cabinet.gradesLoading && !cabinet.gradesError"
@@ -48,7 +48,7 @@ import GradeDetailsModal from './components/GradeDetailsModal/GradeDetailsModal.
 import { useCabinetStore } from '@/stores/cabinet'
 import type { GradeAssignment } from './grades.types'
 import style from './GradesPage.module.scss'
-
+import PageLoader from '@/components/PageLoader/PageLoader.vue'
 export default defineComponent({
   name: 'GradesPage',
   components: {
@@ -57,6 +57,7 @@ export default defineComponent({
     GradesTable,
     GradeDetailsModal,
     PhInfo,
+    PageLoader
   },
   data() {
     return {

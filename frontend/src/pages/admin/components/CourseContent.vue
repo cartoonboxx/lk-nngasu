@@ -5,7 +5,7 @@
     :width="960"
     @update:model-value="$emit('update:modelValue', $event)"
   >
-    <p v-if="loading">Загрузка курса…</p>
+    <PageLoader v-if="loading" />
     <p v-if="error">{{ error }} <Button variant="ghost" @click="load">Повторить</Button></p>
     <template v-if="course && !loading">
       <h3>{{ course.subject_name }} · {{ course.group_name }}</h3>
@@ -180,7 +180,7 @@
       </div>
     </AdminDialog>
     <AdminDialog v-model="worksOpen" title="Работы студентов" :width="900">
-      <p v-if="worksLoading">Загрузка работ…</p>
+      <PageLoader v-if="worksLoading" />
       <template v-else-if="worksAssignment">
         <Button
           variant="secondary"
@@ -245,7 +245,7 @@ import TextInput from '@/components/UI/inputs/TextInput/TextInput.vue'
 import AdminDialog from './AdminDialog.vue'
 import AdminTable from './AdminTable.vue'
 import style from '../Admin.module.scss'
-
+import PageLoader from '@/components/PageLoader/PageLoader.vue'
 type WorkRow = {
   student_id: number
   student_name: string
@@ -255,7 +255,7 @@ type WorkRow = {
 }
 
 export default defineComponent({
-  components: { Button, TextInput, AdminDialog, AdminTable },
+  components: { Button, TextInput, AdminDialog, AdminTable,PageLoader },
   props: { modelValue: Boolean, courseId: { type: Number, required: true } },
   emits: ['update:modelValue'],
   data() {

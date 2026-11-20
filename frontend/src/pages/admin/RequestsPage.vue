@@ -31,7 +31,7 @@
         <Select v-model="sort" :options="sortOptions" full-width />
       </label>
     </div>
-    <p v-if="$adminStore.requestsLoading" role="status">Загрузка заявок…</p>
+    <PageLoader v-if="$adminStore.requestsLoading" />
     <AdminTable
       v-else
       :columns="columns"
@@ -66,7 +66,7 @@
       </tr>
     </AdminTable>
     <AdminDialog v-model="opened" :title="selected ? `Заявка №${selected.id}` : 'Заявка'">
-      <p v-if="detailLoading" role="status">Загрузка заявки…</p>
+      <PageLoader v-if="detailLoading" />
       <template v-else-if="selected && user">
         <dl :class="style.detail">
           <dt>Получена</dt>
@@ -157,6 +157,7 @@ import Button from '@/components/UI/buttons/Button/Button.vue'
 import AdminTable from './components/AdminTable.vue'
 import AdminDialog from './components/AdminDialog.vue'
 import UserFields from './components/UserFields.vue'
+import PageLoader from '@/components/PageLoader/PageLoader.vue'
 import {
   adminDate,
   statusLabels,
@@ -177,6 +178,7 @@ export default defineComponent({
     AdminTable,
     AdminDialog,
     UserFields,
+    PageLoader
   },
   data() {
     return {
